@@ -16,7 +16,7 @@
  *   deleteVariable(key)         → void                         every template)
  *
  * Two implementations: HTTP (talks to `createEmailBuilderHandler` from
- * `mailblocks/server`, or to any backend with the same routes) and memory
+ * `best-email-builder/server`, or to any backend with the same routes) and memory
  * (stories, tests, demos). The interface cannot tell them apart.
  *
  * The document ALWAYS travels serialized then re-read (`readDocument`): a
@@ -111,7 +111,7 @@ function withDocument(template) {
 }
 
 /**
- * Client for the routes of `createEmailBuilderHandler` (`mailblocks/server`).
+ * Client for the routes of `createEmailBuilderHandler` (`best-email-builder/server`).
  *
  * @param {{
  *   baseUrl?: string,

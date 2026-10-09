@@ -36,7 +36,7 @@ export default class EmailBuilderBoundary extends Component {
   }
 
   componentDidCatch(error) {
-    console.warn('[mailblocks] the builder could not load', error);
+    console.warn('[best-email-builder] the builder could not load', error);
   }
 
   retry = () => {
@@ -60,11 +60,11 @@ export default class EmailBuilderBoundary extends Component {
     return (
       <div
         role="alert"
-        className="mb-root mb:flex mb:h-full mb:flex-col mb:items-center mb:justify-center mb:gap-3 mb:p-6 mb:text-center"
+        className="eb-root eb:flex eb:h-full eb:flex-col eb:items-center eb:justify-center eb:gap-3 eb:p-6 eb:text-center"
       >
-        <AlertTriangle className="mb:size-6 mb:text-destructive" aria-hidden="true" />
-        <p className="mb:text-[13px] mb:text-foreground">{t('The builder could not load.')}</p>
-        <div className="mb:flex mb:gap-2">
+        <AlertTriangle className="eb:size-6 eb:text-destructive" aria-hidden="true" />
+        <p className="eb:text-[13px] eb:text-foreground">{t('The builder could not load.')}</p>
+        <div className="eb:flex eb:gap-2">
           {this.props.onClose && (
             <Button variant="outline" size="sm" onClick={this.props.onClose}>
               <ArrowLeft />

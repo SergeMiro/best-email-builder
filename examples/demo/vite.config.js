@@ -1,7 +1,7 @@
 /**
  * Static demo (GitHub Pages): no server. Templates are kept in the browser's
  * localStorage and the preview is compiled with mjml-browser — a real
- * application compiles on the server (`mailblocks/server`).
+ * application compiles on the server (`best-email-builder/server`).
  *
  *   npm run demo         → http://localhost:5175
  *   npm run demo:build   → examples/demo/dist (base path from DEMO_BASE)
@@ -20,8 +20,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: [
-      { find: /^mailblocks\/styles\.css$/, replacement: `${src}styles.css` },
-      { find: /^mailblocks$/, replacement: `${src}index.js` },
+      { find: /^best-email-builder\/styles\.css$/, replacement: `${src}styles.css` },
+      { find: /^best-email-builder$/, replacement: `${src}index.js` },
     ],
   },
   build: { outDir: 'dist', emptyOutDir: true, chunkSizeWarningLimit: 4000 },

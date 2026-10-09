@@ -34,5 +34,5 @@ export default function EmailCanvas({ editor, document = null, onReady, onError,
     };
   }, [editor]);
 
-  return <div ref={ref} className={cn('eb-canvas mb:h-full mb:w-full', className)} data-testid="eb-canvas" />;
+  return <div ref={ref} className={cn('eb-canvas eb:h-full eb:w-full', className)} data-testid="eb-canvas" />;
 }

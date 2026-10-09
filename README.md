@@ -1,9 +1,9 @@
-# mailblocks
+# Best Email Builder
 
 A drag-and-drop **email builder for React** that produces emails which actually
 render in Outlook, Gmail, Apple Mail and on mobile.
 
-**[Live demo](https://OWNER.github.io/mailblocks/)** — runs entirely in your
+**[Live demo](https://sergemiro.github.io/best-email-builder/)** — runs entirely in your
 browser (templates are kept in `localStorage`).
 
 - **MJML under the hood** — every block compiles to battle-tested, table-based
@@ -35,7 +35,7 @@ Server: validation ─► MJML compilation ─► variables ─► links ─► 
 ## Install
 
 ```bash
-npm install mailblocks
+npm install best-email-builder
 ```
 
 Peer dependencies: `react` and `react-dom` ≥ 18.2. The server entry needs
@@ -46,8 +46,8 @@ Node ≥ 20 (or any runtime with the Fetch API and `node:crypto`).
 ### 1. The component
 
 ```jsx
-import { EmailBuilder, createHttpStorage } from 'mailblocks';
-import 'mailblocks/styles.css';
+import { EmailBuilder, createHttpStorage } from 'best-email-builder';
+import 'best-email-builder/styles.css';
 
 const storage = createHttpStorage({ baseUrl: '/api/email-builder' });
 
@@ -79,7 +79,7 @@ import {
   createMemoryTemplateRepository,
   createMemoryAssetRepository,
   createMemoryVariableRepository,
-} from 'mailblocks/server';
+} from 'best-email-builder/server';
 
 const handler = createEmailBuilderHandler({
   templates: createMemoryTemplateRepository(), // replace with your database
@@ -102,7 +102,7 @@ Express or plain Node:
 
 ```js
 import express from 'express';
-import { createEmailBuilderHandler, toNodeListener } from 'mailblocks/server';
+import { createEmailBuilderHandler, toNodeListener } from 'best-email-builder/server';
 
 const app = express();
 app.use(toNodeListener(createEmailBuilderHandler({ /* … */ })));
@@ -118,7 +118,7 @@ The builder stores the compiled HTML; at send time, personalize it per
 recipient:
 
 ```js
-import { personalize, applyVariablesToText } from 'mailblocks/server';
+import { personalize, applyVariablesToText } from 'best-email-builder/server';
 
 const variables = await handler.catalog();   // system + user-created variables
 const values = { 'contact.firstname': 'Ada', 'contact.email': 'ada@example.com' };
@@ -234,19 +234,19 @@ never reaches a recipient.
 
 ## Theming
 
-All colours, radii and fonts are CSS custom properties prefixed `--mb-`
+All colours, radii and fonts are CSS custom properties prefixed `--eb-`
 (see [`src/styles.css`](src/styles.css)). Override them on `:root`:
 
 ```css
 :root {
-  --mb-primary: #0f766e;
-  --mb-primary-foreground: #fff;
-  --mb-font-sans: 'Inter', sans-serif;
+  --eb-primary: #0f766e;
+  --eb-primary-foreground: #fff;
+  --eb-font-sans: 'Inter', sans-serif;
 }
 ```
 
 A dark theme applies under a `.dark` ancestor. The stylesheet uses Tailwind
-CSS v4 with an `mb:` prefix and a reset scoped to the builder: it does not
+CSS v4 with an `eb:` prefix and a reset scoped to the builder: it does not
 touch the rest of your page, whether or not you use Tailwind yourself.
 
 ## Security model

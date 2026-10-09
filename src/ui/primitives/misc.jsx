@@ -8,7 +8,7 @@ export function Separator({ className, orientation = 'horizontal', decorative = 
       decorative={decorative}
       orientation={orientation}
       className={cn(
-        'mb:shrink-0 mb:bg-border mb:data-[orientation=horizontal]:h-px mb:data-[orientation=horizontal]:w-full mb:data-[orientation=vertical]:h-full mb:data-[orientation=vertical]:w-px',
+        'eb:shrink-0 eb:bg-border eb:data-[orientation=horizontal]:h-px eb:data-[orientation=horizontal]:w-full eb:data-[orientation=vertical]:h-full eb:data-[orientation=vertical]:w-px',
         className
       )}
       {...props}
@@ -17,7 +17,7 @@ export function Separator({ className, orientation = 'horizontal', decorative = 
 }
 
 export function Skeleton({ className, as: Comp = 'div', ...props }) {
-  return <Comp data-slot="skeleton" className={cn('mb:animate-pulse mb:rounded-lg2 mb:bg-accent', className)} {...props} />;
+  return <Comp data-slot="skeleton" className={cn('eb:animate-pulse eb:rounded-lg2 eb:bg-accent', className)} {...props} />;
 }
 
 /** Small uppercase heading of a panel section. */
@@ -25,7 +25,7 @@ export function SectionLabel({ className, ...props }) {
   return (
     <span
       data-slot="section-label"
-      className={cn('mb:font-mono mb:text-[10px] mb:uppercase mb:tracking-[0.14em] mb:text-foreground-muted', className)}
+      className={cn('eb:font-mono eb:text-[10px] eb:uppercase eb:tracking-[0.14em] eb:text-foreground-muted', className)}
       {...props}
     />
   );
@@ -35,7 +35,7 @@ export function SectionLabel({ className, ...props }) {
 export function TruncatedText({ children, className, as: Comp = 'span', ...props }) {
   return (
     <Comp
-      className={cn('mb:block mb:truncate', className)}
+      className={cn('eb:block eb:truncate', className)}
       title={typeof children === 'string' ? children : undefined}
       {...props}
     >
@@ -47,7 +47,7 @@ export function TruncatedText({ children, className, as: Comp = 'span', ...props
 /* ── Tabs ─────────────────────────────────────────────────────────────── */
 
 export function Tabs({ className, ...props }) {
-  return <TabsPrimitive.Root data-slot="tabs" className={cn('mb:flex mb:flex-col mb:gap-2', className)} {...props} />;
+  return <TabsPrimitive.Root data-slot="tabs" className={cn('eb:flex eb:flex-col eb:gap-2', className)} {...props} />;
 }
 
 export function TabsList({ className, ...props }) {
@@ -55,7 +55,7 @@ export function TabsList({ className, ...props }) {
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        'mb:inline-flex mb:h-8 mb:w-fit mb:items-center mb:justify-center mb:rounded-lg2 mb:bg-muted mb:p-[3px] mb:text-muted-foreground',
+        'eb:inline-flex eb:h-8 eb:w-fit eb:items-center eb:justify-center eb:rounded-lg2 eb:bg-muted eb:p-[3px] eb:text-muted-foreground',
         className
       )}
       {...props}
@@ -68,7 +68,7 @@ export function TabsTrigger({ className, ...props }) {
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "mb:inline-flex mb:h-[calc(100%-1px)] mb:flex-1 mb:items-center mb:justify-center mb:gap-1.5 mb:rounded-lg2 mb:border mb:border-transparent mb:px-2 mb:py-1 mb:text-[13px] mb:font-medium mb:whitespace-nowrap mb:text-foreground/60 mb:transition-all mb:hover:text-foreground mb:focus-visible:border-ring mb:focus-visible:ring-[3px] mb:focus-visible:ring-ring/50 mb:focus-visible:outline-1 mb:disabled:pointer-events-none mb:disabled:opacity-50 mb:data-[state=active]:bg-background mb:data-[state=active]:text-foreground mb:data-[state=active]:shadow-sm mb:[&_svg]:pointer-events-none mb:[&_svg]:shrink-0 mb:[&_svg:not([class*='size-'])]:size-4",
+        "eb:inline-flex eb:h-[calc(100%-1px)] eb:flex-1 eb:items-center eb:justify-center eb:gap-1.5 eb:rounded-lg2 eb:border eb:border-transparent eb:px-2 eb:py-1 eb:text-[13px] eb:font-medium eb:whitespace-nowrap eb:text-foreground/60 eb:transition-all eb:hover:text-foreground eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:focus-visible:outline-1 eb:disabled:pointer-events-none eb:disabled:opacity-50 eb:data-[state=active]:bg-background eb:data-[state=active]:text-foreground eb:data-[state=active]:shadow-sm eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -97,7 +97,7 @@ export function TooltipContent({ className, sideOffset = 4, children, ...props }
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          'mb-scope mb:z-50 mb:w-fit mb:origin-(--radix-tooltip-content-transform-origin) mb:animate-in mb:rounded-lg2 mb:border mb:border-border mb:bg-popover mb:px-3 mb:py-1.5 mb:text-xs mb:text-balance mb:text-popover-foreground mb:shadow-md mb:fade-in-0 mb:zoom-in-95 mb:data-[state=closed]:animate-out mb:data-[state=closed]:fade-out-0 mb:data-[state=closed]:zoom-out-95',
+          'eb-scope eb:z-50 eb:w-fit eb:origin-(--radix-tooltip-content-transform-origin) eb:animate-in eb:rounded-lg2 eb:border eb:border-border eb:bg-popover eb:px-3 eb:py-1.5 eb:text-xs eb:text-balance eb:text-popover-foreground eb:shadow-md eb:fade-in-0 eb:zoom-in-95 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0 eb:data-[state=closed]:zoom-out-95',
           className
         )}
         {...props}
@@ -114,7 +114,7 @@ export function TooltipWrap({ label, side = 'top', children, asChild = true, del
   return (
     <Tooltip delayDuration={delayDuration}>
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
-      <TooltipContent side={side} className="mb:px-2 mb:py-1 mb:text-[11px]">
+      <TooltipContent side={side} className="eb:px-2 eb:py-1 eb:text-[11px]">
         {label}
       </TooltipContent>
     </Tooltip>

@@ -393,7 +393,7 @@ test.describe('Save, reload, versions', () => {
     // Once saved, the draft is gone.
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByText(/^Saved at/)).toBeVisible();
-    expect(await page.evaluate(() => localStorage.getItem('mailblocks:new-template-draft'))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem('best-email-builder:new-template-draft'))).toBeNull();
   });
 });
 

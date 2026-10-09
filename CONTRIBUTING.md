@@ -33,7 +33,7 @@ All must pass. Add or update tests with every behaviour change.
 - **The server compiles.** No route may accept HTML from the browser.
 - **Strings are English in the code** and go through `t()`; add the French
   translation to `src/i18n/fr.js` (`node scripts/i18n-keys.mjs fr` lists what
-  is missing). Utility classes carry the `mb:` prefix.
+  is missing). Utility classes carry the `eb:` prefix.
 
 ## Commits
 

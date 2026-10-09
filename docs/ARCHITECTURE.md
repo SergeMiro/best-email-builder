@@ -8,7 +8,7 @@ Server: validation ─► MJML compilation ─► variables ─► links ─► 
 ```
 
 **Rule.** The interface, storage, business logic and rendering belong to
-mailblocks; GrapesJS is only an internal engine. No React component calls
+Best Email Builder; GrapesJS is only an internal engine. No React component calls
 GrapesJS: everything goes through the `EmailEditor` contract
 (`core/EmailEditor.js`), and all GrapesJS code lives in `adapters/grapesjs/`.
 Replacing the engine means writing another adapter.
@@ -25,7 +25,7 @@ Replacing the engine means writing another adapter.
 | `storage/` | browser storage contract — HTTP and memory implementations |
 | `renderer/` | MJML preparation, service links, uploaded image URLs (shared browser/server) |
 | `validation/` | what a template may contain (MJML, project, URLs, images, quality checks) |
-| `server/` | handler, services, repositories, compilation, test send (`mailblocks/server`) |
+| `server/` | handler, services, repositories, compilation, test send (`best-email-builder/server`) |
 | `i18n/` | translator and built-in locales |
 
 Removing a block or a feature = removing its line from the registry; the core
@@ -73,9 +73,9 @@ send time, so the same template works across environments.
 ## Styles
 
 `src/styles.css` is compiled by Tailwind CSS v4 with the `mb` prefix
-(`mb:flex`): utilities and theme variables cannot collide with the host
-application. The reset is scoped to `.mb-root` (the builder) and `.mb-scope`
-(overlays rendered in portals). Theme tokens are `--mb-*` custom properties.
+(`eb:flex`): utilities and theme variables cannot collide with the host
+application. The reset is scoped to `.eb-root` (the builder) and `.eb-scope`
+(overlays rendered in portals). Theme tokens are `--eb-*` custom properties.
 
 ## Tests
 

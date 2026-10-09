@@ -29,23 +29,23 @@ export default function Toolbar({
 }) {
   const t = useT();
   return (
-    <div className="mb:flex mb:h-12 mb:shrink-0 mb:items-center mb:gap-3 mb:border-b mb:border-border mb:px-3">
+    <div className="eb:flex eb:h-12 eb:shrink-0 eb:items-center eb:gap-3 eb:border-b eb:border-border eb:px-3">
       <Button variant="ghost" size="sm-compact" onClick={onBack}>
         <ArrowLeft />
         {t('Back')}
       </Button>
-      <Separator orientation="vertical" className="mb:h-5" />
-      <div className="mb:min-w-0 mb:max-w-[320px] mb:flex-1">
-        <p className="mb:text-[13px] mb:font-medium mb:text-foreground">
+      <Separator orientation="vertical" className="eb:h-5" />
+      <div className="eb:min-w-0 eb:max-w-[320px] eb:flex-1">
+        <p className="eb:text-[13px] eb:font-medium eb:text-foreground">
           <FadedText>{title || t('New template')}</FadedText>
         </p>
-        <p className="mb:text-[11px] mb:text-foreground-muted" role="status" aria-live="polite">
+        <p className="eb:text-[11px] eb:text-foreground-muted" role="status" aria-live="polite">
           {status}
         </p>
       </div>
 
-      <div className="mb:flex mb:items-center mb:gap-2">
-        <div className="mb:flex mb:items-center mb:gap-0.5">
+      <div className="eb:flex eb:items-center eb:gap-2">
+        <div className="eb:flex eb:items-center eb:gap-0.5">
           <TooltipWrap label={t('Undo (Ctrl+Z)')}>
             <Button variant="ghost" size="icon-sm-compact" onClick={onUndo} disabled={!ready || !canUndo} aria-label={t('Undo')}>
               <Undo2 />
@@ -71,7 +71,7 @@ export default function Toolbar({
         </Tabs>
       </div>
 
-      <div className="mb:ml-auto mb:flex mb:items-center mb:gap-2">{actions}</div>
+      <div className="eb:ml-auto eb:flex eb:items-center eb:gap-2">{actions}</div>
     </div>
   );
 }

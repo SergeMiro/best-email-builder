@@ -82,35 +82,35 @@ export default function VersionsMenu({ context }) {
           {t('Versions')}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="mb:w-80 mb:p-0">
-        <div className="mb:border-b mb:border-border mb:px-3 mb:py-2.5 mb:text-[13px] mb:font-medium mb:text-foreground">
+      <PopoverContent align="end" className="eb:w-80 eb:p-0">
+        <div className="eb:border-b eb:border-border eb:px-3 eb:py-2.5 eb:text-[13px] eb:font-medium eb:text-foreground">
           {t('Versions')}
         </div>
-        <div className="mb:max-h-[320px] mb:overflow-y-auto mb:p-1" aria-busy={versions === null && !error}>
+        <div className="eb:max-h-[320px] eb:overflow-y-auto eb:p-1" aria-busy={versions === null && !error}>
           {error ? (
-            <p role="alert" className="mb:px-2 mb:py-1.5 mb:text-[12px] mb:text-destructive">
+            <p role="alert" className="eb:px-2 eb:py-1.5 eb:text-[12px] eb:text-destructive">
               {error}
             </p>
           ) : versions === null ? (
-            <div className="mb:space-y-1 mb:p-1" aria-hidden="true">
-              <Skeleton className="mb:h-8 mb:w-40" />
-              <Skeleton className="mb:h-8 mb:w-32" />
-              <Skeleton className="mb:h-8 mb:w-36" />
+            <div className="eb:space-y-1 eb:p-1" aria-hidden="true">
+              <Skeleton className="eb:h-8 eb:w-40" />
+              <Skeleton className="eb:h-8 eb:w-32" />
+              <Skeleton className="eb:h-8 eb:w-36" />
             </div>
           ) : versions.length === 0 ? (
-            <p className="mb:px-2 mb:py-1.5 mb:text-[12px] mb:text-foreground-muted">{t('No versions yet.')}</p>
+            <p className="eb:px-2 eb:py-1.5 eb:text-[12px] eb:text-foreground-muted">{t('No versions yet.')}</p>
           ) : (
             versions.map((version, index) => (
               <div
                 key={version.id}
-                className="mb:flex mb:items-center mb:gap-2 mb:rounded-lg2 mb:px-2 mb:py-1.5 mb:hover:bg-surface-100"
+                className="eb:flex eb:items-center eb:gap-2 eb:rounded-lg2 eb:px-2 eb:py-1.5 eb:hover:bg-surface-100"
               >
-                <div className="mb:min-w-0 mb:flex-1">
-                  <p className="mb:text-[13px] mb:text-foreground">
+                <div className="eb:min-w-0 eb:flex-1">
+                  <p className="eb:text-[13px] eb:text-foreground">
                     {t('Version {n}', { n: version.versionNumber })}
-                    {index === 0 && <span className="mb:ml-1.5 mb:text-[11px] mb:text-foreground-muted">{t('current')}</span>}
+                    {index === 0 && <span className="eb:ml-1.5 eb:text-[11px] eb:text-foreground-muted">{t('current')}</span>}
                   </p>
-                  <p className="mb:text-[11px] mb:tabular-nums mb:text-foreground-muted">
+                  <p className="eb:text-[11px] eb:tabular-nums eb:text-foreground-muted">
                     {formatWhen(version.createdAt, locale)}
                     {version.createdBy ? ` · ${version.createdBy}` : ''}
                   </p>

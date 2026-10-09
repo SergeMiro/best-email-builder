@@ -1,7 +1,7 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { EmailBuilder, createHttpStorage } from 'mailblocks';
-import 'mailblocks/styles.css';
+import { EmailBuilder, createHttpStorage } from 'best-email-builder';
+import 'best-email-builder/styles.css';
 
 const storage = createHttpStorage({ baseUrl: '/api/email-builder' });
 const locale = new URLSearchParams(window.location.search).get('lang') || 'en';
@@ -38,7 +38,7 @@ function App() {
 
   return (
     <main style={{ maxWidth: 720, margin: '48px auto', padding: '0 16px' }}>
-      <h1 style={{ fontSize: 22 }}>mailblocks example</h1>
+      <h1 style={{ fontSize: 22 }}>Best Email Builder example</h1>
       <p style={{ color: '#555' }}>Templates are kept in memory by the dev server.</p>
       <button type="button" onClick={() => setOpen({ id: null })}>
         New template

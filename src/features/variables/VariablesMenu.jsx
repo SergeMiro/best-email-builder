@@ -68,7 +68,7 @@ export default function VariablesMenu({ context }) {
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="mb:w-80 mb:p-0"
+          className="eb:w-80 eb:p-0"
           onCloseAutoFocus={(e) => e.preventDefault()}
           onMouseDown={(e) => e.stopPropagation()}
         >

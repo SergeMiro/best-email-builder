@@ -1,10 +1,10 @@
 import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { EmailBuilder } from 'mailblocks';
-import 'mailblocks/styles.css';
+import { EmailBuilder } from 'best-email-builder';
+import 'best-email-builder/styles.css';
 import { createDemoStorage } from './browserStorage.js';
 
-const REPOSITORY_URL = import.meta.env.VITE_REPOSITORY_URL || 'https://github.com/';
+const REPOSITORY_URL = import.meta.env.VITE_REPOSITORY_URL || 'https://github.com/SergeMiro/best-email-builder';
 
 const TEXT = {
   en: {
@@ -86,7 +86,7 @@ function App() {
   return (
     <main style={{ maxWidth: 760, margin: '0 auto', padding: '56px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <h1 style={{ fontSize: 28, margin: 0 }}>mailblocks</h1>
+        <h1 style={{ fontSize: 28, margin: 0 }}>Best Email Builder</h1>
         <div style={{ display: 'flex', gap: 8 }}>
           {['en', 'fr'].map((code) => (
             <Button key={code} primary={code === locale} onClick={() => setLocale(code)} aria-pressed={code === locale}>

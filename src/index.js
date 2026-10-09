@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * MAILBLOCKS — entry point.
+ * BEST EMAIL BUILDER — entry point.
  *
  *   src/
  *     core/        EmailEditor contract, versioned document, registries

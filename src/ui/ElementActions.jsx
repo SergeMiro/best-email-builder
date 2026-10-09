@@ -22,7 +22,7 @@ export default function ElementActions({ editor, selection }) {
     : [t('Move up'), t('Move down')];
 
   return (
-    <div className="mb:flex mb:items-center mb:gap-0.5 mb:border-b mb:border-border mb:px-3 mb:py-1.5" role="toolbar" aria-label={t('Element actions')}>
+    <div className="eb:flex eb:items-center eb:gap-0.5 eb:border-b eb:border-border eb:px-3 eb:py-1.5" role="toolbar" aria-label={t('Element actions')}>
       <TooltipWrap label={prevLabel}>
         <Button
           variant="ghost"
@@ -63,7 +63,7 @@ export default function ElementActions({ editor, selection }) {
           aria-label={t('Delete')}
           disabled={!selection.canRemove}
           onClick={() => editor.remove(selection.id)}
-          className="mb:ml-auto mb:text-foreground-muted mb:hover:bg-destructive/10 mb:hover:text-destructive"
+          className="eb:ml-auto eb:text-foreground-muted eb:hover:bg-destructive/10 eb:hover:text-destructive"
         >
           <Trash2 />
         </Button>

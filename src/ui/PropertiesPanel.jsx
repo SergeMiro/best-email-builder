@@ -41,7 +41,7 @@ function grouped(properties) {
 function PropertyGroups({ editor, element, block, idPrefix, services = null }) {
   const t = useT();
   return grouped(block?.properties || []).map(([group, properties]) => (
-    <section key={group} className="mb:space-y-3">
+    <section key={group} className="eb:space-y-3">
       <SectionLabel>{t(group)}</SectionLabel>
       {properties.map((property) => (
         <PropertyField
@@ -62,8 +62,8 @@ const LABEL_PROPERTY = { key: 'content', label: 'Label', type: 'text', group: GR
 function PanelHeader({ title, onClose }) {
   const t = useT();
   return (
-    <header className="mb:sticky mb:top-0 mb:z-10 mb:flex mb:h-11 mb:shrink-0 mb:items-center mb:gap-2 mb:border-b mb:border-border mb:bg-background mb:px-4">
-      <h3 className="mb:min-w-0 mb:flex-1 mb:text-[13px] mb:font-medium mb:text-foreground">
+    <header className="eb:sticky eb:top-0 eb:z-10 eb:flex eb:h-11 eb:shrink-0 eb:items-center eb:gap-2 eb:border-b eb:border-border eb:bg-background eb:px-4">
+      <h3 className="eb:min-w-0 eb:flex-1 eb:text-[13px] eb:font-medium eb:text-foreground">
         <FadedText>{title}</FadedText>
       </h3>
       {onClose && (
@@ -89,12 +89,12 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
   return (
     <>
       <PanelHeader title={t('Email')} />
-      <div className="mb:space-y-5 mb:p-4">
-        <section className="mb:space-y-3">
+      <div className="eb:space-y-5 eb:p-4">
+        <section className="eb:space-y-3">
           <SectionLabel>{t('Template')}</SectionLabel>
-          <div className="mb:space-y-1.5">
-            <Label htmlFor="eb-meta-name" className="mb:text-[12px] mb:font-normal mb:text-foreground-lighter">
-              {t('Name')} <span className="mb:text-destructive">*</span>
+          <div className="eb:space-y-1.5">
+            <Label htmlFor="eb-meta-name" className="eb:text-[12px] eb:font-normal eb:text-foreground-lighter">
+              {t('Name')} <span className="eb:text-destructive">*</span>
             </Label>
             <Input
               id="eb-meta-name"
@@ -104,12 +104,12 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
               aria-invalid={(showErrors && !meta.name.trim()) || undefined}
             />
             {showErrors && !meta.name.trim() && (
-              <p className="mb:text-[12px] mb:text-destructive">{t('Name is required')}</p>
+              <p className="eb:text-[12px] eb:text-destructive">{t('Name is required')}</p>
             )}
           </div>
-          <div className="mb:space-y-1.5">
-            <div className="mb:flex mb:h-6 mb:items-center mb:justify-between">
-              <Label htmlFor="eb-meta-subject" className="mb:text-[12px] mb:font-normal mb:text-foreground-lighter">
+          <div className="eb:space-y-1.5">
+            <div className="eb:flex eb:h-6 eb:items-center eb:justify-between">
+              <Label htmlFor="eb-meta-subject" className="eb:text-[12px] eb:font-normal eb:text-foreground-lighter">
                 {t('Subject')}
               </Label>
               {variables && (
@@ -124,9 +124,9 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
             </div>
             <Input ref={subjectRef} id="eb-meta-subject" maxLength={250} value={meta.subject} onChange={field('subject')} />
           </div>
-          <div className="mb:space-y-1.5">
-            <div className="mb:flex mb:h-6 mb:items-center mb:justify-between">
-              <Label htmlFor="eb-meta-preheader" className="mb:text-[12px] mb:font-normal mb:text-foreground-lighter">
+          <div className="eb:space-y-1.5">
+            <div className="eb:flex eb:h-6 eb:items-center eb:justify-between">
+              <Label htmlFor="eb-meta-preheader" className="eb:text-[12px] eb:font-normal eb:text-foreground-lighter">
                 {t('Preview text')}
               </Label>
               {variables && (
@@ -171,7 +171,7 @@ export default function PropertiesPanel({
   const block = selection?.blockId ? editor.getBlock(selection.blockId) : null;
 
   return (
-    <aside aria-label={t('Properties')} className="mb:min-h-0 mb:overflow-y-auto mb:border-l mb:border-border" data-testid="eb-properties">
+    <aside aria-label={t('Properties')} className="eb:min-h-0 eb:overflow-y-auto eb:border-l eb:border-border" data-testid="eb-properties">
       {!selection ? (
         <TemplateSettings
           editor={editor}
@@ -185,9 +185,9 @@ export default function PropertiesPanel({
         <>
           <PanelHeader title={t(selection.label)} onClose={() => editor.select(null)} />
           {actions}
-          <div className="mb:space-y-5 mb:p-4">
+          <div className="eb:space-y-5 eb:p-4">
             {selection.tagName === 'mj-button' && (
-              <section className="mb:space-y-3">
+              <section className="eb:space-y-3">
                 <SectionLabel>{t(GROUPS.content)}</SectionLabel>
                 <PropertyField
                   key={`${selection.id}:content`}
@@ -199,7 +199,7 @@ export default function PropertiesPanel({
               </section>
             )}
             {selection.tagName === 'mj-text' && (
-              <p className="mb:text-[12px] mb:text-foreground-muted">{t('Double-click the text to edit it.')}</p>
+              <p className="eb:text-[12px] eb:text-foreground-muted">{t('Double-click the text to edit it.')}</p>
             )}
             <PropertyGroups editor={editor} element={selection} block={block} idPrefix="eb-prop" services={services} />
           </div>

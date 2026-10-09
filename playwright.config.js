@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
  * Two browser test suites:
  *   stories  the Ladle playground (real engine, memory storage, mocked routes);
  *   example  the example application (real server handler, memory repositories);
- *   demo     the static demo as built for GitHub Pages (served under /mailblocks/).
+ *   demo     the static demo as built for GitHub Pages (served under /best-email-builder/).
  */
 export default defineConfig({
   testDir: './e2e',
@@ -40,7 +40,7 @@ export default defineConfig({
     { command: 'npm run example', url: 'http://localhost:5174', reuseExistingServer: !process.env.CI, timeout: 120_000 },
     {
       command: 'npm run demo:preview',
-      url: 'http://localhost:5176/mailblocks/',
+      url: 'http://localhost:5176/best-email-builder/',
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },

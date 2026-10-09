@@ -27,7 +27,7 @@ export function createEmitter({ onError } = {}) {
   const report =
     onError ||
     ((error, event) => {
-      console.warn(`[mailblocks] listener for "${event}" failed`, error);
+      console.warn(`[best-email-builder] listener for "${event}" failed`, error);
     });
 
   /** @param {string} event @param {Listener} listener */

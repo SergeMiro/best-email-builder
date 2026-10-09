@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * mailblocks/server — rendering, storage rules and HTTP routes (Node >= 20).
+ * best-email-builder/server — rendering, storage rules and HTTP routes (Node >= 20).
  *
  * Never import this entry from browser code: it compiles MJML with `mjml`.
  */

@@ -1,12 +1,12 @@
 /**
- * Demo storage: the memory storage of mailblocks, persisted in localStorage,
+ * Demo storage: the memory storage of Best Email Builder, persisted in localStorage,
  * with a preview compiled in the browser by mjml-browser.
  *
  * Demo only. A real application compiles on its server: the browser must never
  * be trusted with the HTML that gets stored or sent.
  */
 
-import { createMemoryStorage } from 'mailblocks';
+import { createMemoryStorage } from 'best-email-builder';
 import { prepareMjml } from '../../../src/renderer/prepareMjml.js';
 import { applyServiceLinks } from '../../../src/renderer/links.js';
 import { DEFAULT_VARIABLES, mergeVariables } from '../../../src/features/variables/catalog.js';
@@ -19,8 +19,8 @@ import {
 import { qualityReport } from '../../../src/validation/quality.js';
 import { validateMjml } from '../../../src/validation/mjmlValidator.js';
 
-const TEMPLATES_KEY = 'mailblocks-demo:templates';
-const VARIABLES_KEY = 'mailblocks-demo:variables';
+const TEMPLATES_KEY = 'best-email-builder-demo:templates';
+const VARIABLES_KEY = 'best-email-builder-demo:variables';
 
 const read = (key) => {
   try {

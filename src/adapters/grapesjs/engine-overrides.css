@@ -7,14 +7,14 @@
  */
 .eb-engine-host .gjs-editor {
   background: transparent;
-  font-family: var(--mb-font-sans), sans-serif;
+  font-family: var(--eb-font-sans), sans-serif;
 }
 
 .eb-engine-host .gjs-cv-canvas {
   width: 100%;
   height: 100%;
   top: 0;
-  background: var(--mb-surface-75);
+  background: var(--eb-surface-75);
 }
 
 .eb-engine-host .gjs-pn-panels,
@@ -25,34 +25,34 @@
 /* Selected element toolbar and badge: accent colour. */
 .eb-engine-host .gjs-toolbar,
 .eb-engine-host .gjs-badge {
-  background-color: var(--mb-primary);
-  color: var(--mb-primary-foreground);
+  background-color: var(--eb-primary);
+  color: var(--eb-primary-foreground);
   border-radius: 6px;
 }
 
 .eb-engine-host .gjs-toolbar-item {
-  color: var(--mb-primary-foreground);
+  color: var(--eb-primary-foreground);
 }
 
 /* Rich text formatting toolbar. */
 .eb-engine-host .gjs-rte-toolbar {
-  background-color: var(--mb-background);
-  border: 1px solid var(--mb-border-strong);
+  background-color: var(--eb-background);
+  border: 1px solid var(--eb-border-strong);
   border-radius: 10px;
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
 }
 
 .eb-engine-host .gjs-rte-action {
-  color: var(--mb-foreground);
-  border-right-color: var(--mb-border);
+  color: var(--eb-foreground);
+  border-right-color: var(--eb-border);
 }
 
 .eb-engine-host .gjs-rte-active {
-  background-color: var(--mb-surface-200);
+  background-color: var(--eb-surface-200);
 }
 
 .eb-engine-host .gjs-placeholder,
 .eb-engine-host .gjs-placeholder-int {
-  border-color: var(--mb-primary);
-  background-color: var(--mb-primary);
+  border-color: var(--eb-primary);
+  background-color: var(--eb-primary);
 }

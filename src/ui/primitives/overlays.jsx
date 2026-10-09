@@ -11,11 +11,11 @@ import { cn } from './cn.js';
 
 /*
  * Overlays render in a portal, outside the builder's root element: each one
- * carries the `mb-scope` class so the package's base styles reach it.
+ * carries the `eb-scope` class so the package's base styles reach it.
  */
 
 const FADE_ZOOM =
-  'mb:data-[state=open]:animate-in mb:data-[state=open]:fade-in-0 mb:data-[state=open]:zoom-in-95 mb:data-[state=closed]:animate-out mb:data-[state=closed]:fade-out-0 mb:data-[state=closed]:zoom-out-95';
+  'eb:data-[state=open]:animate-in eb:data-[state=open]:fade-in-0 eb:data-[state=open]:zoom-in-95 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0 eb:data-[state=closed]:zoom-out-95';
 
 /* ── Dialog ───────────────────────────────────────────────────────────── */
 
@@ -27,11 +27,11 @@ export function DialogContent({ className, children, showCloseButton = true, ...
   const t = useT();
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="mb-scope mb:fixed mb:inset-0 mb:z-50 mb:bg-black/50 mb:data-[state=open]:animate-in mb:data-[state=open]:fade-in-0 mb:data-[state=closed]:animate-out mb:data-[state=closed]:fade-out-0" />
+      <DialogPrimitive.Overlay className="eb-scope eb:fixed eb:inset-0 eb:z-50 eb:bg-black/50 eb:data-[state=open]:animate-in eb:data-[state=open]:fade-in-0 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0" />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'mb-scope mb:fixed mb:top-[50%] mb:left-[50%] mb:z-50 mb:grid mb:w-full mb:max-w-[calc(100%-2rem)] mb:translate-x-[-50%] mb:translate-y-[-50%] mb:gap-4 mb:rounded-lg2 mb:border mb:border-border mb:bg-background mb:p-6 mb:text-foreground mb:shadow-lg mb:duration-200 mb:outline-none mb:sm:max-w-lg',
+          'eb-scope eb:fixed eb:top-[50%] eb:left-[50%] eb:z-50 eb:grid eb:w-full eb:max-w-[calc(100%-2rem)] eb:translate-x-[-50%] eb:translate-y-[-50%] eb:gap-4 eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:p-6 eb:text-foreground eb:shadow-lg eb:duration-200 eb:outline-none eb:sm:max-w-lg',
           FADE_ZOOM,
           className
         )}
@@ -39,9 +39,9 @@ export function DialogContent({ className, children, showCloseButton = true, ...
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close className="mb:absolute mb:top-4 mb:right-4 mb:rounded-xs mb:opacity-70 mb:transition-opacity mb:hover:opacity-100 mb:focus:ring-2 mb:focus:ring-ring mb:focus:ring-offset-2 mb:focus:outline-hidden mb:disabled:pointer-events-none mb:[&_svg]:pointer-events-none mb:[&_svg]:shrink-0 mb:[&_svg:not([class*='size-'])]:size-4">
+          <DialogPrimitive.Close className="eb:absolute eb:top-4 eb:right-4 eb:rounded-xs eb:opacity-70 eb:transition-opacity eb:hover:opacity-100 eb:focus:ring-2 eb:focus:ring-ring eb:focus:ring-offset-2 eb:focus:outline-hidden eb:disabled:pointer-events-none eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4">
             <XIcon />
-            <span className="mb:sr-only">{t('Close')}</span>
+            <span className="eb:sr-only">{t('Close')}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -50,19 +50,19 @@ export function DialogContent({ className, children, showCloseButton = true, ...
 }
 
 export function DialogHeader({ className, ...props }) {
-  return <div className={cn('mb:flex mb:flex-col mb:gap-2 mb:text-left', className)} {...props} />;
+  return <div className={cn('eb:flex eb:flex-col eb:gap-2 eb:text-left', className)} {...props} />;
 }
 
 export function DialogFooter({ className, ...props }) {
-  return <div className={cn('mb:flex mb:flex-col-reverse mb:gap-2 mb:sm:flex-row mb:sm:justify-end', className)} {...props} />;
+  return <div className={cn('eb:flex eb:flex-col-reverse eb:gap-2 eb:sm:flex-row eb:sm:justify-end', className)} {...props} />;
 }
 
 export function DialogTitle({ className, ...props }) {
-  return <DialogPrimitive.Title className={cn('mb:text-lg mb:leading-none mb:font-semibold', className)} {...props} />;
+  return <DialogPrimitive.Title className={cn('eb:text-lg eb:leading-none eb:font-semibold', className)} {...props} />;
 }
 
 export function DialogDescription({ className, ...props }) {
-  return <DialogPrimitive.Description className={cn('mb:text-sm mb:text-muted-foreground', className)} {...props} />;
+  return <DialogPrimitive.Description className={cn('eb:text-sm eb:text-muted-foreground', className)} {...props} />;
 }
 
 /* ── Alert dialog (confirmations) ─────────────────────────────────────── */
@@ -74,10 +74,10 @@ export function AlertDialog(props) {
 export function AlertDialogContent({ className, ...props }) {
   return (
     <AlertDialogPrimitive.Portal>
-      <AlertDialogPrimitive.Overlay className="mb-scope mb:fixed mb:inset-0 mb:z-50 mb:bg-black/50 mb:data-[state=open]:animate-in mb:data-[state=open]:fade-in-0 mb:data-[state=closed]:animate-out mb:data-[state=closed]:fade-out-0" />
+      <AlertDialogPrimitive.Overlay className="eb-scope eb:fixed eb:inset-0 eb:z-50 eb:bg-black/50 eb:data-[state=open]:animate-in eb:data-[state=open]:fade-in-0 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0" />
       <AlertDialogPrimitive.Content
         className={cn(
-          'mb-scope mb:fixed mb:top-[50%] mb:left-[50%] mb:z-50 mb:grid mb:w-full mb:max-w-[calc(100%-2rem)] mb:translate-x-[-50%] mb:translate-y-[-50%] mb:gap-4 mb:rounded-lg2 mb:border mb:border-border mb:bg-background mb:p-6 mb:text-foreground mb:shadow-lg mb:duration-200 mb:sm:max-w-lg',
+          'eb-scope eb:fixed eb:top-[50%] eb:left-[50%] eb:z-50 eb:grid eb:w-full eb:max-w-[calc(100%-2rem)] eb:translate-x-[-50%] eb:translate-y-[-50%] eb:gap-4 eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:p-6 eb:text-foreground eb:shadow-lg eb:duration-200 eb:sm:max-w-lg',
           FADE_ZOOM,
           className
         )}
@@ -88,10 +88,10 @@ export function AlertDialogContent({ className, ...props }) {
 }
 
 export const AlertDialogTitle = ({ className, ...props }) => (
-  <AlertDialogPrimitive.Title className={cn('mb:text-lg mb:font-semibold', className)} {...props} />
+  <AlertDialogPrimitive.Title className={cn('eb:text-lg eb:font-semibold', className)} {...props} />
 );
 export const AlertDialogDescription = ({ className, ...props }) => (
-  <AlertDialogPrimitive.Description className={cn('mb:text-sm mb:text-muted-foreground', className)} {...props} />
+  <AlertDialogPrimitive.Description className={cn('eb:text-sm eb:text-muted-foreground', className)} {...props} />
 );
 export const AlertDialogAction = AlertDialogPrimitive.Action;
 export const AlertDialogCancel = AlertDialogPrimitive.Cancel;
@@ -114,7 +114,7 @@ export function PopoverContent({ className, align = 'center', sideOffset = 4, ..
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          'mb-scope mb:z-50 mb:w-72 mb:origin-(--radix-popover-content-transform-origin) mb:rounded-lg2 mb:border mb:border-border mb:bg-popover mb:p-4 mb:text-popover-foreground mb:shadow-md mb:outline-hidden',
+          'eb-scope eb:z-50 eb:w-72 eb:origin-(--radix-popover-content-transform-origin) eb:rounded-lg2 eb:border eb:border-border eb:bg-popover eb:p-4 eb:text-popover-foreground eb:shadow-md eb:outline-hidden',
           FADE_ZOOM,
           className
         )}
@@ -141,7 +141,7 @@ export function DropdownMenuContent({ className, sideOffset = 4, ...props }) {
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          'mb-scope mb:z-50 mb:max-h-(--radix-dropdown-menu-content-available-height) mb:min-w-[8rem] mb:origin-(--radix-dropdown-menu-content-transform-origin) mb:overflow-x-hidden mb:overflow-y-auto mb:rounded-lg2 mb:border mb:border-border mb:bg-popover mb:p-1 mb:text-popover-foreground mb:shadow-md',
+          'eb-scope eb:z-50 eb:max-h-(--radix-dropdown-menu-content-available-height) eb:min-w-[8rem] eb:origin-(--radix-dropdown-menu-content-transform-origin) eb:overflow-x-hidden eb:overflow-y-auto eb:rounded-lg2 eb:border eb:border-border eb:bg-popover eb:p-1 eb:text-popover-foreground eb:shadow-md',
           FADE_ZOOM,
           className
         )}
@@ -160,7 +160,7 @@ export function DropdownMenuItem({ className, ...props }) {
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
       className={cn(
-        "mb:relative mb:flex mb:cursor-default mb:items-center mb:gap-2 mb:rounded-sm mb:px-2 mb:py-1.5 mb:text-[13px] mb:outline-hidden mb:select-none mb:focus:bg-accent mb:focus:text-accent-foreground mb:data-[disabled]:pointer-events-none mb:data-[disabled]:opacity-50 mb:[&_svg]:pointer-events-none mb:[&_svg]:shrink-0 mb:[&_svg:not([class*='size-'])]:size-4",
+        "eb:relative eb:flex eb:cursor-default eb:items-center eb:gap-2 eb:rounded-sm eb:px-2 eb:py-1.5 eb:text-[13px] eb:outline-hidden eb:select-none eb:focus:bg-accent eb:focus:text-accent-foreground eb:data-[disabled]:pointer-events-none eb:data-[disabled]:opacity-50 eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -169,11 +169,11 @@ export function DropdownMenuItem({ className, ...props }) {
 }
 
 export function DropdownMenuLabel({ className, ...props }) {
-  return <DropdownMenuPrimitive.Label className={cn('mb:px-2 mb:py-1.5 mb:text-[13px] mb:font-medium', className)} {...props} />;
+  return <DropdownMenuPrimitive.Label className={cn('eb:px-2 eb:py-1.5 eb:text-[13px] eb:font-medium', className)} {...props} />;
 }
 
 export function DropdownMenuSeparator({ className, ...props }) {
-  return <DropdownMenuPrimitive.Separator className={cn('mb:-mx-1 mb:my-1 mb:h-px mb:bg-border', className)} {...props} />;
+  return <DropdownMenuPrimitive.Separator className={cn('eb:-mx-1 eb:my-1 eb:h-px eb:bg-border', className)} {...props} />;
 }
 
 /* ── Select ───────────────────────────────────────────────────────────── */
@@ -191,14 +191,14 @@ export function SelectTrigger({ className, children, ...props }) {
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "mb:flex mb:h-8 mb:w-full mb:items-center mb:justify-between mb:gap-2 mb:rounded-lg2 mb:border mb:border-border-strong mb:bg-surface-75 mb:px-3 mb:py-1 mb:text-[13px] mb:whitespace-nowrap mb:text-foreground mb:shadow-xs mb:transition-[color,box-shadow] mb:outline-none mb:focus-visible:border-ring mb:focus-visible:ring-[3px] mb:focus-visible:ring-ring/50 mb:disabled:cursor-not-allowed mb:disabled:opacity-50 mb:data-[placeholder]:text-foreground-muted mb:*:data-[slot=select-value]:line-clamp-1 mb:*:data-[slot=select-value]:flex mb:*:data-[slot=select-value]:items-center mb:*:data-[slot=select-value]:gap-2 mb:[&_svg]:pointer-events-none mb:[&_svg]:shrink-0 mb:[&_svg:not([class*='size-'])]:size-4",
+        "eb:flex eb:h-8 eb:w-full eb:items-center eb:justify-between eb:gap-2 eb:rounded-lg2 eb:border eb:border-border-strong eb:bg-surface-75 eb:px-3 eb:py-1 eb:text-[13px] eb:whitespace-nowrap eb:text-foreground eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:disabled:cursor-not-allowed eb:disabled:opacity-50 eb:data-[placeholder]:text-foreground-muted eb:*:data-[slot=select-value]:line-clamp-1 eb:*:data-[slot=select-value]:flex eb:*:data-[slot=select-value]:items-center eb:*:data-[slot=select-value]:gap-2 eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="mb:size-4 mb:opacity-50" />
+        <ChevronDownIcon className="eb:size-4 eb:opacity-50" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -211,18 +211,18 @@ export function SelectContent({ className, children, position = 'popper', ...pro
         data-slot="select-content"
         position={position}
         className={cn(
-          'mb-scope mb:relative mb:z-50 mb:max-h-(--radix-select-content-available-height) mb:min-w-[8rem] mb:origin-(--radix-select-content-transform-origin) mb:overflow-x-hidden mb:overflow-y-auto mb:rounded-lg2 mb:border mb:border-border mb:bg-popover mb:text-popover-foreground mb:shadow-md',
+          'eb-scope eb:relative eb:z-50 eb:max-h-(--radix-select-content-available-height) eb:min-w-[8rem] eb:origin-(--radix-select-content-transform-origin) eb:overflow-x-hidden eb:overflow-y-auto eb:rounded-lg2 eb:border eb:border-border eb:bg-popover eb:text-popover-foreground eb:shadow-md',
           FADE_ZOOM,
-          position === 'popper' && 'mb:data-[side=bottom]:translate-y-1 mb:data-[side=top]:-translate-y-1',
+          position === 'popper' && 'eb:data-[side=bottom]:translate-y-1 eb:data-[side=top]:-translate-y-1',
           className
         )}
         {...props}
       >
         <SelectPrimitive.Viewport
           className={cn(
-            'mb:p-1',
+            'eb:p-1',
             position === 'popper' &&
-              'mb:h-[var(--radix-select-trigger-height)] mb:w-full mb:min-w-[var(--radix-select-trigger-width)] mb:scroll-my-1'
+              'eb:h-[var(--radix-select-trigger-height)] eb:w-full eb:min-w-[var(--radix-select-trigger-width)] eb:scroll-my-1'
           )}
         >
           {children}
@@ -237,14 +237,14 @@ export function SelectItem({ className, children, ...props }) {
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        'mb:relative mb:flex mb:w-full mb:cursor-default mb:items-center mb:gap-2 mb:rounded-sm mb:py-1.5 mb:pr-8 mb:pl-2 mb:text-[13px] mb:outline-hidden mb:select-none mb:focus:bg-accent mb:focus:text-accent-foreground mb:data-[disabled]:pointer-events-none mb:data-[disabled]:opacity-50',
+        'eb:relative eb:flex eb:w-full eb:cursor-default eb:items-center eb:gap-2 eb:rounded-sm eb:py-1.5 eb:pr-8 eb:pl-2 eb:text-[13px] eb:outline-hidden eb:select-none eb:focus:bg-accent eb:focus:text-accent-foreground eb:data-[disabled]:pointer-events-none eb:data-[disabled]:opacity-50',
         className
       )}
       {...props}
     >
-      <span className="mb:absolute mb:right-2 mb:flex mb:size-3.5 mb:items-center mb:justify-center">
+      <span className="eb:absolute eb:right-2 eb:flex eb:size-3.5 eb:items-center eb:justify-center">
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="mb:size-4" />
+          <CheckIcon className="eb:size-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

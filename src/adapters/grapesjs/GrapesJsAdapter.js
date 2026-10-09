@@ -60,7 +60,7 @@ const ENGINE_LOCALES = {
 
 /**
  * Engine loading, injectable for tests. The canvas stylesheets (GrapesJS +
- * `engine-overrides.css`) ship in `mailblocks/styles.css`.
+ * `engine-overrides.css`) ship in `best-email-builder/styles.css`.
  *
  * @param {string} locale
  */
@@ -385,7 +385,7 @@ export function createGrapesJsAdapter({ locale = 'en', loadEngine = defaultLoadE
         try {
           editor.destroy();
         } catch (error) {
-          console.warn('[mailblocks] engine destroy failed', error);
+          console.warn('[best-email-builder] engine destroy failed', error);
         }
       }
       editor = null;

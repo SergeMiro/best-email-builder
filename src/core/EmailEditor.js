@@ -284,7 +284,7 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
         if (typeof stop === 'function') teardowns.push(stop);
       } catch (error) {
         // A broken feature must not prevent editing.
-        console.warn(`[mailblocks] feature "${feature.id}" failed`, error);
+        console.warn(`[best-email-builder] feature "${feature.id}" failed`, error);
       }
     }
   }
@@ -294,7 +294,7 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
       try {
         stop();
       } catch (error) {
-        console.warn('[mailblocks] feature teardown failed', error);
+        console.warn('[best-email-builder] feature teardown failed', error);
       }
     }
     teardowns = [];

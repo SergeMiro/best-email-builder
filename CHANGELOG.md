@@ -14,6 +14,6 @@ First public release.
   delete), undo/redo, desktop/mobile canvas, properties panel.
 - Save / load with versions, conflict detection, autosave and local drafts.
 - Merge-tag variables, server preview with quality checks, test sends, image uploads.
-- `mailblocks/server`: Fetch-API handler, template and asset services, memory
+- `best-email-builder/server`: Fetch-API handler, template and asset services, memory
   repositories, MJML rendering, personalization helpers, Node bridge.
-- English and French interfaces; `--mb-*` theming; dark theme.
+- English and French interfaces; `--eb-*` theming; dark theme.

@@ -36,28 +36,28 @@ export function ColorPicker({ value, onChange, id, className }) {
   const emit = (hex) => onChange(normalizeHex(hex));
 
   return (
-    <div className={cn('mb:flex mb:gap-2', className)}>
+    <div className={cn('eb:flex eb:gap-2', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
             type="button"
             aria-label={t('Pick a colour')}
             title={t('Pick a colour')}
-            className="mb-checker mb:relative mb:h-8 mb:w-[44px] mb:shrink-0 mb:overflow-hidden mb:rounded-lg2 mb:shadow-sm mb:ring-1 mb:ring-black/10 mb:ring-inset mb:transition-transform mb:hover:scale-[1.04]"
+            className="eb-checker eb:relative eb:h-8 eb:w-[44px] eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:shadow-sm eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-[1.04]"
           >
-            <span className="mb:absolute mb:inset-0" style={{ backgroundColor: valid ? value : 'transparent' }} aria-hidden />
+            <span className="eb:absolute eb:inset-0" style={{ backgroundColor: valid ? value : 'transparent' }} aria-hidden />
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="mb:w-64 mb:space-y-3 mb:p-3">
-          <div className="mb-picker">
+        <PopoverContent align="start" className="eb:w-64 eb:space-y-3 eb:p-3">
+          <div className="eb-picker">
             <HexAlphaColorPicker color={valid ? value : FALLBACK_COLOR} onChange={emit} />
           </div>
-          <div className="mb:flex mb:items-center mb:gap-2">
+          <div className="eb:flex eb:items-center eb:gap-2">
             <span
-              className="mb-checker mb:relative mb:size-8 mb:shrink-0 mb:overflow-hidden mb:rounded-lg2 mb:ring-1 mb:ring-black/10 mb:ring-inset"
+              className="eb-checker eb:relative eb:size-8 eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:ring-1 eb:ring-black/10 eb:ring-inset"
               aria-hidden
             >
-              <span className="mb:absolute mb:inset-0" style={{ backgroundColor: valid ? value : 'transparent' }} />
+              <span className="eb:absolute eb:inset-0" style={{ backgroundColor: valid ? value : 'transparent' }} />
             </span>
             <Input
               value={value || ''}
@@ -65,10 +65,10 @@ export function ColorPicker({ value, onChange, id, className }) {
               placeholder="#RRGGBB"
               maxLength={9}
               aria-label={t('Hex code')}
-              className="mb:h-8 mb:flex-1 mb:font-mono mb:text-[12px] mb:uppercase"
+              className="eb:h-8 eb:flex-1 eb:font-mono eb:text-[12px] eb:uppercase"
             />
           </div>
-          <div className="mb:grid mb:grid-cols-6 mb:gap-1.5 mb:border-t mb:border-border mb:pt-2.5">
+          <div className="eb:grid eb:grid-cols-6 eb:gap-1.5 eb:border-t eb:border-border eb:pt-2.5">
             {PRESET_COLORS.map((c) => (
               <button
                 key={c}
@@ -76,11 +76,11 @@ export function ColorPicker({ value, onChange, id, className }) {
                 onClick={() => onChange(c)}
                 title={c}
                 aria-label={c}
-                className="mb:relative mb:size-6 mb:rounded-lg2 mb:ring-1 mb:ring-black/10 mb:ring-inset mb:transition-transform mb:hover:scale-110"
+                className="eb:relative eb:size-6 eb:rounded-lg2 eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-110"
                 style={{ backgroundColor: c }}
               >
                 {normalized === c && (
-                  <Check className="mb:absolute mb:inset-0 mb:m-auto mb:size-3.5 mb:text-white mb:drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]" />
+                  <Check className="eb:absolute eb:inset-0 eb:m-auto eb:size-3.5 eb:text-white eb:drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]" />
                 )}
               </button>
             ))}
@@ -93,7 +93,7 @@ export function ColorPicker({ value, onChange, id, className }) {
         onChange={(e) => onChange(e.target.value)}
         maxLength={9}
         placeholder="#RRGGBB"
-        className="mb:h-8 mb:flex-1 mb:font-mono mb:text-[13px]"
+        className="eb:h-8 eb:flex-1 eb:font-mono eb:text-[13px]"
       />
     </div>
   );

@@ -44,7 +44,7 @@ export default function VariableInsertButton({ variables, inputRef, value, onCha
           <Braces />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="mb:w-72 mb:p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
+      <PopoverContent align="end" className="eb:w-72 eb:p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
         {/* Links have no meaning in a subject line. */}
         <VariablePicker variables={variables} onPick={insert} filter={(v) => v.kind !== 'link'} />
       </PopoverContent>

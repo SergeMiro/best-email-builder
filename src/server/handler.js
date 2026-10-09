@@ -117,7 +117,7 @@ export function createEmailBuilderHandler(options) {
     maxVersions,
     maxTestRecipients = MAX_TEST_RECIPIENTS,
     rateLimits = {},
-    onError = (error) => console.error('[mailblocks]', error),
+    onError = (error) => console.error('[best-email-builder]', error),
   } = options || /** @type {any} */ ({});
   if (typeof authorize !== 'function') throw new Error('createEmailBuilderHandler: `authorize` is required');
   if (!templateRepository || !assetRepository) {

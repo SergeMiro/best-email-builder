@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
  * The addresses are remembered in the browser for the next test.
  */
 
-const KEY = 'mailblocks:test-addresses';
+const KEY = 'best-email-builder:test-addresses';
 
 function readAddresses(fallback) {
   try {
@@ -81,22 +81,22 @@ export default function TestEmailButton({ context }) {
         {t('Test')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="mb:sm:max-w-[460px]">
+        <DialogContent className="eb:sm:max-w-[460px]">
           <DialogHeader>
-            <div className="mb:flex mb:items-center mb:gap-3">
-              <span className="mb:flex mb:size-10 mb:shrink-0 mb:items-center mb:justify-center mb:rounded-lg2 mb:bg-primary/10 mb:text-primary">
-                <Send className="mb:size-5" />
+            <div className="eb:flex eb:items-center eb:gap-3">
+              <span className="eb:flex eb:size-10 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-lg2 eb:bg-primary/10 eb:text-primary">
+                <Send className="eb:size-5" />
               </span>
               <div>
-                <DialogTitle className="mb:text-base mb:font-normal">{t('Send a test')}</DialogTitle>
-                <DialogDescription className="mb:text-[13px]">{t('The email on screen, to reviewers’ addresses.')}</DialogDescription>
+                <DialogTitle className="eb:text-base eb:font-normal">{t('Send a test')}</DialogTitle>
+                <DialogDescription className="eb:text-[13px]">{t('The email on screen, to reviewers’ addresses.')}</DialogDescription>
               </div>
             </div>
           </DialogHeader>
-          <div className="mb:space-y-2">
-            <Label htmlFor="mb-test-addresses">{t('Addresses')}</Label>
+          <div className="eb:space-y-2">
+            <Label htmlFor="eb-test-addresses">{t('Addresses')}</Label>
             <Textarea
-              id="mb-test-addresses"
+              id="eb-test-addresses"
               value={addresses}
               onChange={(e) => setAddresses(e.target.value)}
               placeholder="jane@example.com, john@example.com"
@@ -104,33 +104,33 @@ export default function TestEmailButton({ context }) {
             />
           </div>
           {report && (
-            <ul className="mb:space-y-1" aria-label={t('Results')}>
+            <ul className="eb:space-y-1" aria-label={t('Results')}>
               {report.results.map((r) => (
-                <li key={r.email} className="mb:flex mb:items-start mb:gap-1.5 mb:text-[12px] mb:text-foreground">
+                <li key={r.email} className="eb:flex eb:items-start eb:gap-1.5 eb:text-[12px] eb:text-foreground">
                   {r.ok ? (
-                    <CheckCircle2 className="mb:mt-0.5 mb:size-3.5 mb:shrink-0 mb:text-success" aria-hidden="true" />
+                    <CheckCircle2 className="eb:mt-0.5 eb:size-3.5 eb:shrink-0 eb:text-success" aria-hidden="true" />
                   ) : (
-                    <XCircle className="mb:mt-0.5 mb:size-3.5 mb:shrink-0 mb:text-destructive" aria-hidden="true" />
+                    <XCircle className="eb:mt-0.5 eb:size-3.5 eb:shrink-0 eb:text-destructive" aria-hidden="true" />
                   )}
-                  <span className="mb:min-w-0 mb:break-all">
+                  <span className="eb:min-w-0 eb:break-all">
                     {r.email}
                     {r.error ? ` — ${r.error}` : ''}
                   </span>
                 </li>
               ))}
               {report.invalid.map((email) => (
-                <li key={`invalid-${email}`} className="mb:text-[12px] mb:text-foreground-muted">
+                <li key={`invalid-${email}`} className="eb:text-[12px] eb:text-foreground-muted">
                   {t('Ignored (invalid): {email}', { email })}
                 </li>
               ))}
             </ul>
           )}
-          <div className="mb:flex mb:justify-end mb:gap-2">
+          <div className="eb:flex eb:justify-end eb:gap-2">
             <Button variant="outline" onClick={() => setOpen(false)}>
               {t('Close')}
             </Button>
             <Button onClick={send} disabled={sending || !emails.length}>
-              {sending ? <Loader2 className="mb:animate-spin" /> : <Send />}
+              {sending ? <Loader2 className="eb:animate-spin" /> : <Send />}
               {t('Send')}
             </Button>
           </div>

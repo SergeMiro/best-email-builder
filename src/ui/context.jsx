@@ -52,7 +52,7 @@ export function NoticeArea() {
   const t = useT();
   const { notices, dismiss: onDismiss } = useContext(NoticeContext);
   return (
-    <div className="mb:pointer-events-none mb:absolute mb:right-3 mb:bottom-3 mb:z-40 mb:flex mb:w-80 mb:max-w-[calc(100%-1.5rem)] mb:flex-col mb:gap-2">
+    <div className="eb:pointer-events-none eb:absolute eb:right-3 eb:bottom-3 eb:z-40 eb:flex eb:w-80 eb:max-w-[calc(100%-1.5rem)] eb:flex-col eb:gap-2">
       {notices.map((notice) => {
         const Icon = NOTICE_ICON[notice.level] || Info;
         return (
@@ -60,26 +60,26 @@ export function NoticeArea() {
             key={notice.id}
             role={notice.level === 'error' ? 'alert' : 'status'}
             data-level={notice.level}
-            className="mb:pointer-events-auto mb:flex mb:items-start mb:gap-2 mb:rounded-lg2 mb:border mb:border-border mb:bg-popover mb:px-3 mb:py-2.5 mb:text-[13px] mb:text-popover-foreground mb:shadow-lg"
+            className="eb:pointer-events-auto eb:flex eb:items-start eb:gap-2 eb:rounded-lg2 eb:border eb:border-border eb:bg-popover eb:px-3 eb:py-2.5 eb:text-[13px] eb:text-popover-foreground eb:shadow-lg"
           >
             <Icon
               aria-hidden="true"
               className={cn(
-                'mb:mt-0.5 mb:size-4 mb:shrink-0',
-                notice.level === 'error' && 'mb:text-destructive',
-                notice.level === 'warning' && 'mb:text-warning',
-                notice.level === 'success' && 'mb:text-success',
-                notice.level === 'info' && 'mb:text-foreground-muted'
+                'eb:mt-0.5 eb:size-4 eb:shrink-0',
+                notice.level === 'error' && 'eb:text-destructive',
+                notice.level === 'warning' && 'eb:text-warning',
+                notice.level === 'success' && 'eb:text-success',
+                notice.level === 'info' && 'eb:text-foreground-muted'
               )}
             />
-            <p className="mb:min-w-0 mb:flex-1">{notice.message}</p>
+            <p className="eb:min-w-0 eb:flex-1">{notice.message}</p>
             <button
               type="button"
               aria-label={t('Dismiss')}
-              className="mb:shrink-0 mb:rounded-sm mb:text-foreground-muted mb:hover:text-foreground"
+              className="eb:shrink-0 eb:rounded-sm eb:text-foreground-muted eb:hover:text-foreground"
               onClick={() => onDismiss(notice.id)}
             >
-              <X className="mb:size-3.5" />
+              <X className="eb:size-3.5" />
             </button>
           </div>
         );
@@ -157,21 +157,21 @@ export function UiProvider({ locale = 'en', messages, onNotify, children }) {
         <NoticeContext.Provider value={noticeValue}>{children}</NoticeContext.Provider>
         <AlertDialog open={Boolean(request)} onOpenChange={(open) => !open && settle(false)}>
           <AlertDialogContent>
-            <div className="mb:flex mb:items-center mb:gap-3">
+            <div className="eb:flex eb:items-center eb:gap-3">
               <span
                 className={cn(
-                  'mb:flex mb:size-10 mb:shrink-0 mb:items-center mb:justify-center mb:rounded-lg2',
-                  options.destructive ? 'mb:bg-destructive/10 mb:text-destructive' : 'mb:bg-primary/10 mb:text-primary'
+                  'eb:flex eb:size-10 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-lg2',
+                  options.destructive ? 'eb:bg-destructive/10 eb:text-destructive' : 'eb:bg-primary/10 eb:text-primary'
                 )}
               >
-                <AlertCircle className="mb:size-5" />
+                <AlertCircle className="eb:size-5" />
               </span>
-              <AlertDialogTitle className="mb:text-base">{options.title || t('Confirm')}</AlertDialogTitle>
+              <AlertDialogTitle className="eb:text-base">{options.title || t('Confirm')}</AlertDialogTitle>
             </div>
             {options.description && (
-              <AlertDialogDescription className="mb:text-[13px] mb:leading-relaxed">{options.description}</AlertDialogDescription>
+              <AlertDialogDescription className="eb:text-[13px] eb:leading-relaxed">{options.description}</AlertDialogDescription>
             )}
-            <div className="mb:flex mb:flex-col-reverse mb:gap-2 mb:sm:flex-row mb:sm:justify-end">
+            <div className="eb:flex eb:flex-col-reverse eb:gap-2 eb:sm:flex-row eb:sm:justify-end">
               <AlertDialogCancel className={buttonVariants({ variant: 'outline' })} onClick={() => settle(false)}>
                 {options.cancelLabel || t('Cancel')}
               </AlertDialogCancel>

@@ -378,7 +378,7 @@ function Builder({
 
   return (
     <div
-      className={cn('mb-root mb:relative mb:flex mb:h-full mb:min-h-0 mb:flex-col mb:bg-background mb:text-foreground', className)}
+      className={cn('eb-root eb:relative eb:flex eb:h-full eb:min-h-0 eb:flex-col eb:bg-background eb:text-foreground', className)}
       data-testid="email-builder"
       data-status={state.status}
       data-template-id={template.id || ''}
@@ -401,22 +401,22 @@ function Builder({
               return <Action key={feature.id} context={featureContext} />;
             })}
             <Button size="sm-compact" onClick={() => save()} disabled={!ready || saving !== null}>
-              {saving === 'manual' ? <Loader2 className="mb:animate-spin" /> : <Save />}
+              {saving === 'manual' ? <Loader2 className="eb:animate-spin" /> : <Save />}
               {t('Save')}
             </Button>
           </>
         }
       />
-      <div className="mb:grid mb:min-h-0 mb:flex-1 mb:grid-cols-[224px_minmax(0,1fr)_296px] mb:grid-rows-1">
+      <div className="eb:grid eb:min-h-0 eb:flex-1 eb:grid-cols-[224px_minmax(0,1fr)_296px] eb:grid-rows-1">
         <BlockSidebar editor={editor} disabled={!ready} />
-        <div className="mb:relative mb:min-w-0 mb:bg-surface-75" aria-busy={!ready}>
+        <div className="eb:relative eb:min-w-0 eb:bg-surface-75" aria-busy={!ready}>
           {boot.status === 'error' || engineError ? (
-            <div role="alert" className="mb:flex mb:h-full mb:flex-col mb:items-center mb:justify-center mb:gap-2 mb:p-6 mb:text-center">
-              <AlertTriangle className="mb:size-6 mb:text-destructive" aria-hidden="true" />
-              <p className="mb:text-[13px] mb:text-foreground">
+            <div role="alert" className="eb:flex eb:h-full eb:flex-col eb:items-center eb:justify-center eb:gap-2 eb:p-6 eb:text-center">
+              <AlertTriangle className="eb:size-6 eb:text-destructive" aria-hidden="true" />
+              <p className="eb:text-[13px] eb:text-foreground">
                 {boot.status === 'error' ? t('The template could not be loaded.') : t('The builder could not start.')}
               </p>
-              <p className="mb:max-w-sm mb:text-[12px] mb:text-foreground-muted">{boot.message || engineError}</p>
+              <p className="eb:max-w-sm eb:text-[12px] eb:text-foreground-muted">{boot.message || engineError}</p>
               {engineError && (
                 <Button
                   variant="outline"
@@ -442,9 +442,9 @@ function Builder({
                 />
               )}
               {!ready && (
-                <div className="mb:absolute mb:inset-0 mb:flex mb:items-center mb:justify-center mb:bg-surface-75" role="status" aria-live="polite">
-                  <Loader2 className="mb:size-6 mb:animate-spin mb:text-foreground-muted" aria-hidden="true" />
-                  <span className="mb:sr-only">{t('Loading the builder')}</span>
+                <div className="eb:absolute eb:inset-0 eb:flex eb:items-center eb:justify-center eb:bg-surface-75" role="status" aria-live="polite">
+                  <Loader2 className="eb:size-6 eb:animate-spin eb:text-foreground-muted" aria-hidden="true" />
+                  <span className="eb:sr-only">{t('Loading the builder')}</span>
                 </div>
               )}
             </>

@@ -1,5 +1,5 @@
 {
-  "name": "mailblocks",
+  "name": "best-email-builder",
   "version": "0.1.0",
   "description": "Drag-and-drop email builder for React: MJML output that renders in Outlook, Gmail and Apple Mail, with server-side rendering, versions, variables and image uploads.",
   "keywords": [
@@ -13,6 +13,14 @@
     "email-editor"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SergeMiro/best-email-builder.git"
+  },
+  "homepage": "https://sergemiro.github.io/best-email-builder/",
+  "bugs": {
+    "url": "https://github.com/SergeMiro/best-email-builder/issues"
+  },
   "type": "module",
   "sideEffects": [
     "*.css"
@@ -54,11 +62,11 @@
     "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build && npm run check:classes",
     "demo": "vite --config examples/demo/vite.config.js",
     "demo:build": "vite build --config examples/demo/vite.config.js",
-    "demo:preview": "vite preview --config examples/demo/vite.config.js --port 5176 --strictPort --base /mailblocks/",
+    "demo:preview": "vite preview --config examples/demo/vite.config.js --port 5176 --strictPort --base /best-email-builder/",
     "test:demo": "npm run demo:build:pages && playwright test --config=playwright.config.js --project=demo",
-    "demo:build:pages": "vite build --config examples/demo/vite.config.js --base /mailblocks/",
+    "demo:build:pages": "vite build --config examples/demo/vite.config.js --base /best-email-builder/",
     "check:i18n": "node scripts/i18n-keys.mjs fr",
-    "check:classes": "node scripts/check-classes.mjs dist/styles.css"
+    "check:classes": "node scripts/check-classes.mjs dist/styles.css && node scripts/check-unprefixed.mjs"
   },
   "peerDependencies": {
     "react": ">=18.2",

@@ -71,14 +71,14 @@ const asText = (v) => v || '';
 
 function FieldLabel({ id, children }) {
   return (
-    <Label htmlFor={id} className="mb:text-[12px] mb:font-normal mb:text-foreground-lighter">
+    <Label htmlFor={id} className="eb:text-[12px] eb:font-normal eb:text-foreground-lighter">
       {children}
     </Label>
   );
 }
 
 function FieldError({ children }) {
-  return children ? <p className="mb:text-[12px] mb:text-destructive">{children}</p> : null;
+  return children ? <p className="eb:text-[12px] eb:text-destructive">{children}</p> : null;
 }
 
 /** Text, address, long text: draft committed on blur or Enter. */
@@ -114,13 +114,13 @@ function TextField({ id, property, value, onCommit, addon = null, error = null }
     'aria-invalid': invalid || undefined,
   };
   return (
-    <div ref={ref} className="mb:space-y-1.5">
+    <div ref={ref} className="eb:space-y-1.5">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
       {property.type === 'textarea' ? (
         <Textarea rows={3} {...shared} />
       ) : addon ? (
-        <div className="mb:flex mb:gap-2">
-          <Input {...shared} className="mb:min-w-0 mb:flex-1" />
+        <div className="eb:flex eb:gap-2">
+          <Input {...shared} className="eb:min-w-0 eb:flex-1" />
           {addon}
         </div>
       ) : (
@@ -163,7 +163,7 @@ function ImageField({ id, property, value, onCommit, services }) {
         ref={inputRef}
         type="file"
         accept="image/png,image/jpeg,image/gif"
-        className="mb:sr-only"
+        className="eb:sr-only"
         tabIndex={-1}
         aria-hidden="true"
         data-testid={`${id}-file`}
@@ -176,7 +176,7 @@ function ImageField({ id, property, value, onCommit, services }) {
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
-        {busy ? <Loader2 className="mb:animate-spin" /> : <Upload />}
+        {busy ? <Loader2 className="eb:animate-spin" /> : <Upload />}
         {t('Upload')}
       </Button>
     </>
@@ -210,9 +210,9 @@ function SizeField({ id, property, value, onCommit }) {
   };
 
   return (
-    <div ref={ref} className="mb:space-y-1.5">
+    <div ref={ref} className="eb:space-y-1.5">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
-      <div className="mb:relative">
+      <div className="eb:relative">
         <Input
           id={id}
           type="number"
@@ -226,9 +226,9 @@ function SizeField({ id, property, value, onCommit }) {
             if (e.key === 'Enter') commit();
             if (e.key === 'Escape') setDraft(asNumber(value));
           }}
-          className="mb:pr-9 mb:tabular-nums"
+          className="eb:pr-9 eb:tabular-nums"
         />
-        <span className="mb:pointer-events-none mb:absolute mb:right-3 mb:top-1/2 mb:-translate-y-1/2 mb:text-[12px] mb:text-foreground-muted">
+        <span className="eb:pointer-events-none eb:absolute eb:right-3 eb:top-1/2 eb:-translate-y-1/2 eb:text-[12px] eb:text-foreground-muted">
           {property.unit || 'px'}
         </span>
       </div>
@@ -260,7 +260,7 @@ function ColorField({ id, property, value, onCommit }) {
   };
 
   return (
-    <div ref={ref} className="mb:space-y-1.5">
+    <div ref={ref} className="eb:space-y-1.5">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
       <ColorPicker id={id} value={draft} onChange={change} />
     </div>
@@ -274,7 +274,7 @@ function SelectField({ id, property, value, onCommit }) {
   const t = useT();
   const current = value || DEFAULT_OPTION;
   return (
-    <div className="mb:space-y-1.5">
+    <div className="eb:space-y-1.5">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
       <Select
         value={current}
@@ -283,7 +283,7 @@ function SelectField({ id, property, value, onCommit }) {
           if (v !== (value || '')) onCommit(v || null);
         }}
       >
-        <SelectTrigger id={id} className="mb:w-full">
+        <SelectTrigger id={id} className="eb:w-full">
           <SelectValue placeholder={t('Default')} />
         </SelectTrigger>
         <SelectContent>
@@ -307,13 +307,13 @@ const ALIGN_ICONS = { left: AlignLeft, center: AlignCenter, right: AlignRight, j
 function AlignField({ id, property, value, onCommit }) {
   const t = useT();
   return (
-    <div className="mb:space-y-1.5">
+    <div className="eb:space-y-1.5">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
       <div
         id={id}
         role="radiogroup"
         aria-label={t(property.label)}
-        className="mb:flex mb:w-fit mb:items-center mb:gap-0.5 mb:rounded-lg2 mb:border mb:border-border-strong mb:bg-surface-75 mb:p-0.5"
+        className="eb:flex eb:w-fit eb:items-center eb:gap-0.5 eb:rounded-lg2 eb:border eb:border-border-strong eb:bg-surface-75 eb:p-0.5"
       >
         {(property.options || []).map((option) => {
           const Icon = ALIGN_ICONS[option.value] || AlignLeft;
@@ -327,13 +327,13 @@ function AlignField({ id, property, value, onCommit }) {
                 aria-label={t(option.label)}
                 onClick={() => !active && onCommit(option.value)}
                 className={cn(
-                  'mb:inline-flex mb:h-7 mb:w-7 mb:items-center mb:justify-center mb:rounded-lg2 mb:transition-colors',
+                  'eb:inline-flex eb:h-7 eb:w-7 eb:items-center eb:justify-center eb:rounded-lg2 eb:transition-colors',
                   active
-                    ? 'mb:bg-primary mb:text-primary-foreground'
-                    : 'mb:text-foreground-lighter mb:hover:bg-surface-200 mb:hover:text-foreground'
+                    ? 'eb:bg-primary eb:text-primary-foreground'
+                    : 'eb:text-foreground-lighter eb:hover:bg-surface-200 eb:hover:text-foreground'
                 )}
               >
-                <Icon className="mb:h-3.5 mb:w-3.5" />
+                <Icon className="eb:h-3.5 eb:w-3.5" />
               </button>
             </TooltipWrap>
           );
@@ -363,11 +363,11 @@ function SpacingField({ id, property, value, onCommit }) {
   };
 
   return (
-    <fieldset ref={ref} className="mb:space-y-1.5">
-      <legend className="mb-1.5 mb:text-[12px] mb:text-foreground-lighter">{t(property.label)}</legend>
-      <div className="mb:grid mb:grid-cols-4 mb:gap-1.5">
+    <fieldset ref={ref} className="eb:space-y-1.5">
+      <legend className="eb:mb-1.5 eb:text-[12px] eb:text-foreground-lighter">{t(property.label)}</legend>
+      <div className="eb:grid eb:grid-cols-4 eb:gap-1.5">
         {SIDE_LABELS.map(([side, label], i) => (
-          <div key={side} className="mb:space-y-1">
+          <div key={side} className="eb:space-y-1">
             <Input
               id={`${id}-${side}`}
               type="number"
@@ -381,9 +381,9 @@ function SpacingField({ id, property, value, onCommit }) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') commit();
               }}
-              className="mb:px-2 mb:text-center mb:tabular-nums"
+              className="eb:px-2 eb:text-center eb:tabular-nums"
             />
-            <span className="mb:block mb:text-center mb:text-[10.5px] mb:text-foreground-muted">{t(label)}</span>
+            <span className="eb:block eb:text-center eb:text-[10.5px] eb:text-foreground-muted">{t(label)}</span>
           </div>
         ))}
       </div>

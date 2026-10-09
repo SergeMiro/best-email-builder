@@ -3,27 +3,27 @@ import { cva } from 'class-variance-authority';
 import { cn } from './cn.js';
 
 export const buttonVariants = cva(
-  "mb:inline-flex mb:shrink-0 mb:items-center mb:justify-center mb:gap-2 mb:whitespace-nowrap mb:rounded-lg2 mb:text-sm mb:font-medium mb:transition-all mb:outline-none mb:disabled:pointer-events-none mb:disabled:opacity-50 mb:focus-visible:border-ring mb:focus-visible:ring-[3px] mb:focus-visible:ring-ring/50 mb:aria-invalid:border-destructive mb:aria-invalid:ring-destructive/20 mb:[&_svg]:pointer-events-none mb:[&_svg]:shrink-0 mb:[&_svg:not([class*='size-'])]:size-4",
+  "eb:inline-flex eb:shrink-0 eb:items-center eb:justify-center eb:gap-2 eb:whitespace-nowrap eb:rounded-lg2 eb:text-sm eb:font-medium eb:transition-all eb:outline-none eb:disabled:pointer-events-none eb:disabled:opacity-50 eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:aria-invalid:border-destructive eb:aria-invalid:ring-destructive/20 eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: 'mb:bg-primary mb:text-primary-foreground mb:hover:bg-primary/90',
-        destructive: 'mb:bg-destructive mb:text-white mb:hover:bg-destructive/90 mb:focus-visible:ring-destructive/20',
-        outline: 'mb:border mb:border-border mb:bg-background mb:text-foreground mb:shadow-xs mb:hover:bg-accent mb:hover:text-accent-foreground',
-        secondary: 'mb:bg-secondary mb:text-secondary-foreground mb:hover:bg-secondary/80',
-        ghost: 'mb:text-foreground mb:hover:bg-accent mb:hover:text-accent-foreground',
-        link: 'mb:text-primary mb:underline-offset-4 mb:hover:underline',
+        default: 'eb:bg-primary eb:text-primary-foreground eb:hover:bg-primary/90',
+        destructive: 'eb:bg-destructive eb:text-white eb:hover:bg-destructive/90 eb:focus-visible:ring-destructive/20',
+        outline: 'eb:border eb:border-border eb:bg-background eb:text-foreground eb:shadow-xs eb:hover:bg-accent eb:hover:text-accent-foreground',
+        secondary: 'eb:bg-secondary eb:text-secondary-foreground eb:hover:bg-secondary/80',
+        ghost: 'eb:text-foreground eb:hover:bg-accent eb:hover:text-accent-foreground',
+        link: 'eb:text-primary eb:underline-offset-4 eb:hover:underline',
       },
       size: {
-        default: 'mb:h-8 mb:gap-1.5 mb:px-3 mb:text-[13px] mb:has-[>svg]:px-2.5',
-        xs: "mb:h-6 mb:gap-1 mb:px-2 mb:text-xs mb:has-[>svg]:px-1.5 mb:[&_svg:not([class*='size-'])]:size-3",
-        'sm-compact': "mb:h-7 mb:gap-1.5 mb:px-3 mb:text-xs mb:has-[>svg]:px-2.5 mb:[&_svg:not([class*='size-'])]:size-3",
-        sm: 'mb:h-8 mb:gap-1.5 mb:px-3 mb:text-[13px] mb:has-[>svg]:px-2.5',
-        lg: 'mb:h-10 mb:px-6 mb:has-[>svg]:px-4',
-        icon: 'mb:size-8',
-        'icon-xs': "mb:size-6 mb:[&_svg:not([class*='size-'])]:size-3",
-        'icon-sm-compact': "mb:size-7 mb:[&_svg:not([class*='size-'])]:size-3",
-        'icon-sm': 'mb:size-8',
+        default: 'eb:h-8 eb:gap-1.5 eb:px-3 eb:text-[13px] eb:has-[>svg]:px-2.5',
+        xs: "eb:h-6 eb:gap-1 eb:px-2 eb:text-xs eb:has-[>svg]:px-1.5 eb:[&_svg:not([class*='size-'])]:size-3",
+        'sm-compact': "eb:h-7 eb:gap-1.5 eb:px-3 eb:text-xs eb:has-[>svg]:px-2.5 eb:[&_svg:not([class*='size-'])]:size-3",
+        sm: 'eb:h-8 eb:gap-1.5 eb:px-3 eb:text-[13px] eb:has-[>svg]:px-2.5',
+        lg: 'eb:h-10 eb:px-6 eb:has-[>svg]:px-4',
+        icon: 'eb:size-8',
+        'icon-xs': "eb:size-6 eb:[&_svg:not([class*='size-'])]:size-3",
+        'icon-sm-compact': "eb:size-7 eb:[&_svg:not([class*='size-'])]:size-3",
+        'icon-sm': 'eb:size-8',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },

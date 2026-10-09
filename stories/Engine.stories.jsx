@@ -35,7 +35,7 @@ function Bench() {
         Status: <span data-testid="bench-status">{status}</span>
         {error ? ` — ${error}` : ''}
       </p>
-      <div className="mb-root" style={{ height: 560, border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+      <div className="eb-root" style={{ height: 560, border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
         <EmailCanvas
           editor={editor}
           onReady={() => setStatus('ready')}

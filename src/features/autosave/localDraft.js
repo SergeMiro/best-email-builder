@@ -14,7 +14,7 @@
 
 import { readDocument } from '../../core/document.js';
 
-const KEY = 'mailblocks:new-template-draft';
+const KEY = 'best-email-builder:new-template-draft';
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** @param {Storage|null|undefined} store */

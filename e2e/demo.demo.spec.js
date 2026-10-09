@@ -2,16 +2,16 @@ import { test, expect } from '@playwright/test';
 
 /**
  * The STATIC DEMO published on GitHub Pages, as built (`npm run demo:build`,
- * served under `/mailblocks/`): no server, templates and variables kept in
+ * served under `/best-email-builder/`): no server, templates and variables kept in
  * localStorage, preview compiled in the browser.
  */
 
-const HOME = '/mailblocks/';
+const HOME = '/best-email-builder/';
 const builder = (page) => page.getByTestId('email-builder');
 
 test('build a template, preview it, find it again after a reload', async ({ page }) => {
   await page.goto(`${HOME}?lang=en`);
-  await expect(page.getByRole('heading', { name: 'mailblocks' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Best Email Builder' })).toBeVisible();
   await page.getByRole('button', { name: 'New template' }).click();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
 

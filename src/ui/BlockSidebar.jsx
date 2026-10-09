@@ -61,13 +61,13 @@ function BlockTile({ block, disabled, onAdd, onDragStart, onDragEnd }) {
         onDragEnd={(e) => onDragEnd(e.dataTransfer?.dropEffect === 'none')}
         data-block-id={block.id}
         className={cn(
-          'mb:flex mb:h-20 mb:cursor-grab mb:select-none mb:flex-col mb:items-center mb:justify-center mb:gap-1.5 mb:rounded-lg2 mb:border mb:border-border mb:bg-background mb:px-2 mb:text-center mb:transition-colors mb:active:cursor-grabbing',
-          'mb:hover:border-primary/50 mb:hover:bg-primary/5 mb:focus-visible:outline-none mb:focus-visible:ring-2 mb:focus-visible:ring-ring/50',
-          disabled && 'mb:cursor-not-allowed mb:opacity-50'
+          'eb:flex eb:h-20 eb:cursor-grab eb:select-none eb:flex-col eb:items-center eb:justify-center eb:gap-1.5 eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:px-2 eb:text-center eb:transition-colors eb:active:cursor-grabbing',
+          'eb:hover:border-primary/50 eb:hover:bg-primary/5 eb:focus-visible:outline-none eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50',
+          disabled && 'eb:cursor-not-allowed eb:opacity-50'
         )}
       >
-        <Icon className="mb:h-5 mb:w-5 mb:text-foreground-lighter" aria-hidden="true" />
-        <span className="mb:text-[12px] mb:text-foreground">{t(block.label)}</span>
+        <Icon className="eb:h-5 eb:w-5 eb:text-foreground-lighter" aria-hidden="true" />
+        <span className="eb:text-[12px] eb:text-foreground">{t(block.label)}</span>
       </button>
     </TooltipWrap>
   );
@@ -78,14 +78,14 @@ export default function BlockSidebar({ editor, disabled = false }) {
   const blocks = editor.listBlocks();
 
   return (
-    <aside aria-label={t('Blocks')} className="mb:min-h-0 mb:space-y-5 mb:overflow-y-auto mb:border-r mb:border-border mb:p-3">
+    <aside aria-label={t('Blocks')} className="eb:min-h-0 eb:space-y-5 eb:overflow-y-auto eb:border-r eb:border-border eb:p-3">
       {GROUPS.map((group) => {
         const items = blocks.filter((b) => b.kind === group.kind && b.mjml);
         if (!items.length) return null;
         return (
-          <section key={group.kind} className="mb:space-y-2">
+          <section key={group.kind} className="eb:space-y-2">
             <SectionLabel>{t(group.title)}</SectionLabel>
-            <div className="mb:grid mb:grid-cols-2 mb:gap-2">
+            <div className="eb:grid eb:grid-cols-2 eb:gap-2">
               {items.map((block) => (
                 <BlockTile
                   key={block.id}

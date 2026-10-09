@@ -61,9 +61,9 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
   };
 
   return (
-    <div className="mb:flex mb:max-h-[min(440px,70vh)] mb:flex-col" data-testid="variable-picker">
-      <div className="mb:relative mb:border-b mb:border-border mb:p-2">
-        <Search className="mb:pointer-events-none mb:absolute mb:top-1/2 mb:left-4 mb:size-3.5 mb:-translate-y-1/2 mb:text-foreground-muted" />
+    <div className="eb:flex eb:max-h-[min(440px,70vh)] eb:flex-col" data-testid="variable-picker">
+      <div className="eb:relative eb:border-b eb:border-border eb:p-2">
+        <Search className="eb:pointer-events-none eb:absolute eb:top-1/2 eb:left-4 eb:size-3.5 eb:-translate-y-1/2 eb:text-foreground-muted" />
         <input
           autoFocus
           value={query}
@@ -71,20 +71,20 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
           onKeyDown={onKeyDown}
           placeholder={t('Search variables…')}
           aria-label={t('Search variables…')}
-          className="mb:h-8 mb:w-full mb:rounded-md mb:bg-surface-75 mb:pr-2 mb:pl-7 mb:text-[13px] mb:text-foreground mb:outline-none mb:placeholder:text-foreground-muted mb:focus-visible:ring-2 mb:focus-visible:ring-ring/40"
+          className="eb:h-8 eb:w-full eb:rounded-md eb:bg-surface-75 eb:pr-2 eb:pl-7 eb:text-[13px] eb:text-foreground eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:ring-2 eb:focus-visible:ring-ring/40"
         />
       </div>
-      <div ref={listRef} role="listbox" aria-label={t('Variables')} className="mb:min-h-0 mb:flex-1 mb:overflow-y-auto mb:p-1">
+      <div ref={listRef} role="listbox" aria-label={t('Variables')} className="eb:min-h-0 eb:flex-1 eb:overflow-y-auto eb:p-1">
         {ordered.length === 0 && (
-          <div className="mb:px-2 mb:py-3 mb:text-center mb:text-[12px] mb:text-foreground-muted">
+          <div className="eb:px-2 eb:py-3 eb:text-center eb:text-[12px] eb:text-foreground-muted">
             <p>{t('No variable found.')}</p>
             {onCreate && query.trim() && (
               <button
                 type="button"
                 onClick={() => onCreate(query.trim())}
-                className="mb:mt-2 mb:inline-flex mb:items-center mb:gap-1 mb:rounded-md mb:px-2 mb:py-1 mb:text-[12px] mb:font-medium mb:text-primary mb:hover:bg-accent"
+                className="eb:mt-2 eb:inline-flex eb:items-center eb:gap-1 eb:rounded-md eb:px-2 eb:py-1 eb:text-[12px] eb:font-medium eb:text-primary eb:hover:bg-accent"
               >
-                <Plus className="mb:size-3.5" />
+                <Plus className="eb:size-3.5" />
                 {t('Create “{name}”', { name: query.trim() })}
               </button>
             )}
@@ -92,7 +92,7 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
         )}
         {groups.map((group) => (
           <div key={group} role="group" aria-label={t(group)}>
-            <p className="mb:px-2 mb:pt-2 mb:pb-1 mb:text-[11px] mb:text-foreground-muted">{t(group)}</p>
+            <p className="eb:px-2 eb:pt-2 eb:pb-1 eb:text-[11px] eb:text-foreground-muted">{t(group)}</p>
             {ordered
               .filter((v) => v.group === group)
               .map((variable) => {
@@ -102,8 +102,8 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
                     key={variable.key}
                     data-active={index === active}
                     className={cn(
-                      'mb:group/var mb:flex mb:items-center mb:gap-1 mb:rounded-md',
-                      index === active ? 'mb:bg-accent mb:text-accent-foreground' : 'mb:hover:bg-accent/60'
+                      'eb:group/var eb:flex eb:items-center eb:gap-1 eb:rounded-md',
+                      index === active ? 'eb:bg-accent eb:text-accent-foreground' : 'eb:hover:bg-accent/60'
                     )}
                     onMouseEnter={() => setActive(index)}
                   >
@@ -113,11 +113,11 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
                       aria-selected={index === active}
                       data-variable={variable.key}
                       onClick={() => onPick(variable)}
-                      className="mb:flex mb:min-w-0 mb:flex-1 mb:items-center mb:gap-2 mb:px-2 mb:py-1.5 mb:text-left mb:text-[13px]"
+                      className="eb:flex eb:min-w-0 eb:flex-1 eb:items-center eb:gap-2 eb:px-2 eb:py-1.5 eb:text-left eb:text-[13px]"
                       title={variable.description || undefined}
                     >
-                      <span className="mb:min-w-0 mb:flex-1 mb:truncate">{variable.custom ? variable.label : t(variable.label)}</span>
-                      <code className="mb:shrink-0 mb:font-mono mb:text-[10.5px] mb:text-foreground-muted">{tokenOf(variable)}</code>
+                      <span className="eb:min-w-0 eb:flex-1 eb:truncate">{variable.custom ? variable.label : t(variable.label)}</span>
+                      <code className="eb:shrink-0 eb:font-mono eb:text-[10.5px] eb:text-foreground-muted">{tokenOf(variable)}</code>
                     </button>
                     {onEdit && variable.custom && (
                       <button
@@ -125,9 +125,9 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
                         aria-label={t('Edit “{name}”', { name: variable.label })}
                         title={t('Edit')}
                         onClick={() => onEdit(variable)}
-                        className="mb:mr-1 mb:flex mb:size-6 mb:shrink-0 mb:items-center mb:justify-center mb:rounded-md mb:text-foreground-muted mb:opacity-0 mb:group-hover/var:opacity-100 mb:hover:bg-background mb:hover:text-foreground mb:focus-visible:opacity-100"
+                        className="eb:mr-1 eb:flex eb:size-6 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-md eb:text-foreground-muted eb:opacity-0 eb:group-hover/var:opacity-100 eb:hover:bg-background eb:hover:text-foreground eb:focus-visible:opacity-100"
                       >
-                        <Pencil className="mb:size-3" />
+                        <Pencil className="eb:size-3" />
                       </button>
                     )}
                   </div>
@@ -137,13 +137,13 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
         ))}
       </div>
       {onCreate && (
-        <div className="mb:border-t mb:border-border mb:p-1">
+        <div className="eb:border-t eb:border-border eb:p-1">
           <button
             type="button"
             onClick={() => onCreate(query.trim())}
-            className="mb:flex mb:w-full mb:items-center mb:gap-2 mb:rounded-md mb:px-2 mb:py-1.5 mb:text-left mb:text-[13px] mb:font-medium mb:text-primary mb:hover:bg-accent"
+            className="eb:flex eb:w-full eb:items-center eb:gap-2 eb:rounded-md eb:px-2 eb:py-1.5 eb:text-left eb:text-[13px] eb:font-medium eb:text-primary eb:hover:bg-accent"
           >
-            <Plus className="mb:size-4" />
+            <Plus className="eb:size-4" />
             {t('New variable')}
           </button>
         </div>

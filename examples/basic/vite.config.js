@@ -22,7 +22,7 @@ const src = fileURLToPath(new URL('../../src/', import.meta.url));
 
 function emailBuilderApi() {
   return {
-    name: 'mailblocks-api',
+    name: 'best-email-builder-api',
     configureServer(server) {
       const handler = createEmailBuilderHandler({
         templates: createMemoryTemplateRepository(),
@@ -31,10 +31,10 @@ function emailBuilderApi() {
         // Demo only: everyone is "demo". Plug your session check here.
         authorize: () => ({ id: 'demo', name: 'demo' }),
         publicUrl: 'http://localhost:5174',
-        locale: process.env.MAILBLOCKS_LOCALE || 'en',
+        locale: process.env.EXAMPLE_LOCALE || 'en',
         transport: {
           async send({ to, subject, text }) {
-            console.log(`\n[mailblocks example] test email to ${to}: ${subject}\n${text.slice(0, 400)}\n`);
+            console.log(`\n[best-email-builder example] test email to ${to}: ${subject}\n${text.slice(0, 400)}\n`);
           },
         },
       });
@@ -48,8 +48,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), emailBuilderApi()],
   resolve: {
     alias: [
-      { find: /^mailblocks\/styles\.css$/, replacement: `${src}styles.css` },
-      { find: /^mailblocks$/, replacement: `${src}index.js` },
+      { find: /^best-email-builder\/styles\.css$/, replacement: `${src}styles.css` },
+      { find: /^best-email-builder$/, replacement: `${src}index.js` },
     ],
   },
   server: { port: 5174, strictPort: true },

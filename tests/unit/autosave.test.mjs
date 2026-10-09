@@ -82,7 +82,7 @@ test('local draft: write, read, expiry, unreadable, clear, full quota', () => {
   assert.equal(readLocalDraft(store, { now: Date.now() + 8 * 24 * 3600 * 1000 }), null, 'expired after 7 days');
   assert.equal(map.size, 0, 'an expired draft is erased');
 
-  store.setItem('mailblocks:new-template-draft', `{"savedAt":${Date.now()},"document":{"not":"an envelope"}}`);
+  store.setItem('best-email-builder:new-template-draft', `{"savedAt":${Date.now()},"document":{"not":"an envelope"}}`);
   assert.equal(readLocalDraft(store), null);
   assert.equal(map.size, 0, 'unreadable → erased, not offered');
 

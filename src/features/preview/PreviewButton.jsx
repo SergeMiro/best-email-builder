@@ -26,22 +26,22 @@ export function QualityList({ quality = [], warnings = [] }) {
   const { t } = useUi();
   if (!quality.length && !warnings.length) {
     return (
-      <p className="mb:flex mb:items-center mb:gap-1.5 mb:text-[12px] mb:text-foreground-lighter">
-        <CheckCircle2 className="mb:size-3.5 mb:text-success" aria-hidden="true" />
+      <p className="eb:flex eb:items-center eb:gap-1.5 eb:text-[12px] eb:text-foreground-lighter">
+        <CheckCircle2 className="eb:size-3.5 eb:text-success" aria-hidden="true" />
         {t('Nothing to fix.')}
       </p>
     );
   }
   return (
-    <ul className="mb:space-y-1.5" aria-label={t('Points to check')}>
+    <ul className="eb:space-y-1.5" aria-label={t('Points to check')}>
       {quality.map((issue) => {
         const Icon = LEVEL_ICON[issue.level] || Info;
         return (
-          <li key={issue.code} className="mb:flex mb:items-start mb:gap-1.5 mb:text-[12px] mb:text-foreground">
+          <li key={issue.code} className="eb:flex eb:items-start eb:gap-1.5 eb:text-[12px] eb:text-foreground">
             <Icon
               className={cn(
-                'mb:mt-0.5 mb:size-3.5 mb:shrink-0',
-                issue.level === 'warning' ? 'mb:text-warning' : 'mb:text-foreground-muted'
+                'eb:mt-0.5 eb:size-3.5 eb:shrink-0',
+                issue.level === 'warning' ? 'eb:text-warning' : 'eb:text-foreground-muted'
               )}
               aria-hidden="true"
             />
@@ -50,8 +50,8 @@ export function QualityList({ quality = [], warnings = [] }) {
         );
       })}
       {warnings.slice(0, 5).map((w, i) => (
-        <li key={`mjml-${i}`} className="mb:flex mb:items-start mb:gap-1.5 mb:text-[12px] mb:text-foreground-lighter">
-          <Info className="mb:mt-0.5 mb:size-3.5 mb:shrink-0 mb:text-foreground-muted" aria-hidden="true" />
+        <li key={`mjml-${i}`} className="eb:flex eb:items-start eb:gap-1.5 eb:text-[12px] eb:text-foreground-lighter">
+          <Info className="eb:mt-0.5 eb:size-3.5 eb:shrink-0 eb:text-foreground-muted" aria-hidden="true" />
           MJML: {w.message}
         </li>
       ))}
@@ -67,9 +67,9 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
   const srcDoc = useMemo(() => html || '', [html]);
 
   return (
-    <div className="mb:flex mb:h-full mb:min-h-0 mb:flex-col">
-      <div className="mb-2 mb:flex mb:shrink-0 mb:items-center mb:justify-between mb:gap-2">
-        <div className="mb:inline-flex mb:rounded-lg2 mb:border mb:border-border-strong mb:bg-surface-75 mb:p-0.5">
+    <div className="eb:flex eb:h-full eb:min-h-0 eb:flex-col">
+      <div className="eb:mb-2 eb:flex eb:shrink-0 eb:items-center eb:justify-between eb:gap-2">
+        <div className="eb:inline-flex eb:rounded-lg2 eb:border eb:border-border-strong eb:bg-surface-75 eb:p-0.5">
           <Button
             variant={isMobile ? 'ghost' : 'secondary'}
             size="sm-compact"
@@ -91,36 +91,36 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
         </div>
         {onRefresh && (
           <Button variant="outline" size="sm-compact" onClick={onRefresh} disabled={loading}>
-            {loading ? <Loader2 className="mb:animate-spin" /> : <RefreshCw />}
+            {loading ? <Loader2 className="eb:animate-spin" /> : <RefreshCw />}
             {t('Refresh')}
           </Button>
         )}
       </div>
 
-      <div className="mb:min-h-0 mb:flex-1 mb:overflow-auto mb:rounded-lg2 mb:border mb:border-border mb:bg-surface-75 mb:p-3">
+      <div className="eb:min-h-0 eb:flex-1 eb:overflow-auto eb:rounded-lg2 eb:border eb:border-border eb:bg-surface-75 eb:p-3">
         {error ? (
-          <div className="mb:flex mb:h-full mb:items-center mb:justify-center mb:p-6 mb:text-center mb:text-[13px] mb:text-destructive">{error}</div>
+          <div className="eb:flex eb:h-full eb:items-center eb:justify-center eb:p-6 eb:text-center eb:text-[13px] eb:text-destructive">{error}</div>
         ) : !srcDoc ? (
-          <div className="mb:flex mb:h-full mb:items-center mb:justify-center mb:p-6 mb:text-center mb:text-[13px] mb:text-foreground-lighter">
+          <div className="eb:flex eb:h-full eb:items-center eb:justify-center eb:p-6 eb:text-center eb:text-[13px] eb:text-foreground-lighter">
             {loading ? t('Rendering…') : t('Nothing to show yet.')}
           </div>
         ) : (
           <div
-            className={cn('mb:mx-auto mb:bg-white', isMobile && 'mb:shadow-sm')}
+            className={cn('eb:mx-auto eb:bg-white', isMobile && 'eb:shadow-sm')}
             style={isMobile ? { width: EMAIL_MOBILE_WIDTH } : undefined}
           >
             <iframe
               sandbox=""
               srcDoc={srcDoc}
               title={t('Email preview')}
-              className="mb:block mb:w-full mb:border-0 mb:bg-white"
+              className="eb:block eb:w-full eb:border-0 eb:bg-white"
               style={{ height: isMobile ? 760 : 900 }}
             />
           </div>
         )}
       </div>
 
-      <p className="mb:mt-2 mb:shrink-0 mb:text-[11px] mb:leading-relaxed mb:text-foreground-lighter">
+      <p className="eb:mt-2 eb:shrink-0 eb:text-[11px] eb:leading-relaxed eb:text-foreground-lighter">
         {t('Indicative preview — check it with “Send test”.')}
       </p>
     </div>
@@ -168,19 +168,19 @@ export default function PreviewButton({ context }) {
         {t('Preview')}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="mb:flex mb:h-[85vh] mb:max-h-[85vh] mb:flex-col mb:gap-4 mb:sm:max-w-[67.2rem]">
+        <DialogContent className="eb:flex eb:h-[85vh] eb:max-h-[85vh] eb:flex-col eb:gap-4 eb:sm:max-w-[67.2rem]">
           <DialogHeader>
-            <div className="mb:flex mb:items-center mb:gap-3">
-              <span className="mb:flex mb:size-10 mb:shrink-0 mb:items-center mb:justify-center mb:rounded-lg2 mb:bg-primary/10 mb:text-primary">
-                <Eye className="mb:size-5" />
+            <div className="eb:flex eb:items-center eb:gap-3">
+              <span className="eb:flex eb:size-10 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-lg2 eb:bg-primary/10 eb:text-primary">
+                <Eye className="eb:size-5" />
               </span>
               <div>
-                <DialogTitle className="mb:text-base mb:font-normal">{t('Email preview')}</DialogTitle>
-                <DialogDescription className="mb:text-[13px]">{t('Final rendering, variables filled with samples.')}</DialogDescription>
+                <DialogTitle className="eb:text-base eb:font-normal">{t('Email preview')}</DialogTitle>
+                <DialogDescription className="eb:text-[13px]">{t('Final rendering, variables filled with samples.')}</DialogDescription>
               </div>
             </div>
           </DialogHeader>
-          <div className="mb:grid mb:min-h-0 mb:flex-1 mb:grid-cols-1 mb:gap-4 mb:md:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="eb:grid eb:min-h-0 eb:flex-1 eb:grid-cols-1 eb:gap-4 eb:md:grid-cols-[minmax(0,1fr)_260px]">
             <EmailPreview
               html={state.html}
               loading={state.loading}
@@ -189,15 +189,15 @@ export default function PreviewButton({ context }) {
               onDeviceChange={setDevice}
               onRefresh={refresh}
             />
-            <aside className="mb:min-h-0 mb:space-y-5 mb:overflow-y-auto" aria-busy={state.loading}>
-              <section className="mb:space-y-2">
+            <aside className="eb:min-h-0 eb:space-y-5 eb:overflow-y-auto" aria-busy={state.loading}>
+              <section className="eb:space-y-2">
                 <SectionLabel>{t('Inbox')}</SectionLabel>
-                <div className="mb:rounded-lg2 mb:border mb:border-border mb:bg-surface-75 mb:px-3 mb:py-2.5">
-                  <p className="mb:text-[13px] mb:font-medium mb:text-foreground">{(state.subject ?? meta.subject) || t('No subject')}</p>
-                  <p className="mb:text-[12px] mb:text-foreground-muted">{(state.preheader ?? meta.preheader) || t('No preview text')}</p>
+                <div className="eb:rounded-lg2 eb:border eb:border-border eb:bg-surface-75 eb:px-3 eb:py-2.5">
+                  <p className="eb:text-[13px] eb:font-medium eb:text-foreground">{(state.subject ?? meta.subject) || t('No subject')}</p>
+                  <p className="eb:text-[12px] eb:text-foreground-muted">{(state.preheader ?? meta.preheader) || t('No preview text')}</p>
                 </div>
               </section>
-              <section className="mb:space-y-2">
+              <section className="eb:space-y-2">
                 <SectionLabel>{t('To check')}</SectionLabel>
                 {!state.loading && !state.error && <QualityList quality={state.quality} warnings={state.warnings} />}
               </section>
