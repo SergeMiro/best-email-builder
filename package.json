@@ -1,0 +1,101 @@
+{
+  "name": "mailblocks",
+  "version": "0.1.0",
+  "description": "Drag-and-drop email builder for React: MJML output that renders in Outlook, Gmail and Apple Mail, with server-side rendering, versions, variables and image uploads.",
+  "keywords": [
+    "email",
+    "email-builder",
+    "mjml",
+    "react",
+    "grapesjs",
+    "newsletter",
+    "drag-and-drop",
+    "email-editor"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/types/server/index.d.ts",
+      "import": "./dist/server.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build:js && npm run build:css && npm run build:types",
+    "build:js": "tsup",
+    "build:css": "tailwindcss -i src/styles.css -o dist/styles.css --minify",
+    "build:types": "tsc -p tsconfig.build.json",
+    "lint": "eslint src scripts stories examples tests e2e",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run test:unit",
+    "test:unit": "node --test \"tests/unit/*.test.mjs\"",
+    "test:stories": "playwright test --config=playwright.config.js --project=stories",
+    "test:e2e": "playwright test --config=playwright.config.js --project=example",
+    "dev": "ladle serve",
+    "example": "vite --config examples/basic/vite.config.js",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build && npm run check:classes",
+    "demo": "vite --config examples/demo/vite.config.js",
+    "demo:build": "vite build --config examples/demo/vite.config.js",
+    "demo:preview": "vite preview --config examples/demo/vite.config.js --port 5176 --strictPort --base /mailblocks/",
+    "test:demo": "npm run demo:build:pages && playwright test --config=playwright.config.js --project=demo",
+    "demo:build:pages": "vite build --config examples/demo/vite.config.js --base /mailblocks/",
+    "check:i18n": "node scripts/i18n-keys.mjs fr",
+    "check:classes": "node scripts/check-classes.mjs dist/styles.css"
+  },
+  "peerDependencies": {
+    "react": ">=18.2",
+    "react-dom": ">=18.2"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "grapesjs": "0.22.16",
+    "grapesjs-mjml": "1.0.8",
+    "lucide-react": "^0.564.0",
+    "mjml": "4.18.0",
+    "radix-ui": "^1.4.3",
+    "react-colorful": "^5.8.1",
+    "tailwind-merge": "^3.4.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@ladle/react": "^5.1.1",
+    "@playwright/test": "^1.64.0",
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "tsup": "^8.5.1",
+    "tw-animate-css": "^1.4.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.4"
+  },
+  "overrides": {
+    "@swc/core": "1.15.40"
+  }
+}
