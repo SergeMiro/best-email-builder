@@ -10,7 +10,7 @@ import { createGrapesJsAdapter } from '../src/adapters/grapesjs/GrapesJsAdapter.
  *   window.__emailEditor   the mounted editor (reading the MJML)
  *   window.__emailStorage  the memory storage (rows, versions; simulating a
  *                          second editor)
- *   window.__reopenBuilder(id|null)  close then reopen the screen
+ *   window.__reopenBuilder(id|null, {mjml, meta}?)  close then reopen the screen
  *   window.__setAutosave({ idleMs, maxWaitMs, draftDelayMs })  short delays
  *   window.__sentTests     test sends received by the fake transport
  *
@@ -42,7 +42,7 @@ function fakeSendTest({ emails, subject }) {
   });
 }
 
-function Session({ storage, templateId, onClose, locale }) {
+function Session({ storage, templateId, initial, onClose, locale }) {
   const adapter = useMemo(() => createGrapesJsAdapter({ locale }), [locale]);
   const editor = useMemo(
     () => createEmailEditor({ adapter, blocks: emailBlocks, features: emailBuilderFeatures }),
@@ -57,6 +57,8 @@ function Session({ storage, templateId, onClose, locale }) {
       editor={editor}
       storage={storage}
       templateId={templateId}
+      initialMjml={initial?.mjml}
+      initialMeta={initial?.meta}
       onClose={onClose}
       locale={locale}
       sender={{ name: 'Example Inc.', address: '1 Main Street, Springfield' }}
@@ -70,7 +72,8 @@ function Bench() {
   const [session, setSession] = useState({ key: 0, templateId: null, open: true });
   const [closed, setClosed] = useState(0);
   window.__emailStorage = storage;
-  window.__reopenBuilder = (templateId = null) => setSession((s) => ({ key: s.key + 1, templateId, open: true }));
+  window.__reopenBuilder = (templateId = null, initial = null) =>
+    setSession((s) => ({ key: s.key + 1, templateId, initial, open: true }));
   window.__setAutosave = (options) => Object.assign(emailBuilderFeatures.get('autosave').options, options);
   return (
     <div data-testid="bench" data-closed={closed} style={{ height: 760, border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
@@ -79,6 +82,7 @@ function Bench() {
           key={session.key}
           storage={storage}
           templateId={session.templateId}
+          initial={session.initial}
           locale={locale}
           onClose={() => {
             setClosed((n) => n + 1);

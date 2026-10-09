@@ -371,6 +371,24 @@ test.describe('Save, reload, versions', () => {
     expect(Number(await builderOf(page).getAttribute('data-template-id'))).not.toBe(id);
   });
 
+  test('initial content: a new template opens on given MJML and metadata', async ({ page }) => {
+    await openBuilder(page);
+    await page.evaluate(() =>
+      window.__reopenBuilder(null, {
+        mjml: '<mjml><mj-body><mj-section><mj-column><mj-text>Imported content</mj-text></mj-column></mj-section></mj-body></mjml>',
+        meta: { name: 'Imported', subject: 'Imported subject' },
+      })
+    );
+    await expect(builderOf(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+    await expect(canvas(page).getByText('Imported content')).toBeVisible();
+    await expect(panel(page).getByLabel(/^Name/)).toHaveValue('Imported');
+    await expect(panel(page).getByLabel('Subject', { exact: true })).toHaveValue('Imported subject');
+    await expect(page.getByText('Unsaved changes')).toBeVisible();
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(page.getByText(SAVED_AT)).toBeVisible();
+    expect((await stored(page)).rows[0].mjml).toContain('Imported content');
+  });
+
   test('new template never saved: local draft offered at the next opening', async ({ page }) => {
     await openBuilder(page);
     await page.evaluate(() => window.__setAutosave({ draftDelayMs: 200 }));

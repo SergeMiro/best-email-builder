@@ -34,6 +34,11 @@ import { useEmailEditorState } from './useEmailEditorState.js';
  * the server validates, compiles and creates a version. A template changed
  * elsewhere in the meantime is not overwritten: saving a copy is offered.
  *
+ * ── INITIAL CONTENT (`initialMjml`, `initialMeta`) ──────────────────────────
+ * A new template can start from given MJML instead of the starter template —
+ * e.g. a template imported from another format. It counts as modified until
+ * the first save.
+ *
  * ── AUTOSAVE (feature `autosave`) ───────────────────────────────────────────
  * Template already saved: server save without a version. New template: local
  * draft, offered again at the next opening.
@@ -60,6 +65,8 @@ function Builder({
   sender,
   starterMjml,
   testRecipients,
+  initialMjml,
+  initialMeta,
   onClose,
   onSaved,
   onDirtyChange,
@@ -128,6 +135,11 @@ function Builder({
         }
         return;
       }
+      if (initialMjml) {
+        setMeta({ ...EMPTY_META, ...initialMeta });
+        setBoot({ status: 'ready', document: null, draft: true, message: null });
+        return;
+      }
       const draft = autosaveOn ? readLocalDraft() : null;
       if (draft) {
         const when = new Date(draft.savedAt).toLocaleString(locale, {
@@ -151,11 +163,13 @@ function Builder({
       }
       setBoot({ status: 'ready', document: null, draft: false, message: null });
     })();
+    // Initial content is read once, at start-up, like `templateId`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialTemplateId, storage, autosaveOn, confirm, t, locale]);
 
   const onReady = useCallback(() => {
-    if (!boot.document) editor.loadMjml(starter);
-  }, [editor, boot.document, starter]);
+    if (!boot.document) editor.loadMjml(initialMjml || starter);
+  }, [editor, boot.document, starter, initialMjml]);
 
   // A resumed draft was never saved: it is "modified".
   const { markDirty, markClean, checkDirty } = state;
@@ -479,6 +493,8 @@ function Builder({
  *   sender?: import('../features/templates/starter.js').StarterSender,
  *   starterMjml?: string,
  *   testRecipients?: string[],
+ *   initialMjml?: string,
+ *   initialMeta?: {name?: string, subject?: string, preheader?: string, description?: string},
  *   onClose?: () => void,
  *   onSaved?: (template: object) => void,
  *   onDirtyChange?: (dirty: boolean) => void,

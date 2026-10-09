@@ -150,6 +150,7 @@ With an email provider that does its own merge, map the tags instead:
 | `variables` | `DEFAULT_VARIABLES` | Merge tags offered in the *Variables* menu. Pass the same list to the server. |
 | `sender` | — | `{ name, address, logoUrl, logoWidth }` used by the starter template footer. |
 | `starterMjml` | — | Replace the starter template entirely. |
+| `initialMjml`, `initialMeta` | — | Open a NEW template on given MJML and metadata (`{ name, subject, preheader, description }`) — e.g. a template converted from another format. Ignored with `templateId`. |
 | `testRecipients` | `[]` | Addresses pre-filled in the *Send test* dialog. |
 | `onClose` | — | Shows a *Back* button; called after confirming unsaved changes. |
 | `onSaved` | — | Called with the saved template. |
