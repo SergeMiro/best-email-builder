@@ -1,0 +1,182 @@
+/*
+ * mailblocks — the one stylesheet of the builder: `import 'mailblocks/styles.css'`.
+ *
+ * Built with Tailwind CSS v4 under the `mb` prefix (`mb:flex`): the builder's
+ * utilities and theme variables cannot collide with the host application's
+ * own Tailwind, and nothing here styles the host page. The base reset applies
+ * only inside `.mb-root` (the builder) and `.mb-scope` (its dialogs, menus and
+ * tooltips, rendered in portals).
+ *
+ * THEMING: override the `--mb-*` custom properties below, on `:root` or on any
+ * ancestor of the builder (and of `body` for the portals).
+ */
+
+/* Layer order first: the scoped reset (base) must lose against utilities. */
+@layer theme, base, components, utilities;
+
+@import 'tailwindcss/theme.css' layer(theme) prefix(mb);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(mb);
+@import 'tw-animate-css';
+@import 'grapesjs/dist/css/grapes.min.css';
+@import './adapters/grapesjs/engine-overrides.css';
+
+@source './';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --mb-font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mb-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --mb-background: oklch(0.98 0 0);
+  --mb-foreground: oklch(0.28 0.04 260.33);
+  --mb-foreground-lighter: oklch(0.5 0.02 264);
+  --mb-foreground-muted: oklch(0.52 0.01 264);
+  --mb-popover: oklch(1 0 0);
+  --mb-popover-foreground: oklch(0.28 0.04 260.33);
+  --mb-primary: oklch(0.59 0.2 277);
+  --mb-primary-foreground: oklch(0.96 0 0);
+  --mb-secondary: oklch(0.93 0.01 261.82);
+  --mb-secondary-foreground: oklch(0.37 0.03 259.73);
+  --mb-muted: oklch(0.97 0 0);
+  --mb-muted-foreground: oklch(0.5 0.02 264.41);
+  --mb-accent: oklch(0.93 0.03 273.66);
+  --mb-accent-foreground: oklch(0.37 0.03 259.73);
+  --mb-destructive: oklch(0.64 0.21 25.39);
+  --mb-warning: oklch(0.75 0.18 70);
+  --mb-success: oklch(0.6 0.15 155);
+  --mb-border: oklch(0.87 0.01 261.81);
+  --mb-border-strong: oklch(0.82 0.01 261);
+  --mb-input: oklch(0.87 0.01 261.81);
+  --mb-ring: oklch(0.59 0.2 277);
+  --mb-surface-75: oklch(0.97 0 0);
+  --mb-surface-100: oklch(0.96 0 0);
+  --mb-surface-200: oklch(0.94 0 0);
+  --mb-radius: 0.5rem;
+}
+
+/* Dark theme: add the `dark` class on an ancestor (html, body…). */
+.dark {
+  --mb-background: oklch(0.24 0.008 260);
+  --mb-foreground: oklch(0.93 0.01 256.71);
+  --mb-foreground-lighter: oklch(0.75 0.01 260);
+  --mb-foreground-muted: oklch(0.65 0.01 260);
+  --mb-popover: oklch(0.28 0.009 260);
+  --mb-popover-foreground: oklch(0.93 0.01 256.71);
+  --mb-secondary: oklch(0.33 0.012 260);
+  --mb-secondary-foreground: oklch(0.87 0.01 261.81);
+  --mb-muted: oklch(0.28 0.009 260);
+  --mb-muted-foreground: oklch(0.7 0.01 260);
+  --mb-accent: oklch(0.33 0.03 273);
+  --mb-accent-foreground: oklch(0.93 0.01 256.71);
+  --mb-border: oklch(0.34 0.01 260);
+  --mb-border-strong: oklch(0.4 0.01 260);
+  --mb-input: oklch(0.34 0.01 260);
+  --mb-surface-75: oklch(0.21 0.008 260);
+  --mb-surface-100: oklch(0.27 0.009 260);
+  --mb-surface-200: oklch(0.31 0.01 260);
+}
+
+@theme inline {
+  --font-sans: var(--mb-font-sans);
+  --font-mono: var(--mb-font-mono);
+  --color-background: var(--mb-background);
+  --color-foreground: var(--mb-foreground);
+  --color-foreground-lighter: var(--mb-foreground-lighter);
+  --color-foreground-muted: var(--mb-foreground-muted);
+  --color-popover: var(--mb-popover);
+  --color-popover-foreground: var(--mb-popover-foreground);
+  --color-primary: var(--mb-primary);
+  --color-primary-foreground: var(--mb-primary-foreground);
+  --color-secondary: var(--mb-secondary);
+  --color-secondary-foreground: var(--mb-secondary-foreground);
+  --color-muted: var(--mb-muted);
+  --color-muted-foreground: var(--mb-muted-foreground);
+  --color-accent: var(--mb-accent);
+  --color-accent-foreground: var(--mb-accent-foreground);
+  --color-destructive: var(--mb-destructive);
+  --color-warning: var(--mb-warning);
+  --color-success: var(--mb-success);
+  --color-border: var(--mb-border);
+  --color-border-strong: var(--mb-border-strong);
+  --color-input: var(--mb-input);
+  --color-ring: var(--mb-ring);
+  --color-surface-75: var(--mb-surface-75);
+  --color-surface-100: var(--mb-surface-100);
+  --color-surface-200: var(--mb-surface-200);
+  --radius-sm: calc(var(--mb-radius) - 4px);
+  --radius-md: calc(var(--mb-radius) - 2px);
+  --radius-lg: var(--mb-radius);
+  --radius-lg2: calc(var(--mb-radius) + 2px);
+  --radius-xl: calc(var(--mb-radius) + 4px);
+}
+
+/* Scoped reset (Tailwind's preflight, limited to the builder). */
+@layer base {
+  :where(.mb-root, .mb-scope),
+  :where(.mb-root, .mb-scope) *,
+  :where(.mb-root, .mb-scope) ::before,
+  :where(.mb-root, .mb-scope) ::after {
+    box-sizing: border-box;
+    border: 0 solid var(--mb-border);
+    margin: 0;
+    padding: 0;
+  }
+  :where(.mb-root, .mb-scope) {
+    font-family: var(--mb-font-sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  :where(.mb-root, .mb-scope) :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+    background-color: transparent;
+    letter-spacing: inherit;
+  }
+  :where(.mb-root, .mb-scope) :where(button, [role='button']) {
+    cursor: pointer;
+  }
+  :where(.mb-root, .mb-scope) :where(button:disabled) {
+    cursor: default;
+  }
+  :where(.mb-root, .mb-scope) :where(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+  :where(.mb-root, .mb-scope) :where(ol, ul) {
+    list-style: none;
+  }
+  :where(.mb-root, .mb-scope) :where(img, svg, video, canvas, iframe) {
+    display: block;
+    vertical-align: middle;
+  }
+  :where(.mb-root, .mb-scope) :where(input::placeholder, textarea::placeholder) {
+    opacity: 1;
+  }
+  :where(.mb-root, .mb-scope) :where(code, kbd, pre) {
+    font-family: var(--mb-font-mono);
+  }
+}
+
+/* Colour picker: checkerboard behind translucent swatches, picker sizing. */
+.mb-checker {
+  background-image: conic-gradient(#d4d4d8 25%, #fff 0 50%, #d4d4d8 0 75%, #fff 0);
+  background-size: 10px 10px;
+}
+.mb-picker .react-colorful {
+  width: 100%;
+  height: 168px;
+  gap: 10px;
+}
+.mb-picker .react-colorful__saturation {
+  border-radius: 8px;
+  border-bottom: 0;
+}
+.mb-picker .react-colorful__hue,
+.mb-picker .react-colorful__alpha {
+  height: 12px;
+  border-radius: 999px;
+}
+.mb-picker .react-colorful__pointer {
+  width: 16px;
+  height: 16px;
+}

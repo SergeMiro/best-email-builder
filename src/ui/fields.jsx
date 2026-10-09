@@ -1,0 +1,414 @@
+import { useEffect, useRef, useState } from 'react';
+import { Input } from './primitives/fields.jsx';
+import { Textarea } from './primitives/fields.jsx';
+import { Label } from './primitives/fields.jsx';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './primitives/overlays.jsx';
+import { TooltipWrap } from './primitives/misc.jsx';
+import { ColorPicker } from './primitives/color-picker.jsx';
+import { Button } from './primitives/button.jsx';
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Loader2, Upload } from 'lucide-react';
+import { cn } from './primitives/cn.js';
+import { isSafeUrl } from '../validation/urls.js';
+import { imageUploadError } from '../validation/images.js';
+import { parseSpacing, formatSpacing } from '../core/mjmlAttributes.js';
+import { useT } from './context.jsx';
+
+/**
+ * Properties panel fields - one per `BlockProperty` type.
+ *
+ * -- ONE EDIT = ONE UNDO STEP -----------------------------------------------
+ * Each field keeps a local draft and only hands it to the editor once the
+ * edit is FINISHED: on blur or Enter for text, after a 250 ms pause for a
+ * color being dragged. Typing "Hello" must not leave five steps in the
+ * history, nor recompile the canvas on every keystroke. Escape restores the
+ * original value.
+ *
+ * -- WHAT CANNOT BE SENT IS REJECTED HERE -----------------------------------
+ * An address the server would refuse (`javascript:`, non-https image) is
+ * flagged under the field and not passed on; a color with transparency loses
+ * its alpha channel, which no version of Outlook reads.
+ *
+ * -- IMAGES -----------------------------------------------------------------
+ * An image is UPLOADED (application storage, `uploadImage`) or given as an
+ * https address. Never `data:`: it would bloat the email.
+ */
+
+const COLOR_DEBOUNCE_MS = 250;
+
+/** `#RGB` or `#RRGGBB`; a `#RRGGBBAA` is reduced to `#RRGGBB`. */
+export function emailColor(value) {
+  const v = String(value || '').trim();
+  if (/^#[0-9a-f]{3}$/i.test(v) || /^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
+  if (/^#[0-9a-f]{8}$/i.test(v)) return v.slice(0, 7).toLowerCase();
+  return null;
+}
+
+/**
+ * A field's draft, realigned with the editor value when it changes from
+ * elsewhere (undo, redo) - except while typing, which must not be
+ * overwritten under the user's fingers.
+ */
+function useDraft(value, toDraft) {
+  const [draft, setDraft] = useState(() => toDraft(value));
+  const ref = useRef(null);
+  const convert = useRef(toDraft);
+  convert.current = toDraft;
+  useEffect(() => {
+    const el = ref.current;
+    const focused = el && el.ownerDocument?.activeElement && el.contains(el.ownerDocument.activeElement);
+    if (!focused) setDraft(convert.current(value));
+  }, [value]);
+  return [draft, setDraft, ref];
+}
+
+const asText = (v) => v || '';
+
+function FieldLabel({ id, children }) {
+  return (
+    <Label htmlFor={id} className="mb:text-[12px] mb:font-normal mb:text-foreground-lighter">
+      {children}
+    </Label>
+  );
+}
+
+function FieldError({ children }) {
+  return children ? <p className="mb:text-[12px] mb:text-destructive">{children}</p> : null;
+}
+
+/** Text, address, long text: draft committed on blur or Enter. */
+function TextField({ id, property, value, onCommit, addon = null, error = null }) {
+  const t = useT();
+  const [draft, setDraft, ref] = useDraft(value, asText);
+  const isUrl = property.type === 'url' || property.type === 'image';
+  const kind = property.type === 'image' ? 'image' : 'link';
+  const invalid = isUrl && draft.trim() !== '' && !isSafeUrl(draft, kind);
+
+  const commit = () => {
+    const next = draft.trim();
+    if (invalid || next === (value || '')) return;
+    onCommit(next || null);
+  };
+  const keyDown = (e) => {
+    if (e.key === 'Escape') {
+      setDraft(value || '');
+      e.currentTarget.blur();
+    } else if (e.key === 'Enter' && property.type !== 'textarea') {
+      e.preventDefault();
+      commit();
+    }
+  };
+
+  const shared = {
+    id,
+    value: draft,
+    placeholder: property.placeholder ? t(property.placeholder) : property.placeholder,
+    onChange: (e) => setDraft(e.target.value),
+    onBlur: commit,
+    onKeyDown: keyDown,
+    'aria-invalid': invalid || undefined,
+  };
+  return (
+    <div ref={ref} className="mb:space-y-1.5">
+      <FieldLabel id={id}>{t(property.label)}</FieldLabel>
+      {property.type === 'textarea' ? (
+        <Textarea rows={3} {...shared} />
+      ) : addon ? (
+        <div className="mb:flex mb:gap-2">
+          <Input {...shared} className="mb:min-w-0 mb:flex-1" />
+          {addon}
+        </div>
+      ) : (
+        <Input {...shared} />
+      )}
+      <FieldError>{invalid ? (kind === 'image' ? t('An https:// address is required') : t('Address not allowed')) : error}</FieldError>
+    </div>
+  );
+}
+
+/** Image: https address, or a file uploaded to the application storage. */
+function ImageField({ id, property, value, onCommit, services }) {
+  const t = useT();
+  const inputRef = useRef(/** @type {HTMLInputElement|null} */ (null));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(/** @type {string|null} */ (null));
+  const upload = services?.uploadImage;
+
+  const pick = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !upload) return;
+    const refused = imageUploadError(file, { t });
+    setError(refused);
+    if (refused) return;
+    setBusy(true);
+    try {
+      const { path } = await upload(file);
+      onCommit(path);
+    } catch (err) {
+      setError(err?.message || t('Upload failed'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addon = upload ? (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/gif"
+        className="mb:sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        data-testid={`${id}-file`}
+        onChange={pick}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+      >
+        {busy ? <Loader2 className="mb:animate-spin" /> : <Upload />}
+        {t('Upload')}
+      </Button>
+    </>
+  ) : null;
+
+  return <TextField id={id} property={property} value={value} onCommit={onCommit} addon={addon} error={error} />;
+}
+
+/** Number in pixels, clamped. Empty = MJML default value. */
+const asNumber = (v) => {
+  const n = Number.parseFloat(String(v || ''));
+  return Number.isFinite(n) ? String(n) : '';
+};
+
+function SizeField({ id, property, value, onCommit }) {
+  const t = useT();
+  const [draft, setDraft, ref] = useDraft(value, asNumber);
+
+  const commit = (raw = draft) => {
+    if (String(raw).trim() === '') {
+      if (value) onCommit(null);
+      return;
+    }
+    let n = Number.parseFloat(String(raw));
+    if (!Number.isFinite(n)) return;
+    if (property.min !== undefined) n = Math.max(property.min, n);
+    if (property.max !== undefined) n = Math.min(property.max, n);
+    setDraft(String(n));
+    const next = `${n}${property.unit || 'px'}`;
+    if (next !== value) onCommit(next);
+  };
+
+  return (
+    <div ref={ref} className="mb:space-y-1.5">
+      <FieldLabel id={id}>{t(property.label)}</FieldLabel>
+      <div className="mb:relative">
+        <Input
+          id={id}
+          type="number"
+          inputMode="numeric"
+          min={property.min}
+          max={property.max}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => commit()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') setDraft(asNumber(value));
+          }}
+          className="mb:pr-9 mb:tabular-nums"
+        />
+        <span className="mb:pointer-events-none mb:absolute mb:right-3 mb:top-1/2 mb:-translate-y-1/2 mb:text-[12px] mb:text-foreground-muted">
+          {property.unit || 'px'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** Color: swatch + hex code, committed after a short pause. */
+function ColorField({ id, property, value, onCommit }) {
+  const t = useT();
+  const [draft, setDraft, ref] = useDraft(value, asText);
+  const timer = useRef(null);
+  const latest = useRef({ value, onCommit });
+  latest.current = { value, onCommit };
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const change = (next) => {
+    setDraft(next);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      const color = emailColor(next);
+      if (!String(next || '').trim()) {
+        if (latest.current.value) latest.current.onCommit(null);
+      } else if (color && color !== latest.current.value) {
+        latest.current.onCommit(color);
+      }
+    }, COLOR_DEBOUNCE_MS);
+  };
+
+  return (
+    <div ref={ref} className="mb:space-y-1.5">
+      <FieldLabel id={id}>{t(property.label)}</FieldLabel>
+      <ColorPicker id={id} value={draft} onChange={change} />
+    </div>
+  );
+}
+
+/** Radix does not accept an empty option ("default value"): use a sentinel. */
+const DEFAULT_OPTION = '__default__';
+
+function SelectField({ id, property, value, onCommit }) {
+  const t = useT();
+  const current = value || DEFAULT_OPTION;
+  return (
+    <div className="mb:space-y-1.5">
+      <FieldLabel id={id}>{t(property.label)}</FieldLabel>
+      <Select
+        value={current}
+        onValueChange={(next) => {
+          const v = next === DEFAULT_OPTION ? '' : next;
+          if (v !== (value || '')) onCommit(v || null);
+        }}
+      >
+        <SelectTrigger id={id} className="mb:w-full">
+          <SelectValue placeholder={t('Default')} />
+        </SelectTrigger>
+        <SelectContent>
+          {!(property.options || []).some((o) => !o.value) && (
+            <SelectItem value={DEFAULT_OPTION}>{t('Default')}</SelectItem>
+          )}
+          {(property.options || []).map((o) => (
+            <SelectItem key={o.value || DEFAULT_OPTION} value={o.value || DEFAULT_OPTION}>
+              {t(o.label)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+const ALIGN_ICONS = { left: AlignLeft, center: AlignCenter, right: AlignRight, justify: AlignJustify };
+
+/** Alignment: toggle group (solid `bg-primary` on the active one). */
+function AlignField({ id, property, value, onCommit }) {
+  const t = useT();
+  return (
+    <div className="mb:space-y-1.5">
+      <FieldLabel id={id}>{t(property.label)}</FieldLabel>
+      <div
+        id={id}
+        role="radiogroup"
+        aria-label={t(property.label)}
+        className="mb:flex mb:w-fit mb:items-center mb:gap-0.5 mb:rounded-lg2 mb:border mb:border-border-strong mb:bg-surface-75 mb:p-0.5"
+      >
+        {(property.options || []).map((option) => {
+          const Icon = ALIGN_ICONS[option.value] || AlignLeft;
+          const active = value === option.value;
+          return (
+            <TooltipWrap key={option.value} label={t(option.label)}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={active}
+                aria-label={t(option.label)}
+                onClick={() => !active && onCommit(option.value)}
+                className={cn(
+                  'mb:inline-flex mb:h-7 mb:w-7 mb:items-center mb:justify-center mb:rounded-lg2 mb:transition-colors',
+                  active
+                    ? 'mb:bg-primary mb:text-primary-foreground'
+                    : 'mb:text-foreground-lighter mb:hover:bg-surface-200 mb:hover:text-foreground'
+                )}
+              >
+                <Icon className="mb:h-3.5 mb:w-3.5" />
+              </button>
+            </TooltipWrap>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+const SIDE_LABELS = [
+  ['top', 'Top'],
+  ['right', 'Right'],
+  ['bottom', 'Bottom'],
+  ['left', 'Left'],
+];
+
+/** Spacing: four sides in pixels, rewritten in their shortest form. */
+const asSides = (v) => parseSpacing(v || '').map((s) => String(Number.parseFloat(s) || 0));
+
+function SpacingField({ id, property, value, onCommit }) {
+  const t = useT();
+  const [draft, setDraft, ref] = useDraft(value, asSides);
+
+  const commit = (sides = draft) => {
+    const next = formatSpacing(sides.map((s) => `${Math.max(0, Math.min(200, Number.parseFloat(s) || 0))}px`));
+    if (next !== (value || '')) onCommit(next);
+  };
+
+  return (
+    <fieldset ref={ref} className="mb:space-y-1.5">
+      <legend className="mb-1.5 mb:text-[12px] mb:text-foreground-lighter">{t(property.label)}</legend>
+      <div className="mb:grid mb:grid-cols-4 mb:gap-1.5">
+        {SIDE_LABELS.map(([side, label], i) => (
+          <div key={side} className="mb:space-y-1">
+            <Input
+              id={`${id}-${side}`}
+              type="number"
+              min={0}
+              max={200}
+              aria-label={t('{label} — {side}', { label: t(property.label), side: t(label) })}
+              title={t(label)}
+              value={draft[i]}
+              onChange={(e) => setDraft((d) => d.map((v, j) => (j === i ? e.target.value : v)))}
+              onBlur={() => commit()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commit();
+              }}
+              className="mb:px-2 mb:text-center mb:tabular-nums"
+            />
+            <span className="mb:block mb:text-center mb:text-[10.5px] mb:text-foreground-muted">{t(label)}</span>
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+const FIELDS = {
+  text: TextField,
+  textarea: TextField,
+  url: TextField,
+  image: ImageField,
+  size: SizeField,
+  color: ColorField,
+  select: SelectField,
+  align: AlignField,
+  spacing: SpacingField,
+};
+
+/**
+ * Field of a property. The caller's `key` (element + property) remounts it on
+ * every selection change: a draft never carries over from one element to another.
+ */
+export function PropertyField({ property, value, onCommit, idPrefix = 'eb', services = null }) {
+  const Field = FIELDS[property.type] || TextField;
+  const id = `${idPrefix}-${property.key}`;
+  return <Field id={id} property={property} value={value} onCommit={onCommit} services={services} />;
+}
