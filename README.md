@@ -1,5 +1,9 @@
 # Best Email Builder
 
+[![CI](https://github.com/SergeMiro/best-email-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/SergeMiro/best-email-builder/actions/workflows/ci.yml)
+[![Demo](https://img.shields.io/badge/demo-live-5b4fe0)](https://sergemiro.github.io/best-email-builder/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A drag-and-drop **email builder for React** that produces emails which actually
 render in Outlook, Gmail, Apple Mail and on mobile.
 

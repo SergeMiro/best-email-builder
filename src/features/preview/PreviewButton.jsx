@@ -60,7 +60,7 @@ export function QualityList({ quality = [], warnings = [] }) {
 }
 
 /** Sandboxed preview frame, desktop or mobile width. */
-export function EmailPreview({ html, loading = false, error = null, device = 'desktop', onDeviceChange, onRefresh }) {
+export function EmailPreview({ html, loading = false, error = null, device = 'desktop', onDeviceChange, onRefresh, hint = true }) {
   const { t } = useUi();
   const isMobile = device === 'mobile';
   // `srcDoc`, not a blob URL: nothing to revoke when the HTML changes.
@@ -120,9 +120,11 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
         )}
       </div>
 
-      <p className="eb:mt-2 eb:shrink-0 eb:text-[11px] eb:leading-relaxed eb:text-foreground-lighter">
-        {t('Indicative preview — check it with “Send test”.')}
-      </p>
+      {hint && (
+        <p className="eb:mt-2 eb:shrink-0 eb:text-[11px] eb:leading-relaxed eb:text-foreground-lighter">
+          {t('Indicative preview — check it with “Send test”.')}
+        </p>
+      )}
     </div>
   );
 }
@@ -188,6 +190,8 @@ export default function PreviewButton({ context }) {
               device={device}
               onDeviceChange={setDevice}
               onRefresh={refresh}
+              // The reminder points to "Send test": only when it exists.
+              hint={typeof storage.sendTest === 'function'}
             />
             <aside className="eb:min-h-0 eb:space-y-5 eb:overflow-y-auto" aria-busy={state.loading}>
               <section className="eb:space-y-2">
