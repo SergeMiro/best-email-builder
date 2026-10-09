@@ -1,0 +1,348 @@
+// @ts-check
+/**
+ * STORAGE on the browser side — the interface only knows this contract.
+ *
+ *   load(id)                    → template (document, mjml, revision…)
+ *   create(payload)             → { template, warnings }
+ *   duplicate(id)               → { template, warnings }
+ *   save(id, payload)           → { template, warnings, version }
+ *   listVersions(id)            → versions, newest first
+ *   getVersion(id, versionId)   → version, project included
+ *   uploadImage(file)           → { path }: RELATIVE path of the uploaded image
+ *   render(input)               → { html, warnings, quality }   (optional: preview)
+ *   sendTest(input)             → { sent, failed, invalid, results } (optional: test send)
+ *   listVariables()             → custom variables            (optional: user-defined
+ *   saveVariable(variable)      → saved variable               variables, shared by
+ *   deleteVariable(key)         → void                         every template)
+ *
+ * Two implementations: HTTP (talks to `createEmailBuilderHandler` from
+ * `mailblocks/server`, or to any backend with the same routes) and memory
+ * (stories, tests, demos). The interface cannot tell them apart.
+ *
+ * The document ALWAYS travels serialized then re-read (`readDocument`): a
+ * project that would not survive JSON shows up in the memory implementation
+ * already, not in production.
+ */
+
+import { readDocument } from '../core/document.js';
+import { DEFAULT_ASSETS_PATH } from '../renderer/links.js';
+import { IMAGE_TYPES, imageUploadError } from '../validation/images.js';
+import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables/catalog.js';
+
+/**
+ * @typedef {import('../core/document.js').EmailDocument} EmailDocument
+ * @typedef {import('../features/variables/catalog.js').EmailVariable} EmailVariable
+ *
+ * @typedef {{
+ *   id: number|string,
+ *   name: string,
+ *   description?: string|null,
+ *   subject?: string|null,
+ *   preheader?: string|null,
+ *   revision?: string|null,
+ *   document?: EmailDocument,
+ *   mjml?: string,
+ *   html?: string,
+ *   createdAt?: string,
+ *   updatedAt?: string|null,
+ * }} StoredTemplate
+ *
+ * @typedef {{
+ *   name?: string,
+ *   description?: string|null,
+ *   subject?: string|null,
+ *   preheader?: string|null,
+ *   document: EmailDocument,
+ *   mjml: string,
+ *   revision?: string|null,
+ *   createVersion?: boolean,
+ * }} SavePayload
+ *
+ * @typedef {{
+ *   id: number|string,
+ *   versionNumber: number,
+ *   name?: string,
+ *   subject?: string|null,
+ *   createdBy?: string|null,
+ *   createdAt?: string,
+ * }} TemplateVersion
+ *
+ * @typedef {{mjml: string, subject?: string|null, preheader?: string|null}} RenderInput
+ * @typedef {{html: string, warnings: {message: string}[], quality: {code: string, level: string, message: string}[]}} RenderResult
+ * @typedef {{email: string, ok: boolean, error: string|null}} TestResult
+ * @typedef {{sent: number, failed: number, invalid: string[], results: TestResult[]}} SendTestResult
+ *
+ * @typedef {{
+ *   load: (id: number|string) => Promise<StoredTemplate>,
+ *   create: (payload: SavePayload & {name: string}) => Promise<{template: StoredTemplate, warnings: object[]}>,
+ *   duplicate: (id: number|string) => Promise<{template: StoredTemplate, warnings: object[]}>,
+ *   save: (id: number|string, payload: SavePayload) => Promise<{template: StoredTemplate, warnings: object[], version: {id: number|string, versionNumber: number}|null}>,
+ *   listVersions: (id: number|string) => Promise<TemplateVersion[]>,
+ *   getVersion: (id: number|string, versionId: number|string) => Promise<TemplateVersion & {document: EmailDocument, mjml: string}>,
+ *   uploadImage: (file: Blob & {name?: string}) => Promise<{path: string}>,
+ *   render?: (input: RenderInput) => Promise<RenderResult>,
+ *   sendTest?: (input: RenderInput & {emails: string[]}) => Promise<SendTestResult>,
+ *   listVariables?: () => Promise<EmailVariable[]>,
+ *   saveVariable?: (variable: Partial<EmailVariable>, options?: {create?: boolean}) => Promise<EmailVariable>,
+ *   deleteVariable?: (key: string) => Promise<void>,
+ * }} TemplateStorage
+ */
+
+export class StorageError extends Error {
+  /** @param {string} message @param {number} status @param {string} [code] */
+  constructor(message, status, code) {
+    super(message);
+    this.name = 'StorageError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/** @param {{type?: string, size?: number}} file */
+function assertUploadable(file) {
+  const error = imageUploadError(file);
+  if (error) throw new StorageError(error, 415, 'UNSUPPORTED_IMAGE');
+}
+
+/** Re-reads the document of a received template (JSON → validated envelope). */
+function withDocument(template) {
+  if (!template || !template.document) return template;
+  return { ...template, document: readDocument(template.document) };
+}
+
+/**
+ * Client for the routes of `createEmailBuilderHandler` (`mailblocks/server`).
+ *
+ * @param {{
+ *   baseUrl?: string,
+ *   headers?: Record<string, string> | (() => Record<string, string>),
+ *   fetch?: typeof fetch,
+ * }} [options]
+ * @returns {TemplateStorage}
+ */
+export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}, fetch: fetchImpl } = {}) {
+  const root = baseUrl.replace(/\/+$/, '');
+  const doFetch = fetchImpl || ((input, init) => fetch(input, init));
+  const extraHeaders = () => (typeof headers === 'function' ? headers() : headers);
+
+  /** @param {Response} res */
+  async function unwrap(res) {
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.error) {
+      throw new StorageError(json.error || `Request failed (HTTP ${res.status})`, res.status, json.code);
+    }
+    return json.data;
+  }
+
+  /** @param {string} path @param {RequestInit} [init] */
+  async function call(path, init) {
+    const res = await doFetch(`${root}${path}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...extraHeaders(), ...(init?.headers || {}) },
+    });
+    return unwrap(res);
+  }
+
+  /** @param {SavePayload} payload */
+  function body(payload) {
+    return JSON.stringify({ ...payload, document: readDocument(payload.document) });
+  }
+
+  return {
+    load: async (id) => withDocument(await call(`/templates/${encodeURIComponent(id)}`)),
+    create: async (payload) => call('/templates', { method: 'POST', body: body(payload) }),
+    duplicate: async (id) => call('/templates', { method: 'POST', body: JSON.stringify({ duplicateOf: id }) }),
+    save: async (id, payload) => call(`/templates/${encodeURIComponent(id)}`, { method: 'PUT', body: body(payload) }),
+    listVersions: async (id) => call(`/templates/${encodeURIComponent(id)}/versions`),
+    getVersion: async (id, versionId) =>
+      withDocument(await call(`/templates/${encodeURIComponent(id)}/versions/${encodeURIComponent(versionId)}`)),
+    render: async (input) => call('/render', { method: 'POST', body: JSON.stringify(input) }),
+    sendTest: async (input) => call('/test', { method: 'POST', body: JSON.stringify(input) }),
+    listVariables: async () => call('/variables'),
+    saveVariable: async (variable, { create = false } = {}) =>
+      create
+        ? call('/variables', { method: 'POST', body: JSON.stringify(variable) })
+        : call(`/variables/${encodeURIComponent(String(variable.key))}`, { method: 'PUT', body: JSON.stringify(variable) }),
+    deleteVariable: async (key) => {
+      await call(`/variables/${encodeURIComponent(key)}`, { method: 'DELETE' });
+    },
+    async uploadImage(file) {
+      assertUploadable(file);
+      const form = new FormData();
+      form.append('file', file, file.name || 'image');
+      // No Content-Type: the browser sets the multipart boundary itself.
+      const res = await doFetch(`${root}/assets`, { method: 'POST', body: form, headers: extraHeaders() });
+      const data = await unwrap(res);
+      return { path: data.path };
+    },
+  };
+}
+
+/**
+ * In-memory storage, same contract. Documents are kept SERIALIZED.
+ * `render` and `sendTest` cannot run in a browser (MJML compiles on the
+ * server): pass implementations to enable the preview and test buttons.
+ *
+ * @param {{
+ *   render?: TemplateStorage['render'],
+ *   sendTest?: TemplateStorage['sendTest'],
+ *   assetsPath?: string,
+ *   systemVariables?: EmailVariable[],
+ * }} [options]  `systemVariables`: keys a custom variable may not take
+ * @returns {TemplateStorage & {dump: () => object}}
+ */
+export function createMemoryStorage({ render, sendTest, assetsPath = DEFAULT_ASSETS_PATH, systemVariables = DEFAULT_VARIABLES } = {}) {
+  /** @type {Map<string, any>} */
+  const rows = new Map();
+  /** @type {Map<string, any[]>} */
+  const versions = new Map();
+  /** @type {Map<string, Blob>} */
+  const images = new Map();
+  /** @type {Map<string, EmailVariable>} */
+  const customVariables = new Map();
+  let nextId = 1;
+  let tick = Date.parse('2026-01-01T00:00:00.000Z');
+  const now = () => new Date((tick += 1000)).toISOString();
+
+  /** @param {any} row */
+  function toTemplate(row) {
+    return {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      subject: row.subject,
+      preheader: row.preheader,
+      revision: row.revision,
+      document: readDocument(row.documentJson),
+      mjml: row.mjml,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  /** @param {any} row */
+  function snapshot(row) {
+    const list = versions.get(String(row.id)) || [];
+    const entry = {
+      id: list.length + 1,
+      versionNumber: list.length + 1,
+      name: row.name,
+      subject: row.subject,
+      createdBy: null,
+      createdAt: row.revision,
+      documentJson: row.documentJson,
+      mjml: row.mjml,
+    };
+    versions.set(String(row.id), [...list, entry]);
+    return { id: entry.id, versionNumber: entry.versionNumber };
+  }
+
+  /** @param {number|string} id */
+  function rowOf(id) {
+    const row = rows.get(String(id));
+    if (!row) throw new StorageError('Template not found', 404, 'NOT_FOUND');
+    return row;
+  }
+
+  /** @type {TemplateStorage & {dump: () => object}} */
+  const storage = {
+    async load(id) {
+      return toTemplate(rowOf(id));
+    },
+    async create(payload) {
+      if (!payload.name?.trim()) throw new StorageError('Name required', 400, 'NAME_REQUIRED');
+      const at = now();
+      const row = {
+        id: nextId++,
+        name: payload.name.trim(),
+        description: payload.description ?? null,
+        subject: payload.subject ?? null,
+        preheader: payload.preheader ?? null,
+        documentJson: JSON.stringify(readDocument(payload.document)),
+        mjml: payload.mjml,
+        createdAt: at,
+        updatedAt: null,
+        revision: at,
+      };
+      rows.set(String(row.id), row);
+      snapshot(row);
+      return { template: toTemplate(row), warnings: [] };
+    },
+    async duplicate(id) {
+      const source = rowOf(id);
+      return storage.create({
+        name: `${source.name} (copy)`,
+        description: source.description,
+        subject: source.subject,
+        preheader: source.preheader,
+        document: readDocument(source.documentJson),
+        mjml: source.mjml,
+      });
+    },
+    async save(id, payload) {
+      const row = rowOf(id);
+      if (payload.revision && payload.revision !== row.revision) {
+        throw new StorageError('Template changed in the meantime — reload it before saving', 409, 'CONFLICT');
+      }
+      const at = now();
+      Object.assign(row, {
+        ...(payload.name !== undefined ? { name: payload.name } : {}),
+        ...(payload.description !== undefined ? { description: payload.description } : {}),
+        ...(payload.subject !== undefined ? { subject: payload.subject } : {}),
+        ...(payload.preheader !== undefined ? { preheader: payload.preheader } : {}),
+        documentJson: JSON.stringify(readDocument(payload.document)),
+        mjml: payload.mjml,
+        updatedAt: at,
+        revision: at,
+      });
+      const version = payload.createVersion ? snapshot(row) : null;
+      const { document: _omit, ...template } = toTemplate(row);
+      return { template, warnings: [], version };
+    },
+    async listVersions(id) {
+      rowOf(id);
+      return [...(versions.get(String(id)) || [])].reverse().map(({ documentJson: _d, mjml: _m, ...v }) => v);
+    },
+    async getVersion(id, versionId) {
+      const entry = (versions.get(String(id)) || []).find((v) => String(v.id) === String(versionId));
+      if (!entry) throw new StorageError('Version not found', 404, 'NOT_FOUND');
+      const { documentJson, ...version } = entry;
+      return { ...version, document: readDocument(documentJson) };
+    },
+    async uploadImage(file) {
+      assertUploadable(file);
+      // Same key as the server: 32 hex characters of the hash + extension.
+      const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+      const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+      const path = `${assetsPath}${hex.slice(0, 32)}.${IMAGE_TYPES[file.type]}`;
+      images.set(path, file);
+      return { path };
+    },
+    async listVariables() {
+      return [...customVariables.values()].map((v) => ({ ...v }));
+    },
+    async saveVariable(input, { create = false } = {}) {
+      const existing = [...systemVariables, ...customVariables.values()];
+      if (!create && !customVariables.has(String(input?.key))) {
+        throw new StorageError('Variable not found', 404, 'NOT_FOUND');
+      }
+      const base = create ? {} : customVariables.get(String(input.key));
+      const { variable, errors } = validateCustomVariable({ ...base, ...input }, { existing, editing: create ? null : input.key });
+      if (errors) throw new StorageError(Object.values(errors)[0], 400, 'INVALID_VARIABLE');
+      customVariables.set(variable.key, variable);
+      return { ...variable };
+    },
+    async deleteVariable(key) {
+      if (!customVariables.delete(String(key))) throw new StorageError('Variable not found', 404, 'NOT_FOUND');
+    },
+    ...(render ? { render } : {}),
+    ...(sendTest ? { sendTest } : {}),
+    dump: () => ({
+      rows: [...rows.values()],
+      versions: Object.fromEntries(versions),
+      images: [...images.keys()],
+      variables: [...customVariables.values()],
+    }),
+  };
+  return storage;
+}

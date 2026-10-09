@@ -1,0 +1,100 @@
+/**
+ * BLOCKS — every block of the registry is complete, accepted by the server
+ * validator and compiles without MJML warning; attribute helpers keep the
+ * canvas and the sent email identical.
+ */
+
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { emailBlocks } from '../../src/blocks/index.js';
+import { validateMjml } from '../../src/validation/mjmlValidator.js';
+import { compileMjml } from '../../src/server/compileMjml.js';
+import { parseSpacing, formatSpacing, toAttributes, toValues, cleanAttributeValue } from '../../src/core/mjmlAttributes.js';
+import { STARTER_MJML, createStarterMjml } from '../../src/features/templates/starter.js';
+
+const PROPERTY_TYPES = new Set(['text', 'textarea', 'color', 'size', 'select', 'align', 'url', 'image', 'spacing']);
+const KINDS = new Set(['content', 'layout', 'structure']);
+const doc = (inner) => `<mjml><mj-body>${inner}</mj-body></mjml>`;
+
+test('attributes: longhand paddings, safe values', () => {
+  assert.deepEqual(parseSpacing('10px'), ['10px', '10px', '10px', '10px']);
+  assert.deepEqual(parseSpacing('10px 25px'), ['10px', '25px', '10px', '25px']);
+  assert.deepEqual(parseSpacing('1px 2px 3px'), ['1px', '2px', '3px', '2px']);
+  assert.equal(formatSpacing(['10px', '25px', '10px', '25px']), '10px 25px');
+  assert.equal(formatSpacing(['4px', '4px', '4px', '4px']), '4px');
+  const attrs = toAttributes({ padding: '12px 18px', color: '#123456', href: '' });
+  assert.equal(attrs['padding-top'], '12px');
+  assert.equal(attrs['padding-right'], '18px');
+  assert.equal(attrs['padding-bottom'], '12px');
+  assert.equal(attrs['padding-left'], '18px');
+  assert.equal(attrs.padding, null, 'shorthand removed');
+  assert.equal(attrs.href, null, 'empty value → attribute removed');
+  assert.equal(attrs.color, '#123456');
+  const cleared = toAttributes({ padding: '' });
+  assert.equal(cleared['padding-top'], null);
+  assert.equal(cleared.padding, null);
+  assert.equal(toAttributes({ 'inner-padding': '12px 30px' })['inner-padding'], '12px 30px');
+  assert.equal(cleanAttributeValue('https://x.com/?a="b"<c>\n'), 'https://x.com/?a=bc');
+  const values = toValues(
+    { 'padding-top': '10px', 'padding-right': '25px', 'padding-bottom': '10px', 'padding-left': '25px', color: '#fff' },
+    [{ key: 'padding' }, { key: 'color' }, { key: 'align' }]
+  );
+  assert.deepEqual(values, { padding: '10px 25px', color: '#fff', align: '' });
+  assert.equal(
+    toValues({ padding: '8px 4px', 'padding-top': '20px' }, [{ key: 'padding' }]).padding,
+    '20px 4px 8px',
+    'longhand wins over shorthand (like MJML)'
+  );
+});
+
+test('registry: unique ids, structures present', () => {
+  const all = emailBlocks.list();
+  assert.ok(all.length > 0);
+  assert.equal(new Set(all.map((b) => b.id)).size, all.length);
+  for (const id of ['body', 'section', 'column']) assert.equal(emailBlocks.get(id)?.kind, 'structure', id);
+});
+
+for (const block of emailBlocks.list()) {
+  test(`block "${block.id}"`, () => {
+    assert.ok(KINDS.has(block.kind) && /^mj-/.test(block.tagName) && block.label && block.icon, 'complete identity');
+    const keys = block.properties.map((p) => p.key);
+    assert.equal(new Set(keys).size, keys.length, 'unique properties');
+    for (const property of block.properties) {
+      assert.ok(PROPERTY_TYPES.has(property.type), `${property.key}: known type`);
+      assert.ok(property.label && property.group, `${property.key}: label and group`);
+      if (['select', 'align'].includes(property.type)) assert.ok((property.options || []).length > 1, `${property.key}: options`);
+    }
+    if (block.kind === 'structure') {
+      assert.ok(!block.mjml, 'a structure cannot be inserted');
+      return;
+    }
+    assert.ok(typeof block.mjml === 'string' && block.mjml.length > 0);
+    assert.ok(block.mjml.startsWith(block.kind === 'layout' ? '<mj-section' : `<${block.tagName}`));
+    if (block.kind === 'content') {
+      assert.ok(block.sectionMjml?.startsWith('<mj-section') && block.sectionMjml.includes(block.mjml), 'section wrapper');
+    }
+    const wrapped = block.kind === 'layout' ? block.mjml : block.sectionMjml;
+    const { ok, issues } = validateMjml(doc(wrapped));
+    assert.ok(ok, issues.map((i) => i.message).join('; '));
+    const { html, warnings } = compileMjml(doc(wrapped));
+    assert.ok(html.includes('<!doctype html>'));
+    assert.deepEqual(warnings, []);
+    if (['mj-text', 'mj-button'].includes(block.tagName)) {
+      for (const attr of ['font-family=', 'font-size=', 'color=']) assert.ok(block.mjml.includes(attr), `explicit ${attr}`);
+      assert.ok(!html.includes('Ubuntu'), "MJML's default font does not appear");
+    }
+  });
+}
+
+test('starter template', () => {
+  const { ok, issues } = validateMjml(STARTER_MJML);
+  assert.ok(ok, issues.map((i) => i.message).join('; '));
+  const { html, warnings } = compileMjml(STARTER_MJML);
+  assert.deepEqual(warnings, []);
+  assert.ok(html.includes('{{ unsubscribe }}'), 'unsubscribe link');
+  assert.ok(!/\spadding="/.test(STARTER_MJML), 'no shorthand padding (canvas = email)');
+  const withSender = createStarterMjml({ sender: { name: 'ACME', address: '1 Main Street', logoUrl: 'https://example.com/logo.png' } });
+  assert.ok(validateMjml(withSender).ok);
+  assert.ok(withSender.includes('1 Main Street'), 'sender address (CAN-SPAM, GDPR)');
+  assert.ok(withSender.includes('<mj-image src="https://example.com/logo.png"'));
+});
