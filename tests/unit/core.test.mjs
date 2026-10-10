@@ -17,7 +17,8 @@ import { createRegistry } from '../../src/core/registry.js';
 import { createEmitter } from '../../src/core/events.js';
 import { createEmailEditor } from '../../src/core/EmailEditor.js';
 import { createDocument, readDocument, serializeDocument, EmailDocumentError } from '../../src/core/document.js';
-import { EMAIL_DOCUMENT_SCHEMA_VERSION } from '../../src/core/constants.js';
+import { readFileSync } from 'node:fs';
+import { EMAIL_BUILDER_VERSION, EMAIL_DOCUMENT_SCHEMA_VERSION } from '../../src/core/constants.js';
 
 /** Fake adapter: records calls, returns predictable values. */
 function fakeAdapter({ delay = 0 } = {}) {
@@ -215,4 +216,9 @@ test('document envelope', () => {
     () => readDocument(null),
     (error) => error instanceof EmailDocumentError && error.status === 422
   );
+});
+
+test('the builder version written into every template is the published package version', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+  assert.equal(EMAIL_BUILDER_VERSION, pkg.version);
 });

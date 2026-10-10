@@ -1,5 +1,7 @@
 # Best Email Builder
 
+[![npm version](https://img.shields.io/npm/v/best-email-builder?color=cb3837&logo=npm)](https://www.npmjs.com/package/best-email-builder)
+[![npm downloads](https://img.shields.io/npm/dm/best-email-builder?color=cb3837)](https://www.npmjs.com/package/best-email-builder)
 [![CI](https://github.com/SergeMiro/best-email-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/SergeMiro/best-email-builder/actions/workflows/ci.yml)
 [![Demo](https://img.shields.io/badge/demo-live-5b4fe0)](https://sergemiro.github.io/best-email-builder/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -8,7 +10,25 @@ A drag-and-drop **email builder for React** that produces emails which actually
 render in Outlook, Gmail, Apple Mail and on mobile.
 
 **[Live demo](https://sergemiro.github.io/best-email-builder/)** — runs entirely in your
-browser (templates are kept in `localStorage`).
+browser (templates are kept in `localStorage`). ·
+**[npm](https://www.npmjs.com/package/best-email-builder)** — `npm install best-email-builder`
+
+## Built for the whole developer community
+
+Every product that talks to its users ends up needing an email editor, and the
+choice is usually between a paid SaaS widget you cannot style or own, and a
+canvas you have to wire to MJML, storage, validation and sending yourself.
+Best Email Builder is the second option done once, properly, and given away:
+
+- **Free and MIT-licensed** — use it in commercial products, fork it, ship it.
+- **No account, no API key, no vendor.** It is a React component and a server
+  handler you run in your own app, against your own database.
+- **Readable from end to end.** The engine is hidden behind one adapter, every
+  block and feature is a registry entry, and the rules a template must obey
+  live in one validation folder — so it is easy to change what you need.
+- **Open to contributions.** Bug reports, new blocks, new locales, storage
+  recipes for your database and fixes for a mail client that renders something
+  oddly are all welcome — see [Contributing](#contributing).
 
 - **MJML under the hood** — every block compiles to battle-tested, table-based
   email HTML. You never write a `<table>` by hand.
@@ -283,6 +303,28 @@ npm run build          # dist/ (ESM + styles.css + types)
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the internals and
 [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
+## Contributing
+
+This project is built for and with the developer community. Good first
+contributions:
+
+- **a new block** — one folder in `src/blocks/` and one line in its registry;
+- **a new interface language** — a dictionary like `src/i18n/fr.js`
+  (`npm run check:i18n` lists the missing keys);
+- **a storage recipe** — the memory repositories are the reference shape for
+  PostgreSQL, MongoDB, S3 and friends;
+- **a rendering report** — a template that looks wrong in a given mail client,
+  with a screenshot and the client version.
+
+Open an [issue](https://github.com/SergeMiro/best-email-builder/issues) to
+discuss a larger change first. Security problems go through the private
+channel described in [SECURITY.md](SECURITY.md).
+
 ## License
 
 [MIT](LICENSE). GrapesJS and grapesjs-mjml are BSD-3-Clause, MJML is MIT.
+
+## Author
+
+Built and maintained by [Sergiy Miro](https://smiro.dev/projects) — more
+open-source work and case studies on [smiro.dev](https://smiro.dev/projects).
