@@ -30,12 +30,12 @@ import { compileMjml } from './compileMjml.js';
  * @param {{mjml: string, subject?: string|null, preheader?: string|null}} input
  * @param {{t?: Translate, lang?: string, variables?: EmailVariable[]}} [options]
  */
-export function compileTemplate(
+export async function compileTemplate(
   { mjml, subject = null, preheader = null },
   { t = identity, lang = 'en', variables = DEFAULT_VARIABLES } = {}
 ) {
   assertValidMjml(mjml, { t });
-  const { html, warnings } = compileMjml(prepareMjml(mjml, { title: subject, preheader, lang }));
+  const { html, warnings } = await compileMjml(prepareMjml(mjml, { title: subject, preheader, lang }));
   const quality = qualityReport({ mjml, html, subject }, { t });
   const unknown = unknownVariables([mjml, subject || '', preheader || ''].join('\n'), variables);
   if (unknown.length) {
@@ -82,7 +82,7 @@ export function personalize(compiled, { values, unsubscribeUrl, baseUrl = null, 
  *   lang?: string,
  * }} input
  */
-export function renderEmail({
+export async function renderEmail({
   mjml,
   subject = null,
   preheader = null,
@@ -93,7 +93,7 @@ export function renderEmail({
   t = identity,
   lang = 'en',
 }) {
-  const { compiled, warnings, quality } = compileTemplate({ mjml, subject, preheader }, { t, lang, variables });
+  const { compiled, warnings, quality } = await compileTemplate({ mjml, subject, preheader }, { t, lang, variables });
   return { html: personalize(compiled, { values, unsubscribeUrl, baseUrl, variables }), warnings, quality };
 }
 

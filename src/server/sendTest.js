@@ -68,7 +68,7 @@ export async function sendTestEmail({
   }
 
   // Compiled once (validation included), then personalized per address.
-  const { compiled, warnings, quality } = compileTemplate({ mjml, subject, preheader }, { t, lang, variables });
+  const { compiled, warnings, quality } = await compileTemplate({ mjml, subject, preheader }, { t, lang, variables });
 
   const results = [];
   for (const email of valid) {

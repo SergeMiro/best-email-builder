@@ -151,7 +151,7 @@ test('MJML validation: allow-list', () => {
   assert.ok(validateMjml(big).issues.some((i) => i.code === 'TOO_LARGE'));
 });
 
-test('project validation', () => {
+test('project validation', async () => {
   assert.ok(validateProject(doc).ok);
   // A text link is, for the engine, a component of TYPE "link" (tag <a>).
   const withLink = createDocument({
@@ -179,7 +179,7 @@ test('project validation', () => {
   assert.equal(validateProject('{').ok, false);
 });
 
-test('preparation and server compilation', () => {
+test('preparation and server compilation', async () => {
   const prepared = prepareMjml(MJML, { title: 'Subject <test>', preheader: 'Preview & more' });
   assert.ok(
     prepared.startsWith(
@@ -192,7 +192,7 @@ test('preparation and server compilation', () => {
   assert.ok(prepareMjml('<mjml lang="fr"><mj-body></mj-body></mjml>').startsWith('<mjml lang="fr">'));
   assert.ok(prepareMjml('<mjml><mj-body></mj-body></mjml>', { lang: 'de' }).startsWith('<mjml lang="de">'));
 
-  const { html, warnings } = compileMjml(prepared);
+  const { html, warnings } = await compileMjml(prepared);
   assert.match(html, /^<!doctype html>/i);
   assert.ok(html.includes('<title>Subject &lt;test&gt;</title>'));
   assert.ok(html.includes('Preview &amp; more'));
@@ -201,7 +201,7 @@ test('preparation and server compilation', () => {
   assert.ok(!/fonts\.googleapis/.test(html), 'no Google font added');
   assert.deepEqual(warnings, []);
 
-  const soft = compileMjml(
+  const soft = await compileMjml(
     '<mjml><mj-body><mj-section><mj-column><mj-text font-size="abc">x</mj-text></mj-column></mj-section></mj-body></mjml>'
   );
   assert.ok(soft.html.length > 0 && soft.warnings.length > 0, 'an invalid value is a warning, not a failure');

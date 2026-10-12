@@ -214,7 +214,7 @@ test('assets: upload, dedupe, public GET with safe headers, refusals', async () 
   assert.equal((await call('POST', '/api/email-builder/assets', svg, { raw: true })).status, 415);
 });
 
-test('inspectAsset reads the type from the bytes', () => {
+test('inspectAsset reads the type from the bytes', async () => {
   const { type, key } = inspectAsset(PNG);
   assert.equal(type, 'image/png');
   assert.match(key, /^[a-f0-9]{32}\.png$/);
@@ -222,7 +222,7 @@ test('inspectAsset reads the type from the bytes', () => {
   assert.throws(() => inspectAsset(new Uint8Array(3 * 1024 * 1024).fill(0x89)), (e) => e.status === 413);
 });
 
-test('links: uploaded images become absolute at send time only', () => {
+test('links: uploaded images become absolute at send time only', async () => {
   const path = '/email-assets/0123456789abcdef0123456789abcdef.png';
   const html = `<img src="${path}"><td style="background:url(${path})"><a href="https://x.com${path}">`;
   assert.equal(
@@ -240,10 +240,10 @@ test('links: uploaded images become absolute at send time only', () => {
     '<a href="https://u/?a=1&amp;b=2">x</a><a href="#">y</a>');
 });
 
-test('renderEmail: values escaped, missing value empty, never a raw tag', () => {
-  const { html } = renderEmail({ mjml: MJML, values: { 'contact.firstname': '<b>Jo</b>' } });
+test('renderEmail: values escaped, missing value empty, never a raw tag', async () => {
+  const { html } = await renderEmail({ mjml: MJML, values: { 'contact.firstname': '<b>Jo</b>' } });
   assert.ok(html.includes('Hello &lt;b&gt;Jo&lt;/b&gt;'));
-  assert.ok(!renderEmail({ mjml: MJML }).html.includes('{{'));
+  assert.ok(!(await renderEmail({ mjml: MJML })).html.includes('{{'));
 });
 
 test('starter template: sender, translated texts', () => {

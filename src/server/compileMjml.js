@@ -21,11 +21,12 @@ import mjml2html from 'mjml';
 
 /**
  * @param {string} mjml
- * @returns {{html: string, warnings: CompileWarning[]}}
+ * @returns {Promise<{html: string, warnings: CompileWarning[]}>}
  */
-export function compileMjml(mjml) {
+export async function compileMjml(mjml) {
   const compile = /** @type {any} */ (mjml2html);
-  const result = compile(String(mjml || ''), {
+  // MJML 5 compiles asynchronously; `await` also accepts a synchronous result.
+  const result = await compile(String(mjml || ''), {
     validationLevel: 'soft',
     keepComments: false,
     beautify: false,

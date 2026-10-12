@@ -4,6 +4,16 @@ All notable changes are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **Breaking:** `compileMjml`, `compileTemplate` and `renderEmail` from
+  `best-email-builder/server` now return a Promise — MJML 5 compiles
+  asynchronously. Add `await` where you call them.
+- MJML 5.4 on the server (htmlnano/cssnano instead of html-minifier, stricter
+  includes), GrapesJS 0.23.6 in the canvas, lucide-react 1.x, radix-ui 1.8.
+  Templates saved with GrapesJS 0.22 open unchanged.
+
 ## [0.1.1] — 2026-10-12
 
 ### Fixed

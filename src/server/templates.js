@@ -153,10 +153,10 @@ export function createTemplateService({ repository, t = identity, lang = 'en', m
    * Validates the project and the MJML, compiles the final HTML.
    * @param {{document: any, mjml: any, subject?: string|null, preheader?: string|null}} input
    */
-  function compile({ document, mjml, subject = null, preheader = null }) {
+  async function compile({ document, mjml, subject = null, preheader = null }) {
     const { json } = assertValidProject(document, { t });
     assertValidMjml(mjml, { t });
-    const { html, warnings } = compileMjml(prepareMjml(mjml, { title: subject, preheader, lang }));
+    const { html, warnings } = await compileMjml(prepareMjml(mjml, { title: subject, preheader, lang }));
     if (!html) throw new HttpError(422, t('Empty MJML compilation'), 'EMPTY_COMPILATION');
     return { projectJson: json, mjml: String(mjml), html, warnings };
   }
@@ -190,7 +190,7 @@ export function createTemplateService({ repository, t = identity, lang = 'en', m
       if (!name) throw new HttpError(400, t('Name required'), 'NAME_REQUIRED');
       const subject = text(body?.subject, LIMITS.subject);
       const preheader = text(body?.preheader, LIMITS.preheader);
-      const { projectJson, mjml, html, warnings } = compile({ document: body?.document, mjml: body?.mjml, subject, preheader });
+      const { projectJson, mjml, html, warnings } = await compile({ document: body?.document, mjml: body?.mjml, subject, preheader });
       const by = actorName(user);
 
       const row = await inTransaction(async () => {
@@ -230,7 +230,7 @@ export function createTemplateService({ repository, t = identity, lang = 'en', m
       const preheader = body?.preheader !== undefined ? text(body.preheader, LIMITS.preheader) : current.preheader;
       const description =
         body?.description !== undefined ? text(body.description, LIMITS.description) : current.description;
-      const { projectJson, mjml, html, warnings } = compile({ document: body?.document, mjml: body?.mjml, subject, preheader });
+      const { projectJson, mjml, html, warnings } = await compile({ document: body?.document, mjml: body?.mjml, subject, preheader });
       const by = actorName(user);
 
       const result = await inTransaction(async () => {

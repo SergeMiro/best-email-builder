@@ -35,7 +35,7 @@ import { unwrapModule } from './unwrapModule.js';
 
 export const ENGINE_NAME = 'grapesjs-mjml';
 /** Engine version, copied into every document (exact package.json version). */
-export const ENGINE_VERSION = '0.22.16';
+export const ENGINE_VERSION = '0.23.6';
 
 /** Prefix of blocks registered with the engine — for drag and drop only. */
 const BLOCK_PREFIX = 'eb-';

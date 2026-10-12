@@ -36,7 +36,7 @@ never refers to one by name.
 What gets stored is the engine **project**, wrapped in a versioned envelope:
 
 ```json
-{ "schemaVersion": 1, "engine": "grapesjs", "engineVersion": "0.22.16",
+{ "schemaVersion": 1, "engine": "grapesjs", "engineVersion": "0.23.6",
   "builderVersion": "0.1.1", "project": { … } }
 ```
 

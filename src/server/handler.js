@@ -222,7 +222,7 @@ export function createEmailBuilderHandler(options) {
       await userFor(request, 'read');
       const body = await readJson(request);
       const catalog = await customVariables.catalog();
-      const { compiled, warnings, quality } = compileTemplate(
+      const { compiled, warnings, quality } = await compileTemplate(
         { mjml: body?.mjml, subject: body?.subject, preheader: body?.preheader },
         { t, lang, variables: catalog }
       );

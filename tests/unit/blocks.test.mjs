@@ -55,7 +55,7 @@ test('registry: unique ids, structures present', () => {
 });
 
 for (const block of emailBlocks.list()) {
-  test(`block "${block.id}"`, () => {
+  test(`block "${block.id}"`, async () => {
     assert.ok(KINDS.has(block.kind) && /^mj-/.test(block.tagName) && block.label && block.icon, 'complete identity');
     const keys = block.properties.map((p) => p.key);
     assert.equal(new Set(keys).size, keys.length, 'unique properties');
@@ -76,7 +76,7 @@ for (const block of emailBlocks.list()) {
     const wrapped = block.kind === 'layout' ? block.mjml : block.sectionMjml;
     const { ok, issues } = validateMjml(doc(wrapped));
     assert.ok(ok, issues.map((i) => i.message).join('; '));
-    const { html, warnings } = compileMjml(doc(wrapped));
+    const { html, warnings } = await compileMjml(doc(wrapped));
     assert.ok(html.includes('<!doctype html>'));
     assert.deepEqual(warnings, []);
     if (['mj-text', 'mj-button'].includes(block.tagName)) {
@@ -86,10 +86,10 @@ for (const block of emailBlocks.list()) {
   });
 }
 
-test('starter template', () => {
+test('starter template', async () => {
   const { ok, issues } = validateMjml(STARTER_MJML);
   assert.ok(ok, issues.map((i) => i.message).join('; '));
-  const { html, warnings } = compileMjml(STARTER_MJML);
+  const { html, warnings } = await compileMjml(STARTER_MJML);
   assert.deepEqual(warnings, []);
   assert.ok(html.includes('{{ unsubscribe }}'), 'unsubscribe link');
   assert.ok(!/\spadding="/.test(STARTER_MJML), 'no shorthand padding (canvas = email)');
