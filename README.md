@@ -95,7 +95,10 @@ export default function TemplateEditor({ templateId, onClose }) {
 }
 ```
 
-The builder fills its parent: give the parent a height. It is a client-only
+The builder fills its parent: give the parent a height. It adapts to the
+width it is given — not the window's: three columns from 1180 px, properties
+in a drawer below that, and on a phone the canvas alone with *Add a block* /
+*Edit* drawers. It is a client-only
 component (the canvas needs the DOM). With Next.js, load it with
 `dynamic(() => import(...), { ssr: false })` or render it from a
 `'use client'` component.

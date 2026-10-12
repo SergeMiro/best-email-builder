@@ -21,6 +21,11 @@ All notable changes are documented here. The format follows
   it was modified) and fills the subject and preview text when empty.
   `templates` prop to offer your own, `[]` to hide it; `TEMPLATE_GALLERY` and
   `buildGallery` are exported.
+- **Phones and tablets**: the layout follows the builder's own width. Below
+  1180 px the properties open in a drawer and the toolbar takes two rows (its
+  actions scroll sideways); below 760 px the blocks move to a drawer too and a
+  bar under the canvas offers *Add a block* and *Edit: <element>*. Adding a
+  block opens its properties; saving without a name opens the settings.
 - `editor.exportHtml(mjml)` compiles the given MJML with the canvas compiler
   (display only — what is stored and sent is still compiled by the server).
 

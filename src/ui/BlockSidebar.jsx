@@ -85,7 +85,7 @@ function BlockTile({ block, disabled, onAdd, onDragStart, onDragEnd }) {
   );
 }
 
-export default function BlockSidebar({ editor, disabled = false }) {
+export default function BlockSidebar({ editor, disabled = false, onAdded }) {
   const t = useT();
   const blocks = editor.listBlocks();
 
@@ -103,7 +103,9 @@ export default function BlockSidebar({ editor, disabled = false }) {
                   key={block.id}
                   block={block}
                   disabled={disabled}
-                  onAdd={(id) => editor.addBlock(id)}
+                  onAdd={(id) => {
+                    if (editor.addBlock(id)) onAdded?.(id);
+                  }}
                   onDragStart={(id, event) => editor.startBlockDrag(id, event)}
                   onDragEnd={(cancel) => editor.endBlockDrag(cancel)}
                 />

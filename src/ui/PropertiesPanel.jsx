@@ -20,7 +20,8 @@ import VariableInsertButton from '../features/variables/VariableInsertButton.jsx
  *     the page (background, width), i.e. the email body.
  *
  * `actions`: the element action bar (move, duplicate, delete), provided by
- * the host screen.
+ * the host screen. `onDismiss`: the panel is shown in a drawer — its header
+ * button closes the drawer rather than deselecting.
  */
 
 const GROUP_ORDER = Object.values(GROUPS);
@@ -59,7 +60,7 @@ function PropertyGroups({ editor, element, block, idPrefix, services = null }) {
 
 const LABEL_PROPERTY = { key: 'content', label: 'Label', type: 'text', group: GROUPS.content };
 
-function PanelHeader({ title, onClose }) {
+function PanelHeader({ title, onClose, closeLabel = 'Deselect' }) {
   const t = useT();
   return (
     <header className="eb:sticky eb:top-0 eb:z-10 eb:flex eb:h-11 eb:shrink-0 eb:items-center eb:gap-2 eb:border-b eb:border-border eb:bg-background eb:px-4">
@@ -67,7 +68,7 @@ function PanelHeader({ title, onClose }) {
         <FadedText>{title}</FadedText>
       </h3>
       {onClose && (
-        <Button variant="ghost" size="icon-sm-compact" onClick={onClose} aria-label={t('Deselect')}>
+        <Button variant="ghost" size="icon-sm-compact" onClick={onClose} aria-label={t(closeLabel)}>
           <X />
         </Button>
       )}
@@ -76,7 +77,7 @@ function PanelHeader({ title, onClose }) {
 }
 
 /** Nothing selected: the template and the page. */
-function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, variables = null }) {
+function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, variables = null, onDismiss = null }) {
   const t = useT();
   const subjectRef = useRef(null);
   const preheaderRef = useRef(null);
@@ -88,7 +89,7 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
 
   return (
     <>
-      <PanelHeader title={t('Email')} />
+      <PanelHeader title={t('Email')} onClose={onDismiss} closeLabel="Close" />
       <div className="eb:space-y-5 eb:p-4">
         <section className="eb:space-y-3">
           <SectionLabel>{t('Template')}</SectionLabel>
@@ -166,6 +167,7 @@ export default function PropertiesPanel({
   showErrors = false,
   services = null,
   variables = null,
+  onDismiss = null,
 }) {
   const t = useT();
   const block = selection?.blockId ? editor.getBlock(selection.blockId) : null;
@@ -180,10 +182,15 @@ export default function PropertiesPanel({
           changes={changes}
           showErrors={showErrors}
           variables={variables}
+          onDismiss={onDismiss}
         />
       ) : (
         <>
-          <PanelHeader title={t(selection.label)} onClose={() => editor.select(null)} />
+          <PanelHeader
+            title={t(selection.label)}
+            onClose={onDismiss || (() => editor.select(null))}
+            closeLabel={onDismiss ? 'Close' : 'Deselect'}
+          />
           {actions}
           <div className="eb:space-y-5 eb:p-4">
             {selection.content !== null && selection.content !== undefined && (

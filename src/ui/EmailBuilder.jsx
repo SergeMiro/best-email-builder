@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Loader2, Save } from 'lucide-react';
+import { AlertTriangle, Loader2, Plus, Save, SlidersHorizontal } from 'lucide-react';
 import { createDefaultEmailEditor } from '../index.js';
 import { emailBuilderFeatures, isFeatureEnabled } from '../features/index.js';
 import { DEFAULT_VARIABLES, defineVariables, mergeVariables } from '../features/variables/catalog.js';
@@ -16,7 +16,9 @@ import BlockSidebar from './BlockSidebar.jsx';
 import ElementActions from './ElementActions.jsx';
 import PropertiesPanel from './PropertiesPanel.jsx';
 import Toolbar from './Toolbar.jsx';
+import Drawer from './Drawer.jsx';
 import { useEmailEditorState } from './useEmailEditorState.js';
+import { useLayoutWidth } from './useLayoutWidth.js';
 
 /**
  * THE EMAIL BUILDER — the screen.
@@ -39,6 +41,12 @@ import { useEmailEditorState } from './useEmailEditorState.js';
  * A new template can start from given MJML instead of the starter template —
  * e.g. a template imported from another format. It counts as modified until
  * the first save.
+ *
+ * ── NARROW SCREENS (`useLayoutWidth`) ───────────────────────────────────────
+ * Measured on the builder's own box. Below the wide layout the properties
+ * move to a drawer and the toolbar takes two rows; on a phone the blocks go to
+ * a drawer too, and a bar under the canvas opens them ("Add a block", "Edit").
+ * Adding a block from the sidebar opens its properties.
  *
  * ── AUTOSAVE (feature `autosave`) ───────────────────────────────────────────
  * Template already saved: server save without a version. New template: local
@@ -113,6 +121,18 @@ function Builder({
   const [autosaveBlocked, setAutosaveBlocked] = useState(null);
   const [engineError, setEngineError] = useState(null);
   const [attempt, setAttempt] = useState(0);
+
+  const rootRef = useRef(null);
+  const layout = useLayoutWidth(rootRef);
+  const compact = layout !== 'wide';
+  const blocksInDrawer = layout === 'narrow';
+  /** Open drawer of the compact layouts: 'blocks', 'properties' or null. */
+  const [drawer, setDrawer] = useState(null);
+  const closeDrawer = useCallback(() => setDrawer(null), []);
+  useEffect(() => {
+    if (!compact) setDrawer(null);
+    else if (!blocksInDrawer) setDrawer((d) => (d === 'blocks' ? null : d));
+  }, [compact, blocksInDrawer]);
 
   const ready = state.status === 'ready';
   const metaDirty = !sameMeta(meta, savedMeta);
@@ -215,7 +235,7 @@ function Builder({
   /* ── Save ────────────────────────────────────────────────────────────── */
   const savingRef = useRef(false);
   const latest = useRef({});
-  latest.current = { template, meta, onSaved };
+  latest.current = { template, meta, onSaved, compact };
 
   const save = useCallback(
     async ({ auto = false } = {}) => {
@@ -225,6 +245,7 @@ function Builder({
         if (!auto) {
           setShowErrors(true);
           editor.select(null);
+          setDrawer((d) => (d === null && latest.current.compact ? 'properties' : d));
           notify('error', t('Give the template a name before saving it.'));
         }
         return false;
@@ -398,11 +419,28 @@ function Builder({
     (f) => f.enabled !== false && Boolean(f.toolbar) && (f.isAvailable ? f.isAvailable(featureContext) : true)
   );
 
+  const properties = (
+    <PropertiesPanel
+      onDismiss={compact ? closeDrawer : null}
+      editor={editor}
+      selection={ready ? state.selection : null}
+      meta={meta}
+      onMetaChange={setMeta}
+      changes={state.changes}
+      showErrors={showErrors}
+      actions={<ElementActions editor={editor} selection={state.selection} />}
+      services={services}
+      variables={variables}
+    />
+  );
+
   return (
     <div
+      ref={rootRef}
       className={cn('eb-root eb:relative eb:flex eb:h-full eb:min-h-0 eb:flex-col eb:bg-background eb:text-foreground', className)}
       data-testid="email-builder"
       data-status={state.status}
+      data-layout={layout}
       data-template-id={template.id || ''}
     >
       <Toolbar
@@ -416,21 +454,27 @@ function Builder({
         device={state.device}
         onDeviceChange={(device) => editor.setDevice(device)}
         onBack={onClose ? back : undefined}
-        actions={
-          <>
-            {toolbarFeatures.map((feature) => {
-              const Action = feature.toolbar;
-              return <Action key={feature.id} context={featureContext} />;
-            })}
-            <Button size="sm-compact" onClick={() => save()} disabled={!ready || saving !== null}>
-              {saving === 'manual' ? <Loader2 className="eb:animate-spin" /> : <Save />}
-              {t('Save')}
-            </Button>
-          </>
+        compact={compact}
+        actions={toolbarFeatures.map((feature) => {
+          const Action = feature.toolbar;
+          return <Action key={feature.id} context={featureContext} />;
+        })}
+        primary={
+          <Button size="sm-compact" onClick={() => save()} disabled={!ready || saving !== null}>
+            {saving === 'manual' ? <Loader2 className="eb:animate-spin" /> : <Save />}
+            {t('Save')}
+          </Button>
         }
       />
-      <div className="eb:grid eb:min-h-0 eb:flex-1 eb:grid-cols-[224px_minmax(0,1fr)_296px] eb:grid-rows-1">
-        <BlockSidebar editor={editor} disabled={!ready} />
+      <div
+        className={cn(
+          'eb:relative eb:grid eb:min-h-0 eb:flex-1 eb:grid-rows-1',
+          layout === 'wide' && 'eb:grid-cols-[224px_minmax(0,1fr)_296px]',
+          layout === 'medium' && 'eb:grid-cols-[200px_minmax(0,1fr)]',
+          layout === 'narrow' && 'eb:grid-cols-1'
+        )}
+      >
+        {!blocksInDrawer && <BlockSidebar editor={editor} disabled={!ready} onAdded={compact ? () => setDrawer('properties') : undefined} />}
         <div className="eb:relative eb:min-w-0 eb:bg-surface-75" aria-busy={!ready}>
           {boot.status === 'error' || engineError ? (
             <div role="alert" className="eb:flex eb:h-full eb:flex-col eb:items-center eb:justify-center eb:gap-2 eb:p-6 eb:text-center">
@@ -472,18 +516,47 @@ function Builder({
             </>
           )}
         </div>
-        <PropertiesPanel
-          editor={editor}
-          selection={ready ? state.selection : null}
-          meta={meta}
-          onMetaChange={setMeta}
-          changes={state.changes}
-          showErrors={showErrors}
-          actions={<ElementActions editor={editor} selection={state.selection} />}
-          services={services}
-          variables={variables}
-        />
+        {!compact && properties}
+        {blocksInDrawer && (
+          <Drawer open={drawer === 'blocks'} side="left" title={t('Add a block')} onClose={closeDrawer} testId="eb-blocks-drawer">
+            <BlockSidebar editor={editor} disabled={!ready} onAdded={() => setDrawer('properties')} />
+          </Drawer>
+        )}
+        {compact && (
+          <Drawer
+            open={drawer === 'properties'}
+            side="right"
+            title={t('Properties')}
+            onClose={closeDrawer}
+            testId="eb-properties-drawer"
+            header={false}
+          >
+            {properties}
+          </Drawer>
+        )}
       </div>
+      {compact && (
+        <div className="eb:flex eb:shrink-0 eb:items-center eb:gap-2 eb:border-t eb:border-border eb:px-2 eb:py-2" data-testid="eb-compact-bar">
+          {blocksInDrawer && (
+            <Button variant="outline" size="sm-compact" disabled={!ready} onClick={() => setDrawer('blocks')}>
+              <Plus />
+              {t('Add a block')}
+            </Button>
+          )}
+          <Button
+            variant={state.selection ? 'default' : 'outline'}
+            size="sm-compact"
+            className="eb:ml-auto eb:min-w-0"
+            disabled={!ready}
+            onClick={() => setDrawer('properties')}
+          >
+            <SlidersHorizontal />
+            <span className="eb:truncate">
+              {ready && state.selection ? t('Edit: {element}', { element: t(state.selection.label) }) : t('Email settings')}
+            </span>
+          </Button>
+        </div>
+      )}
       <NoticeArea />
     </div>
   );
