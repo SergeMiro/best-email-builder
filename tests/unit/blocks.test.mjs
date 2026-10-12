@@ -99,3 +99,25 @@ test('starter template', async () => {
   assert.ok(withSender.includes('1 Main Street'), 'sender address (CAN-SPAM, GDPR)');
   assert.ok(withSender.includes('<mj-image src="https://example.com/logo.png"'));
 });
+
+test('template gallery: every template validates, compiles cleanly and carries the legal footer', async () => {
+  const { TEMPLATE_GALLERY, buildGallery, withThumbnailImages } = await import('../../src/features/templates/gallery.js');
+  const gallery = buildGallery({ sender: { name: 'ACME', address: '1 Main Street' } });
+  assert.equal(new Set(gallery.map((g) => g.id)).size, TEMPLATE_GALLERY.length, 'unique ids');
+  for (const entry of gallery) {
+    assert.ok(entry.name && entry.description, `${entry.id}: name and description`);
+    const { ok, issues } = validateMjml(entry.mjml);
+    assert.ok(ok, `${entry.id}: ${issues.map((i) => i.message).join('; ')}`);
+    const { warnings } = await compileMjml(entry.mjml);
+    assert.deepEqual(warnings, [], `${entry.id}: no MJML warning`);
+    assert.ok(!/\spadding="/.test(entry.mjml), `${entry.id}: no shorthand padding (canvas = email)`);
+    assert.ok(!/(<mj-[a-z-]+)[^>]*\s(padding-top)="[^"]*"[^>]*\s\2="/.test(entry.mjml), `${entry.id}: no duplicate attribute`);
+    if (entry.id !== 'blank') {
+      assert.ok(entry.mjml.includes('{{ unsubscribe }}') && entry.mjml.includes('1 Main Street'), `${entry.id}: legal footer`);
+    }
+    assert.ok(!entry.mjml.includes('data:image'), `${entry.id}: no inline image saved`);
+    if (entry.mjml.includes('<mj-image')) assert.ok(withThumbnailImages(entry.mjml).includes('data:image/svg+xml'), 'thumbnail frame');
+  }
+  const fr = buildGallery({ t: (key) => (key === 'Newsletter' ? 'Lettre' : key) });
+  assert.equal(fr.find((g) => g.id === 'newsletter').name, 'Lettre', 'names translated');
+});
