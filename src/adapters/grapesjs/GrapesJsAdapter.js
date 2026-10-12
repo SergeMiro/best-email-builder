@@ -573,8 +573,9 @@ export function createGrapesJsAdapter({ locale = 'en', loadEngine = defaultLoadE
         .trim();
     },
 
-    exportHtml() {
-      const result = requireEditor().runCommand('mjml-code-to-html', { mjml: adapter.exportMjml() }) || {};
+    exportHtml(mjml = null) {
+      const source = mjml ?? adapter.exportMjml();
+      const result = requireEditor().runCommand('mjml-code-to-html', { mjml: source }) || {};
       return {
         html: String(result.html || ''),
         errors: (result.errors || []).map((/** @type {any} */ e) => ({

@@ -65,6 +65,7 @@ export {
 } from './features/variables/catalog.js';
 export { applyVariables, applyVariablesToText, usedVariables, unknownVariables } from './features/variables/service.js';
 export { createStarterMjml, STARTER_MJML } from './features/templates/starter.js';
+export { TEMPLATE_GALLERY, buildGallery } from './features/templates/gallery.js';
 export { isAssetPath, absoluteAssetUrls, DEFAULT_ASSETS_PATH } from './renderer/links.js';
 
 /* ── Translations ────────────────────────────────────────────────────────── */

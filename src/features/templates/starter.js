@@ -23,7 +23,7 @@ import { DEFAULT_BUTTON_URL, FONT_STACK, PALETTE } from '../../blocks/shared.js'
  * }} StarterSender
  */
 
-function escapeXml(text) {
+export function escapeXml(text) {
   return String(text ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -31,8 +31,39 @@ function escapeXml(text) {
     .replace(/"/g, '&quot;');
 }
 
-const SIDE = 'padding-left="32px" padding-right="32px"';
-const TEXT = `font-family="${FONT_STACK}" color="${PALETTE.ink}"`;
+export const SIDE = 'padding-left="32px" padding-right="32px"';
+export const TEXT = `font-family="${FONT_STACK}" color="${PALETTE.ink}"`;
+
+/**
+ * Header row: the sender's logo, or its name in bold.
+ * @param {StarterSender} sender @param {import('../../i18n/index.js').Translate} t
+ */
+export function senderHeaderMjml(sender, t) {
+  const name = escapeXml(sender.name || t('Your company'));
+  return sender.logoUrl
+    ? `<mj-image src="${escapeXml(sender.logoUrl)}" alt="${name}" width="${Number(sender.logoWidth) || 140}px" align="left" ${SIDE}></mj-image>`
+    : `<mj-text ${TEXT} font-size="18px" line-height="24px" font-weight="bold" ${SIDE}>${name}</mj-text>`;
+}
+
+/**
+ * Footer section: sender name and postal address, unsubscribe link — the two
+ * mentions a bulk email must carry (CAN-SPAM, GDPR).
+ * @param {StarterSender} sender @param {import('../../i18n/index.js').Translate} t
+ */
+export function footerSectionMjml(sender, t) {
+  const name = escapeXml(sender.name || t('Your company'));
+  const footer = [name, sender.address ? escapeXml(sender.address) : ''].filter(Boolean).join(' · ');
+  return (
+    '<mj-section padding-top="20px" padding-bottom="28px">' +
+    '<mj-column>' +
+    `<mj-text font-family="${FONT_STACK}" font-size="12px" line-height="18px" color="#6d7484" align="center" ${SIDE}>` +
+    `${footer}<br />` +
+    `<a href="{{ unsubscribe }}" style="color:#6d7484;text-decoration:underline;">${escapeXml(t('Unsubscribe'))}</a>` +
+    '</mj-text>' +
+    '</mj-column>' +
+    '</mj-section>'
+  );
+}
 
 /**
  * @param {{
@@ -42,19 +73,13 @@ const TEXT = `font-family="${FONT_STACK}" color="${PALETTE.ink}"`;
  * }} [options]
  */
 export function createStarterMjml({ sender = {}, buttonUrl = DEFAULT_BUTTON_URL, t = identity } = {}) {
-  const name = escapeXml(sender.name || t('Your company'));
-  const footer = [name, sender.address ? escapeXml(sender.address) : ''].filter(Boolean).join(' · ');
-  const header = sender.logoUrl
-    ? `<mj-image src="${escapeXml(sender.logoUrl)}" alt="${name}" width="${Number(sender.logoWidth) || 140}px" align="left" ${SIDE}></mj-image>`
-    : `<mj-text ${TEXT} font-size="18px" line-height="24px" font-weight="bold" ${SIDE}>${name}</mj-text>`;
-
   return [
     '<mjml>',
     `<mj-body background-color="${PALETTE.canvas}" width="600px">`,
     // Header: logo or sender name.
     `<mj-section background-color="${PALETTE.surface}" padding-top="28px" padding-bottom="8px">`,
     '<mj-column>',
-    header,
+    senderHeaderMjml(sender, t),
     '</mj-column>',
     '</mj-section>',
     // Body: headline, text, button.
@@ -69,14 +94,7 @@ export function createStarterMjml({ sender = {}, buttonUrl = DEFAULT_BUTTON_URL,
     '</mj-column>',
     '</mj-section>',
     // Footer: sender and unsubscribe link.
-    '<mj-section padding-top="20px" padding-bottom="28px">',
-    '<mj-column>',
-    `<mj-text font-family="${FONT_STACK}" font-size="12px" line-height="18px" color="#6d7484" align="center" ${SIDE}>` +
-      `${footer}<br />` +
-      `<a href="{{ unsubscribe }}" style="color:#6d7484;text-decoration:underline;">${escapeXml(t('Unsubscribe'))}</a>` +
-      '</mj-text>',
-    '</mj-column>',
-    '</mj-section>',
+    footerSectionMjml(sender, t),
     '</mj-body>',
     '</mjml>',
   ].join('');

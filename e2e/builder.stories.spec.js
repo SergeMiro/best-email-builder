@@ -597,3 +597,58 @@ test.describe('Images, preview, test send', () => {
     await expect(dialog.getByRole('list', { name: 'Results' }).getByText('reviewer@example.com')).toBeVisible();
   });
 });
+
+test.describe('Template gallery', () => {
+  test('every template is shown rendered; picking one replaces the email and fills an empty subject', async ({ page }) => {
+    await openBuilder(page);
+    await page.getByRole('button', { name: 'Templates' }).click();
+    const gallery = page.getByTestId('eb-template-gallery');
+    await expect(gallery.getByRole('heading', { name: 'Start from a template' })).toBeVisible();
+    const cards = gallery.locator('[data-template-id]');
+    await expect(cards).toHaveCount(6);
+    // Thumbnails: compiled emails in sandboxed frames, never empty.
+    const frames = gallery.locator('iframe');
+    await expect(frames).toHaveCount(6);
+    for (const frame of await frames.all()) {
+      await expect(frame).toHaveAttribute('sandbox', '');
+      expect((await frame.getAttribute('srcdoc'))?.length).toBeGreaterThan(500);
+    }
+    await expect(gallery.locator('iframe').nth(2)).toHaveAttribute('srcdoc', /The news of the month/);
+
+    // Nothing modified yet: applied without a question.
+    await gallery.locator('[data-template-id="newsletter"]').click();
+    await expect(gallery).toBeHidden();
+    await expect(notice(page, '“Newsletter” template applied.')).toBeVisible();
+    const source = await mjml(page);
+    expect(source).toContain('Article 1');
+    expect(source).toContain('<mj-social');
+    expect(source).toContain('href="{{ unsubscribe }}"');
+    expect(source).not.toContain('data:image');
+    await expect(panel(page).getByRole('textbox', { name: 'Subject' })).toHaveValue('The news of the month');
+
+    // Modified: a confirmation first, and the subject typed by the user stays.
+    await panel(page).getByRole('textbox', { name: 'Subject' }).fill('My own subject');
+    await page.locator('[data-block-id="divider"]').click();
+    await page.getByRole('button', { name: 'Templates' }).click();
+    await page.getByTestId('eb-template-gallery').locator('[data-template-id="welcome"]').click();
+    const dialog = page.getByRole('alertdialog');
+    await expect(dialog).toContainText('Replace the current email?');
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    expect(await mjml(page)).toContain('Article 1');
+    await page.getByRole('button', { name: 'Templates' }).click();
+    await page.getByTestId('eb-template-gallery').locator('[data-template-id="welcome"]').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Replace' }).click();
+    expect(await mjml(page)).toContain('Get started');
+    await page.locator('body').click({ position: { x: 5, y: 5 } });
+    await expect(panel(page).getByRole('textbox', { name: 'Subject' })).toHaveValue('My own subject');
+  });
+
+  test('French gallery: names and email texts translated', async ({ page }) => {
+    await openBuilder(page, { lang: 'fr' });
+    await page.getByRole('button', { name: 'Modèles' }).click();
+    const gallery = page.getByTestId('eb-template-gallery');
+    await expect(gallery.getByText('Invitation', { exact: true })).toBeVisible();
+    await gallery.locator('[data-template-id="event"]').click();
+    expect(await mjml(page)).toContain('Je réserve ma place');
+  });
+});

@@ -41,6 +41,9 @@ Best Email Builder is the second option done once, properly, and given away:
   project (the source of truth) plus server-compiled HTML.
 - **Server-side rendering only.** The browser never sends HTML: the server
   validates the project and the MJML, compiles, and stores its own HTML.
+- **A gallery of ready-made emails** — newsletter, welcome, promotion, event
+  invitation… each one with the sender's footer and the unsubscribe link, so
+  nobody starts from a blank page or forgets the legal mentions.
 - **Production features**: undo/redo, desktop/mobile canvas, autosave and local
   drafts, versions, conflict detection between concurrent editors, image
   uploads, server preview with quality checks (missing alt text, missing
@@ -173,6 +176,7 @@ With an email provider that does its own merge, map the tags instead:
 | `variables` | `DEFAULT_VARIABLES` | Merge tags offered in the *Variables* menu. Pass the same list to the server. |
 | `sender` | — | `{ name, address, logoUrl, logoWidth }` used by the starter template footer. |
 | `starterMjml` | — | Replace the starter template entirely. |
+| `templates` | `TEMPLATE_GALLERY` | Ready-made emails offered by the *Templates* button (blank, simple, newsletter, welcome, promotion, event invitation). Pass your own `{ id, name, description, create({ sender, t }), meta?(t) }` entries, or `[]` to hide the gallery. |
 | `initialMjml`, `initialMeta` | — | Open a NEW template on given MJML and metadata (`{ name, subject, preheader, description }`) — e.g. a template converted from another format. Ignored with `templateId`. |
 | `testRecipients` | `[]` | Addresses pre-filled in the *Send test* dialog. |
 | `onClose` | — | Shows a *Back* button; called after confirming unsaved changes. |

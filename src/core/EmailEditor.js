@@ -155,7 +155,7 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *   loadProject: (project: object) => void,
  *   loadMjml: (mjml: string) => void,
  *   exportMjml: () => string,
- *   exportHtml: () => HtmlExport,
+ *   exportHtml: (mjml?: string|null) => HtmlExport,
  *   setDevice: (device: EmailDevice) => void,
  *   getDevice: () => EmailDevice,
  *   startBlockDrag: (block: EmailBlock, event: Event) => void,
@@ -215,7 +215,7 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *   loadDocument: (document: unknown) => void,
  *   loadMjml: (mjml: string) => void,
  *   exportMjml: () => string,
- *   exportHtml: () => HtmlExport,
+ *   exportHtml: (mjml?: string|null) => HtmlExport,
  *   setDevice: (device: EmailDevice) => void,
  *   getDevice: () => EmailDevice,
  *   startBlockDrag: (blockId: string, event: Event) => void,
@@ -466,9 +466,14 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
       return adapter.exportMjml();
     },
 
-    exportHtml() {
+    /**
+     * The email (or the given MJML) compiled by the CANVAS compiler — for
+     * display only (thumbnails, inspection). The HTML that is stored and sent
+     * is always compiled by the server.
+     */
+    exportHtml(mjml = null) {
       requireReady('exportHtml');
-      return adapter.exportHtml();
+      return adapter.exportHtml(mjml === null || mjml === undefined ? null : String(mjml));
     },
 
     setDevice(device) {

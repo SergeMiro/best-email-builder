@@ -15,6 +15,14 @@ All notable changes are documented here. The format follows
 - Sections take a background image, with its size and position; the color
   underneath stays for clients that block images.
 - Text: a *Weight* property (normal / bold).
+- **Template gallery**: a *Templates* button opens six ready-made emails
+  (blank, simple, newsletter, welcome, promotion, event invitation), shown as
+  rendered thumbnails. Picking one replaces the email (after confirmation if
+  it was modified) and fills the subject and preview text when empty.
+  `templates` prop to offer your own, `[]` to hide it; `TEMPLATE_GALLERY` and
+  `buildGallery` are exported.
+- `editor.exportHtml(mjml)` compiles the given MJML with the canvas compiler
+  (display only — what is stored and sent is still compiled by the server).
 
 ### Changed
 - **Breaking:** `compileMjml`, `compileTemplate` and `renderEmail` from

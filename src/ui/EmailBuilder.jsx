@@ -4,6 +4,7 @@ import { createDefaultEmailEditor } from '../index.js';
 import { emailBuilderFeatures, isFeatureEnabled } from '../features/index.js';
 import { DEFAULT_VARIABLES, defineVariables, mergeVariables } from '../features/variables/catalog.js';
 import { createStarterMjml } from '../features/templates/starter.js';
+import { TEMPLATE_GALLERY, buildGallery } from '../features/templates/gallery.js';
 import { createAutosaveScheduler } from '../features/autosave/scheduler.js';
 import { clearLocalDraft, readLocalDraft, saveLocalDraft } from '../features/autosave/localDraft.js';
 import { createHttpStorage } from '../storage/client.js';
@@ -64,6 +65,7 @@ function Builder({
   variables: variablesProp,
   sender,
   starterMjml,
+  templates: galleryProp,
   testRecipients,
   initialMjml,
   initialMeta,
@@ -92,6 +94,10 @@ function Builder({
     reloadVariables();
   }, [reloadVariables]);
   const starter = useMemo(() => starterMjml || createStarterMjml({ sender, t }), [starterMjml, sender, t]);
+  const templates = useMemo(
+    () => buildGallery({ templates: galleryProp ?? TEMPLATE_GALLERY, sender: sender || {}, t }),
+    [galleryProp, sender, t]
+  );
   const services = useMemo(() => ({ uploadImage: (file) => storage.uploadImage(file) }), [storage]);
   const state = useEmailEditorState(editor);
   const autosaveOn = isFeatureEnabled('autosave');
@@ -376,6 +382,8 @@ function Builder({
     storage,
     template,
     meta,
+    setMeta,
+    templates,
     ready,
     isDirty,
     markDirty,
@@ -492,6 +500,7 @@ function Builder({
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
  *   sender?: import('../features/templates/starter.js').StarterSender,
  *   starterMjml?: string,
+ *   templates?: import('../features/templates/gallery.js').GalleryTemplate[],
  *   testRecipients?: string[],
  *   initialMjml?: string,
  *   initialMeta?: {name?: string, subject?: string, preheader?: string, description?: string},
