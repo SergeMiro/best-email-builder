@@ -4,6 +4,14 @@ All notable changes are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] — 2026-10-12
+
+### Fixed
+- The builder did not start under webpack (Next.js): `grapesjs-mjml` arrived
+  wrapped twice by the bundler's CommonJS interop ("mjmlPlugin is not a
+  function"), and its French labels were lost the same way. Every interop
+  layer is now unwrapped, whatever the bundler.
+
 ## [0.1.0] — 2026-10-10
 
 First public release.

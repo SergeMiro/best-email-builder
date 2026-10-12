@@ -37,7 +37,7 @@ What gets stored is the engine **project**, wrapped in a versioned envelope:
 
 ```json
 { "schemaVersion": 1, "engine": "grapesjs", "engineVersion": "0.22.16",
-  "builderVersion": "0.1.0", "project": { … } }
+  "builderVersion": "0.1.1", "project": { … } }
 ```
 
 A document from another engine, a future schema or malformed is **refused**

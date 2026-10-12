@@ -24,6 +24,7 @@
  */
 
 import { buildEngineConfig, EMPTY_MJML, IMAGE_PLACEHOLDER } from './engineConfig.js';
+import { unwrapModule } from './unwrapModule.js';
 
 /**
  * @typedef {import('../../core/EmailEditor.js').EmailEditorAdapter} EmailEditorAdapter
@@ -71,13 +72,11 @@ async function defaultLoadEngine(locale) {
     import('grapesjs-mjml'),
     loadLocales ? loadLocales() : Promise.resolve(null),
   ]);
-  /** @param {any} mod */
-  const unwrap = (mod) => mod.default || mod;
   return {
-    grapesjs: unwrap(grapesjs),
-    mjmlPlugin: unwrap(mjml),
+    grapesjs: unwrapModule(grapesjs),
+    mjmlPlugin: unwrapModule(mjml),
     locales: localeModules
-      ? { engine: unwrap(localeModules[0]), mjml: unwrap(localeModules[1]) }
+      ? { engine: unwrapModule(localeModules[0]), mjml: unwrapModule(localeModules[1]) }
       : {},
   };
 }
