@@ -3,10 +3,16 @@ import { TooltipWrap } from './primitives/misc.jsx';
 import {
   Columns2,
   Columns3,
+  Columns4,
+  GalleryHorizontal,
+  Heading,
   Image as ImageIcon,
+  LayoutPanelLeft,
+  Menu,
   MoveVertical,
   RectangleHorizontal,
   SeparatorHorizontal,
+  Share2,
   Square,
   Type,
 } from 'lucide-react';
@@ -28,7 +34,13 @@ import { useT } from './context.jsx';
  */
 
 const ICONS = {
+  Heading,
   Type,
+  Share2,
+  Menu,
+  Columns4,
+  LayoutPanelLeft,
+  GalleryHorizontal,
   Image: ImageIcon,
   RectangleHorizontal,
   SeparatorHorizontal,

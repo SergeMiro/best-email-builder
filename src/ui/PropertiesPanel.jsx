@@ -15,7 +15,7 @@ import VariableInsertButton from '../features/variables/VariableInsertButton.jsx
  * Properties panel, right of the canvas.
  *
  *   an element is selected -> its properties, by group (those of its block in
- *     the registry); a button also gets its label here;
+ *     the registry); a button or a menu link also gets its label here;
  *   nothing is selected    -> the TEMPLATE (name, subject, preview text) and
  *     the page (background, width), i.e. the email body.
  *
@@ -186,7 +186,7 @@ export default function PropertiesPanel({
           <PanelHeader title={t(selection.label)} onClose={() => editor.select(null)} />
           {actions}
           <div className="eb:space-y-5 eb:p-4">
-            {selection.tagName === 'mj-button' && (
+            {selection.content !== null && selection.content !== undefined && (
               <section className="eb:space-y-3">
                 <SectionLabel>{t(GROUPS.content)}</SectionLabel>
                 <PropertyField

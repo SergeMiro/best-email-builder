@@ -14,23 +14,41 @@ import { imageBlock } from './image/index.js';
 import { buttonBlock } from './button/index.js';
 import { dividerBlock } from './divider/index.js';
 import { spacerBlock } from './spacer/index.js';
-import { oneColumnBlock, threeColumnsBlock, twoColumnsBlock } from './columns/index.js';
+import { headingBlock } from './heading/index.js';
+import { socialBlock, socialElementBlock } from './social/index.js';
+import { navbarBlock, navbarLinkBlock } from './navbar/index.js';
+import { heroBlock } from './hero/index.js';
+import {
+  fourColumnsBlock,
+  imageTextBlock,
+  oneColumnBlock,
+  threeColumnsBlock,
+  twoColumnsBlock,
+} from './columns/index.js';
 
 /** @typedef {import('../core/EmailEditor.js').EmailBlock} EmailBlock */
 
 /** @type {EmailBlock[]} */
 const BLOCKS = [
+  headingBlock,
   textBlock,
   imageBlock,
   buttonBlock,
   dividerBlock,
   spacerBlock,
+  socialBlock,
+  navbarBlock,
   oneColumnBlock,
   twoColumnsBlock,
   threeColumnsBlock,
+  fourColumnsBlock,
+  imageTextBlock,
+  heroBlock,
   bodyBlock,
   sectionBlock,
   columnBlock,
+  socialElementBlock,
+  navbarLinkBlock,
 ];
 
 export const emailBlocks = createRegistry('emailBlocks', BLOCKS);

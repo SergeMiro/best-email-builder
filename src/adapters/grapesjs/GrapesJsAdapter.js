@@ -44,7 +44,7 @@ const BLOCK_PREFIX = 'eb-';
 const LOCKED_TYPES = new Set(['mjml', 'mj-head', 'mj-body', 'wrapper']);
 
 /** Elements whose content is a plain label, edited in the panel. */
-const LABEL_TYPES = new Set(['mj-button']);
+const LABEL_TYPES = new Set(['mj-button', 'mj-navbar-link']);
 
 /** Elements whose content is edited in the canvas (rich text editor). */
 const RICH_TYPES = new Set(['mj-text', 'mj-button']);

@@ -32,6 +32,9 @@ Best Email Builder is the second option done once, properly, and given away:
 
 - **MJML under the hood** — every block compiles to battle-tested, table-based
   email HTML. You never write a `<table>` by hand.
+- **The blocks emails are made of**: heading, text, image, button, divider,
+  spacer, social links, menu, 1 to 4 columns, image + text, and a hero banner
+  with a background image — sections take a background image too.
 - **Your UI, your storage, your rendering.** The builder is a React component
   with its own interface; GrapesJS is only the internal canvas engine, hidden
   behind an adapter. Templates are stored by *your* backend, as a versioned JSON

@@ -6,6 +6,16 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Blocks: **Heading**, **Social links** (Facebook, Instagram, LinkedIn, X,
+  YouTube, GitHub — each icon selectable, duplicable, its network and link
+  editable), **Menu** (a row of links, each label edited in the panel),
+  **4 columns**, **Image + text** and **Hero banner** (a section with a
+  background image under a title, a sentence and a button).
+- Sections take a background image, with its size and position; the color
+  underneath stays for clients that block images.
+- Text: a *Weight* property (normal / bold).
+
 ### Changed
 - **Breaking:** `compileMjml`, `compileTemplate` and `renderEmail` from
   `best-email-builder/server` now return a Promise — MJML 5 compiles

@@ -8,7 +8,7 @@
  * screens).
  */
 
-import { FONT_STACK, PALETTE, inWhiteSection, prop } from '../shared.js';
+import { FONT_STACK, GROUPS, PALETTE, inWhiteSection, prop } from '../shared.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
@@ -43,6 +43,16 @@ export const textBlock = {
     prop.fontFamily(),
     prop.fontSize(10, 48),
     prop.lineHeight(),
+    {
+      key: 'font-weight',
+      label: 'Weight',
+      type: 'select',
+      group: GROUPS.typography,
+      options: [
+        { value: 'normal', label: 'Normal' },
+        { value: 'bold', label: 'Bold' },
+      ],
+    },
     prop.color('Text'),
     prop.background('container-background-color', 'Background'),
     { ...prop.align(), options: [...prop.align().options || [], { value: 'justify', label: 'Justify' }] },

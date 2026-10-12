@@ -10,7 +10,7 @@
  * (`blocks/structure`): background, padding, corner radius.
  */
 
-import { PALETTE } from '../shared.js';
+import { DEFAULT_BUTTON_URL, FONT_STACK, PALETTE } from '../shared.js';
 import { textMjml } from '../text/index.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
@@ -45,3 +45,34 @@ function layout(count, icon) {
 export const oneColumnBlock = layout(1, 'Square');
 export const twoColumnsBlock = layout(2, 'Columns2');
 export const threeColumnsBlock = layout(3, 'Columns3');
+export const fourColumnsBlock = layout(4, 'Columns4');
+
+/**
+ * Image on one side, title, text and button on the other - the usual
+ * "product" or "article" row. Stacked on mobile, image first.
+ */
+const IMAGE_TEXT_MJML =
+  `<mj-section background-color="${PALETTE.surface}">` +
+  '<mj-column vertical-align="middle"><mj-image align="center"></mj-image></mj-column>' +
+  '<mj-column vertical-align="middle">' +
+  `<mj-text font-family="${FONT_STACK}" font-size="20px" line-height="28px" font-weight="bold" ` +
+  `color="${PALETTE.navy}" align="left">Title</mj-text>` +
+  textMjml('A few words about it.') +
+  `<mj-button href="${DEFAULT_BUTTON_URL}" background-color="${PALETTE.navy}" color="${PALETTE.white}" ` +
+  `font-family="${FONT_STACK}" font-size="14px" font-weight="bold" border-radius="6px" ` +
+  'inner-padding="10px 22px" align="left">Learn more</mj-button>' +
+  '</mj-column>' +
+  '</mj-section>';
+
+/** @type {EmailBlock} */
+export const imageTextBlock = {
+  id: 'image-text',
+  label: 'Image + text',
+  description: 'Image beside a title, text and button',
+  icon: 'LayoutPanelLeft',
+  kind: 'layout',
+  tagName: 'mj-section',
+  order: 105,
+  mjml: IMAGE_TEXT_MJML,
+  properties: [],
+};

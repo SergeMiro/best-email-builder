@@ -45,6 +45,30 @@ export const sectionBlock = {
   order: 901,
   properties: [
     prop.background('background-color', 'Background'),
+    // A background image keeps the color under it: shown when images are blocked.
+    { key: 'background-url', label: 'Background image', type: 'image', group: GROUPS.colors },
+    {
+      key: 'background-size',
+      label: 'Image size',
+      type: 'select',
+      group: GROUPS.colors,
+      options: [
+        { value: 'cover', label: 'Fill the section' },
+        { value: 'contain', label: 'Whole image' },
+        { value: 'auto', label: 'Original size' },
+      ],
+    },
+    {
+      key: 'background-position',
+      label: 'Image position',
+      type: 'select',
+      group: GROUPS.colors,
+      options: [
+        { value: 'center center', label: 'Center' },
+        { value: 'center top', label: 'Top' },
+        { value: 'center bottom', label: 'Bottom' },
+      ],
+    },
     prop.padding('padding', 'Padding'),
     prop.radius(24),
   ],

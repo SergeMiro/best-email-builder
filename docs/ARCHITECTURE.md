@@ -19,7 +19,7 @@ Replacing the engine means writing another adapter.
 |---|---|
 | `core/` | `EmailEditor` contract, versioned document envelope (`document.js`), registries, events |
 | `adapters/grapesjs/` | the engine — the only place that knows it |
-| `blocks/` | one folder per block (text, image, button, divider, spacer, 1/2/3 columns, structure) + the `emailBlocks` registry |
+| `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
 | `features/` | one folder per feature + the `emailBuilderFeatures` registry (variables, autosave, versions, preview, test send) and the starter template |
 | `ui/` | the React interface (toolbar, blocks sidebar, canvas, properties) and its primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |

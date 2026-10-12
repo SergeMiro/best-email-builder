@@ -286,7 +286,7 @@ function expectedFragments(property, value) {
   return [`${property.key}="${value}"`];
 }
 
-const CONTENT_BLOCKS = ['text', 'image', 'button', 'divider', 'spacer'];
+const CONTENT_BLOCKS = ['text', 'image', 'button', 'divider', 'spacer', 'social'];
 
 test.describe('Blocks', () => {
   for (const blockId of CONTENT_BLOCKS) {
@@ -487,12 +487,19 @@ test.describe('Button', () => {
 });
 
 test.describe('Columns and structure', () => {
-  for (const count of [1, 2, 3]) {
-    test(`${count}-column layout: placed after the current section, stacked on mobile`, async ({ page }) => {
+  const LAYOUTS = [
+    { id: 'columns-1', count: 1 },
+    { id: 'columns-2', count: 2 },
+    { id: 'columns-3', count: 3 },
+    { id: 'columns-4', count: 4 },
+    { id: 'image-text', count: 2 },
+  ];
+  for (const { id: layoutId, count } of LAYOUTS) {
+    test(`layout "${layoutId}": placed after the current section, stacked on mobile`, async ({ page }) => {
       await openBench(page);
       const out = await withEditor(
         page,
-        async (editor, n) => {
+        async (editor, id) => {
           editor.loadMjml(
             '<mjml><mj-body><mj-section><mj-column><mj-text>A</mj-text></mj-column></mj-section>' +
               '<mj-section><mj-column><mj-text>Z</mj-text></mj-column></mj-section></mj-body></mjml>'
@@ -500,19 +507,22 @@ test.describe('Columns and structure', () => {
           const engine = window.__emailEngine();
           const firstText = engine.getWrapper().findType('mj-text')[0];
           editor.select(firstText.getId());
-          editor.addBlock(`columns-${n}`);
+          editor.addBlock(id);
           const selection = editor.getSelection();
           const sections = engine.getWrapper().findType('mj-section');
           const added = sections[1];
-          const tops = async () => {
+          const boxes = async () => {
             await new Promise((r) => setTimeout(r, 400));
             const frame = document.querySelector('.gjs-frame').contentDocument;
             const ids = added.components().map((c) => c.getId());
-            return ids.map((id) => Math.round(frame.getElementById(id)?.getBoundingClientRect().top ?? -1));
+            return ids.map((id) => {
+              const box = frame.getElementById(id)?.getBoundingClientRect();
+              return { top: Math.round(box?.top ?? -1), left: Math.round(box?.left ?? -1) };
+            });
           };
-          const desktop = await tops();
+          const desktop = await boxes();
           editor.setDevice('mobile');
-          const mobile = await tops();
+          const mobile = await boxes();
           const frameWidth = document.querySelector('.gjs-frame').getBoundingClientRect().width;
           editor.setDevice('desktop');
           return {
@@ -525,27 +535,47 @@ test.describe('Columns and structure', () => {
             errors: editor.exportHtml().errors,
           };
         },
-        count
+        layoutId
       );
       expect(out.selection.blockId).toBe('section');
       expect(out.columns).toBe(count);
       // Inserted BETWEEN the section of "A" and the one of "Z".
       expect(out.order[0]).toBe('A');
       expect(out.order[2]).toBe('Z');
+      expect(out.order).toHaveLength(3);
       expect(out.errors).toEqual([]);
       expect(Math.round(out.frameWidth)).toBe(375);
       if (count > 1) {
-        // Desktop: side by side; mobile: stacked.
-        expect(new Set(out.desktop).size).toBe(1);
-        expect(new Set(out.mobile).size).toBe(count);
+        // Desktop: side by side; mobile: stacked, one under the other.
+        expect(new Set(out.desktop.map((b) => b.left)).size).toBe(count);
+        expect(new Set(out.mobile.map((b) => b.top)).size).toBe(count);
+        expect(new Set(out.mobile.map((b) => b.left)).size).toBe(1);
       }
     });
   }
 
+  const PLAIN =
+    '<mjml><mj-body><mj-section><mj-column><mj-text>A</mj-text></mj-column></mj-section></mj-body></mjml>';
   const STRUCTURES = [
-    { id: 'section', type: 'mj-section' },
-    { id: 'column', type: 'mj-column' },
-    { id: 'body', type: 'mj-body' },
+    { id: 'section', type: 'mj-section', mjml: PLAIN },
+    { id: 'column', type: 'mj-column', mjml: PLAIN },
+    { id: 'body', type: 'mj-body', mjml: PLAIN },
+    {
+      id: 'social-element',
+      type: 'mj-social-element',
+      mjml:
+        '<mjml><mj-body><mj-section><mj-column><mj-social>' +
+        '<mj-social-element name="facebook-noshare" href="https://www.facebook.com/"></mj-social-element>' +
+        '</mj-social></mj-column></mj-section></mj-body></mjml>',
+    },
+    {
+      id: 'navbar-link',
+      type: 'mj-navbar-link',
+      mjml:
+        '<mjml><mj-body><mj-section><mj-column><mj-navbar>' +
+        '<mj-navbar-link href="https://example.com/a">A</mj-navbar-link>' +
+        '</mj-navbar></mj-column></mj-section></mj-body></mjml>',
+    },
   ];
   for (const structure of STRUCTURES) {
     test(`structure "${structure.id}": every property exports and compiles`, async ({ page }) => {
@@ -555,10 +585,8 @@ test.describe('Columns and structure', () => {
         const value = sampleFor(property, '');
         const out = await withEditor(
           page,
-          (editor, { type, key, value: v }) => {
-            editor.loadMjml(
-              '<mjml><mj-body><mj-section><mj-column><mj-text>A</mj-text></mj-column></mj-section></mj-body></mjml>'
-            );
+          (editor, { type, key, value: v, mjml }) => {
+            editor.loadMjml(mjml);
             const target = window.__emailEngine().getWrapper().findType(type)[0];
             editor.select(target.getId());
             editor.updateProperties({ [key]: v });
@@ -569,7 +597,7 @@ test.describe('Columns and structure', () => {
               errors: editor.exportHtml().errors,
             };
           },
-          { type: structure.type, key: property.key, value }
+          { type: structure.type, key: property.key, value, mjml: structure.mjml }
         );
         expect(out.blockId).toBe(structure.id);
         expect(out.value, `${structure.id}.${property.key} relu`).toBe(value);
@@ -580,4 +608,86 @@ test.describe('Columns and structure', () => {
       }
     });
   }
+});
+
+test.describe('Heading, menu, hero', () => {
+  test('heading: inserted as a large bold text, then edited as a Text', async ({ page }) => {
+    await openBench(page);
+    const out = await withEditor(page, (editor) => {
+      editor.loadMjml('<mjml><mj-body></mj-body></mjml>');
+      editor.addBlock('heading');
+      const selection = editor.getSelection();
+      editor.updateProperties({ 'font-weight': 'normal' });
+      return { selection, after: editor.getSelection().values, mjml: editor.exportMjml(), errors: editor.exportHtml().errors };
+    });
+    expect(out.selection.tagName).toBe('mj-text');
+    expect(out.selection.blockId).toBe('text');
+    expect(out.selection.values['font-size']).toBe('26px');
+    expect(out.selection.values['font-weight']).toBe('bold');
+    expect(out.after['font-weight']).toBe('normal');
+    expect(out.mjml).toContain('Your headline');
+    expect(out.errors).toEqual([]);
+  });
+
+  test('menu: links rendered, a link label and URL edited from the panel, a link duplicated', async ({ page }) => {
+    await openBench(page);
+    const out = await withEditor(page, async (editor) => {
+      editor.loadMjml('<mjml><mj-body></mj-body></mjml>');
+      editor.addBlock('navbar');
+      const engine = window.__emailEngine();
+      const links = engine.getWrapper().findType('mj-navbar-link');
+      editor.select(links[0].getId());
+      const before = editor.getSelection();
+      editor.setContent('Prices & <deals>');
+      editor.updateProperties({ href: 'https://example.com/prices' });
+      editor.duplicate();
+      await new Promise((r) => setTimeout(r, 300));
+      const frame = document.querySelector('.gjs-frame').contentDocument;
+      return {
+        before,
+        after: editor.getSelection(),
+        count: engine.getWrapper().findType('mj-navbar-link').length,
+        canvas: frame.body.textContent,
+        mjml: editor.exportMjml(),
+        html: editor.exportHtml(),
+      };
+    });
+    expect(out.before.blockId).toBe('navbar-link');
+    expect(out.before.content).toBe('Shop');
+    expect(out.after.content).toBe('Prices & <deals>');
+    expect(out.count).toBe(4);
+    expect(out.canvas).toContain('Prices & <deals>');
+    expect(out.mjml).toContain('href="https://example.com/prices"');
+    expect(out.mjml).toContain('>Prices &amp; &lt;deals&gt;</mj-navbar-link>');
+    expect(out.html.errors).toEqual([]);
+    expect(out.html.html).not.toContain('<input');
+  });
+
+  test('hero: a section with a background image, placed after the current section', async ({ page }) => {
+    await openBench(page);
+    const out = await withEditor(page, (editor) => {
+      editor.loadMjml(
+        '<mjml><mj-body><mj-section><mj-column><mj-text>A</mj-text></mj-column></mj-section>' +
+          '<mj-section><mj-column><mj-text>Z</mj-text></mj-column></mj-section></mj-body></mjml>'
+      );
+      const engine = window.__emailEngine();
+      editor.select(engine.getWrapper().findType('mj-text')[0].getId());
+      editor.addBlock('hero');
+      const sections = engine.getWrapper().findType('mj-section');
+      editor.select(sections[1].getId());
+      editor.updateProperties({ 'background-url': 'https://example.com/banner.jpg' });
+      return {
+        selection: editor.getSelection(),
+        order: sections.map((s) => s.findType('mj-text').length),
+        mjml: editor.exportMjml(),
+        html: editor.exportHtml(),
+      };
+    });
+    expect(out.selection.blockId).toBe('section');
+    expect(out.selection.values['background-size']).toBe('cover');
+    expect(out.order).toEqual([1, 2, 1]);
+    expect(out.mjml).toContain('background-url="https://example.com/banner.jpg"');
+    expect(out.html.errors).toEqual([]);
+    expect(out.html.html).toContain('https://example.com/banner.jpg');
+  });
 });

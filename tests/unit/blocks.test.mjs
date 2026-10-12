@@ -69,7 +69,8 @@ for (const block of emailBlocks.list()) {
       return;
     }
     assert.ok(typeof block.mjml === 'string' && block.mjml.length > 0);
-    assert.ok(block.mjml.startsWith(block.kind === 'layout' ? '<mj-section' : `<${block.tagName}`));
+    assert.ok(block.mjml.startsWith(`<${block.tagName}`));
+    if (block.kind === 'layout') assert.equal(block.tagName, 'mj-section', 'a layout is a section of the body');
     if (block.kind === 'content') {
       assert.ok(block.sectionMjml?.startsWith('<mj-section') && block.sectionMjml.includes(block.mjml), 'section wrapper');
     }

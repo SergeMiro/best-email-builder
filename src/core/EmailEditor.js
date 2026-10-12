@@ -61,6 +61,9 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  * block of a selected element (`mj-text` → text).
  * `editableContent`: the content is editable (canvas for text, panel for a
  * button label).
+ * `insertOnly`: a preset of another block's element (a Heading is an
+ * `mj-text`): offered in the sidebar, but a selected element of that tag is
+ * described by the main block.
  *
  * @typedef {{
  *   id: string,
@@ -74,6 +77,7 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *   sectionMjml?: string,
  *   properties: BlockProperty[],
  *   editableContent?: boolean,
+ *   insertOnly?: boolean,
  * }} EmailBlock
  */
 
@@ -254,9 +258,12 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
     return resolved;
   }
 
-  /** Block describing a tag: structure first (a section stays a section). */
+  /**
+   * Block describing a tag: structure first (a section stays a section),
+   * presets (`insertOnly`) never.
+   */
   function blockForTag(tagName) {
-    const all = blocks.list();
+    const all = blocks.list((b) => !b.insertOnly);
     return (
       all.find((b) => b.tagName === tagName && b.kind === 'structure') ||
       all.find((b) => b.tagName === tagName) ||
