@@ -21,7 +21,7 @@ Replacing the engine means writing another adapter.
 | `adapters/grapesjs/` | the engine — the only place that knows it |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
 | `features/` | one folder per feature + the `emailBuilderFeatures` registry (variables, autosave, versions, preview, test send) and the starter template |
-| `ui/` | the React interface (toolbar, blocks sidebar, canvas, properties) and its primitives |
+| `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template bank (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |
 | `renderer/` | MJML preparation, service links, uploaded image URLs (shared browser/server) |
 | `validation/` | what a template may contain (MJML, project, URLs, images, quality checks) |
@@ -30,6 +30,11 @@ Replacing the engine means writing another adapter.
 
 Removing a block or a feature = removing its line from the registry; the core
 never refers to one by name.
+
+The two screens do not import each other: `TemplateLibrary` reports *Edit* /
+*New* through callbacks and never mounts an editor, `EmailBuilder` knows
+nothing of a library. Only `EmailStudio` (a few lines of state) knows both, so
+an application can install either screen alone.
 
 ## The document
 

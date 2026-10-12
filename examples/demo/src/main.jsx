@@ -1,48 +1,35 @@
-import { StrictMode, useEffect, useMemo, useState } from 'react';
+import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { EmailBuilder } from 'best-email-builder';
+import { EmailBuilder, TemplateLibrary } from 'best-email-builder';
 import 'best-email-builder/styles.css';
-import { Check, Copy, Info, Languages, LayoutTemplate, Mail, PencilLine, Plus, Smartphone, Trash2 } from 'lucide-react';
+import { Check, Copy, Info, Languages, LayoutTemplate, Mail, Smartphone } from 'lucide-react';
 import { createDemoStorage } from './browserStorage.js';
 
 const REPOSITORY_URL = import.meta.env.VITE_REPOSITORY_URL || 'https://github.com/SergeMiro/best-email-builder';
 
 const INSTALL = 'npm install best-email-builder';
 const AUTHOR_URL = 'https://smiro.dev';
+const SENDER = { name: 'Example Inc.', address: '1 Main Street, Springfield' };
 
 const TEXT = {
   en: {
     eyebrow: 'Open source · MIT',
     tagline: 'Drag-and-drop email builder for React — MJML output that renders in Outlook, Gmail and Apple Mail.',
     chips: ['Outlook, Gmail, Apple Mail', 'Ready-made templates', 'Phone and tablet', 'English and French'],
-    note: 'Demo: templates stay in this browser; the preview compiles in the browser. A real app compiles on its server.',
-    templates: 'Your templates',
-    create: 'New template',
-    empty: 'No template yet.',
-    emptyHint: 'Start from a blank page or from one of the ready-made emails.',
-    open: 'Open',
-    remove: 'Delete',
-    source: 'Source code',
+    note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
     copy: 'Copy the install command',
     copied: 'Copied',
-    noSubject: 'No subject',
+    source: 'Source code',
     madeBy: 'Made by',
   },
   fr: {
     eyebrow: 'Open source · MIT',
     tagline: 'Constructeur de courriels par glisser-déposer pour React — un rendu MJML fidèle dans Outlook, Gmail et Apple Mail.',
     chips: ['Outlook, Gmail, Apple Mail', 'Modèles prêts à l’emploi', 'Téléphone et tablette', 'Anglais et français'],
-    note: 'Démo : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur.',
-    templates: 'Vos modèles',
-    create: 'Nouveau modèle',
-    empty: 'Aucun modèle pour l’instant.',
-    emptyHint: 'Partez d’une page vierge ou de l’un des courriels prêts à l’emploi.',
-    open: 'Ouvrir',
-    remove: 'Supprimer',
-    source: 'Code source',
+    note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
     copy: 'Copier la commande d’installation',
     copied: 'Copié',
-    noSubject: 'Sans objet',
+    source: 'Code source',
     madeBy: 'Réalisé par',
   },
 };
@@ -54,6 +41,35 @@ const initialLocale = () => {
   if (fromUrl === 'en' || fromUrl === 'fr') return fromUrl;
   return navigator.language?.startsWith('fr') ? 'fr' : 'en';
 };
+
+/** The product mark: an envelope whose flap opens on the letters "beb". */
+function BrandMark() {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="3" y="6.5" width="26" height="20" rx="3.5" fill="none" stroke="currentColor" strokeWidth="1.9" />
+      <path
+        d="M4.5 8.5 16 15.2 27.5 8.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <text
+        x="16"
+        y="23.6"
+        textAnchor="middle"
+        fill="currentColor"
+        fontSize="7.4"
+        fontWeight="800"
+        letterSpacing="0.35"
+        fontFamily="ui-monospace, 'SFMono-Regular', Menlo, monospace"
+      >
+        beb
+      </text>
+    </svg>
+  );
+}
 
 /** GitHub's mark (lucide no longer ships brand icons). */
 function GitHubMark() {
@@ -101,44 +117,100 @@ function InstallCommand({ text }) {
   );
 }
 
+/** Two lines of JSX: what a developer actually writes. */
+function CodeSample() {
+  return (
+    <figure className="code">
+      <figcaption className="code-bar">
+        <i aria-hidden="true" />
+        <i aria-hidden="true" />
+        <i aria-hidden="true" />
+        <span>App.jsx</span>
+      </figcaption>
+      <pre>
+        <code>
+          <span className="k">import</span> {'{ '}
+          <span className="f">EmailStudio</span>
+          {' }'} <span className="k">from</span> <span className="s">&apos;best-email-builder&apos;</span>;{'\n\n'}
+          <span className="t">&lt;EmailStudio</span> <span className="a">storage</span>={'{'}
+          <span className="f">createHttpStorage</span>(){'}'} <span className="a">locale</span>=<span className="s">&quot;fr&quot;</span>{' '}
+          <span className="t">/&gt;</span>
+        </code>
+      </pre>
+    </figure>
+  );
+}
+
+/**
+ * The background follows the pointer, slowly: a soft light and a dot grid
+ * that brightens around it. CSS variables only — no re-render — and nothing
+ * follows the pointer for people who asked for reduced motion.
+ */
+function usePointerGlow(ref) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const target = { x: 0.5, y: 0.15 };
+    const current = { ...target };
+    let frame = 0;
+    const tick = () => {
+      current.x += (target.x - current.x) * 0.06;
+      current.y += (target.y - current.y) * 0.06;
+      el.style.setProperty('--mx', `${(current.x * 100).toFixed(2)}%`);
+      el.style.setProperty('--my', `${(current.y * 100).toFixed(2)}%`);
+      frame = Math.abs(target.x - current.x) + Math.abs(target.y - current.y) > 0.0005 ? requestAnimationFrame(tick) : 0;
+    };
+    const onMove = (event) => {
+      target.x = event.clientX / window.innerWidth;
+      target.y = event.clientY / window.innerHeight;
+      if (!frame) frame = requestAnimationFrame(tick);
+    };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      cancelAnimationFrame(frame);
+    };
+  }, [ref]);
+}
+
 function App() {
   const storage = useMemo(() => createDemoStorage(), []);
   const [locale, setLocale] = useState(initialLocale);
-  const [templates, setTemplates] = useState([]);
-  const [open, setOpen] = useState(null);
+  /** null = landing and library; else the editor: {key, templateId, start}. */
+  const [session, setSession] = useState(null);
+  const [lastId, setLastId] = useState(null);
+  const landingRef = useRef(null);
+  usePointerGlow(landingRef);
   const text = TEXT[locale];
 
-  const refresh = () => storage.list().then(setTemplates);
-  useEffect(() => {
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  if (open) {
+  // Level 2: the editor alone, full screen. Level 1 (the library) only hands it a template.
+  if (session) {
     return (
       <EmailBuilder
-        key={`${open.id ?? 'new'}-${locale}`}
+        key={`${session.key}-${locale}`}
         storage={storage}
-        templateId={open.id}
+        templateId={session.templateId}
+        initialMjml={session.start?.mjml}
+        initialMeta={session.start?.meta}
         locale={locale}
-        sender={{ name: 'Example Inc.', address: '1 Main Street, Springfield' }}
-        onClose={() => {
-          setOpen(null);
-          refresh();
-        }}
+        sender={SENDER}
+        onSaved={(template) => template?.id != null && setLastId(template.id)}
+        onClose={() => setSession(null)}
       />
     );
   }
 
   return (
-    <div className="landing">
+    <div className="landing" ref={landingRef}>
+      <div className="backdrop" aria-hidden="true" />
       <header className="wrap topbar">
         <span className="brand">
           <span className="brand-mark">
-            <Mail aria-hidden="true" />
+            <BrandMark />
           </span>
           <span className="brand-name">Best Email Builder</span>
         </span>
@@ -157,8 +229,8 @@ function App() {
         </div>
       </header>
 
-      <main className="wrap">
-        <section className="hero">
+      <main>
+        <section className="wrap hero">
           <span className="eyebrow">
             <i aria-hidden="true" />
             {text.eyebrow}
@@ -178,66 +250,31 @@ function App() {
               );
             })}
           </div>
-          <InstallCommand text={text} />
+          <div className="dev">
+            <InstallCommand text={text} />
+            <CodeSample />
+          </div>
         </section>
 
-        <section className="panel" aria-labelledby="templates-title">
-          <div className="panel-head">
-            <h2 id="templates-title">
-              {text.templates}
-              {templates.length > 0 && <span className="count">{templates.length}</span>}
-            </h2>
-            <button type="button" className="btn btn-primary" onClick={() => setOpen({ id: null })}>
-              <Plus aria-hidden="true" />
-              {text.create}
-            </button>
-          </div>
+        <div className="wrap wrap-wide">
+          <section className="window" aria-label="Demo">
+            <TemplateLibrary
+              storage={storage}
+              locale={locale}
+              sender={SENDER}
+              selectedId={lastId}
+              onEdit={(template) => {
+                setLastId(template.id);
+                setSession({ key: Date.now(), templateId: template.id, start: null });
+              }}
+              onCreate={(start) => setSession({ key: Date.now(), templateId: null, start })}
+            />
+          </section>
           <p className="note">
             <Info aria-hidden="true" />
             <span>{text.note}</span>
           </p>
-          <ul data-testid="template-list" className="list">
-            {templates.length === 0 && (
-              <li className="empty">
-                <div className="empty-art">
-                  <LayoutTemplate aria-hidden="true" />
-                </div>
-                <strong>{text.empty}</strong>
-                <p>{text.emptyHint}</p>
-                <button type="button" className="btn" onClick={() => setOpen({ id: null })} tabIndex={-1} aria-hidden="true">
-                  <Plus />
-                  {text.create}
-                </button>
-              </li>
-            )}
-            {templates.map((template) => (
-              <li key={template.id} className="row">
-                <span className="row-icon">
-                  <Mail aria-hidden="true" />
-                </span>
-                <div className="row-text">
-                  <div className="row-name">{template.name}</div>
-                  <div className="row-sub">{template.subject || text.noSubject}</div>
-                </div>
-                <div className="row-actions">
-                  <button type="button" className="btn" onClick={() => setOpen({ id: template.id })}>
-                    <PencilLine aria-hidden="true" />
-                    {text.open}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => storage.remove(template.id).then(refresh)}
-                    aria-label={text.remove}
-                    title={text.remove}
-                  >
-                    <Trash2 aria-hidden="true" />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+        </div>
       </main>
 
       <footer className="wrap footer">

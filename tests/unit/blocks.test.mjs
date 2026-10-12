@@ -101,15 +101,19 @@ test('starter template', async () => {
 });
 
 test('template gallery: every template validates, compiles cleanly and carries the legal footer', async () => {
-  const { TEMPLATE_GALLERY, buildGallery, withThumbnailImages } = await import('../../src/features/templates/gallery.js');
+  const { TEMPLATE_GALLERY, buildGallery, withThumbnailImages, withPlaceholderImages } = await import(
+    '../../src/features/templates/gallery.js'
+  );
   const gallery = buildGallery({ sender: { name: 'ACME', address: '1 Main Street' } });
   assert.equal(new Set(gallery.map((g) => g.id)).size, TEMPLATE_GALLERY.length, 'unique ids');
   for (const entry of gallery) {
     assert.ok(entry.name && entry.description, `${entry.id}: name and description`);
     const { ok, issues } = validateMjml(entry.mjml);
     assert.ok(ok, `${entry.id}: ${issues.map((i) => i.message).join('; ')}`);
-    const { warnings } = await compileMjml(entry.mjml);
+    const { html, warnings } = await compileMjml(entry.mjml);
     assert.deepEqual(warnings, [], `${entry.id}: no MJML warning`);
+    const images = withPlaceholderImages(html).match(/<img\b[^>]*>/g) || [];
+    assert.ok(images.every((img) => /\ssrc="/.test(img)), `${entry.id}: every image of the preview has a source`);
     assert.ok(!/\spadding="/.test(entry.mjml), `${entry.id}: no shorthand padding (canvas = email)`);
     assert.ok(!/(<mj-[a-z-]+)[^>]*\s(padding-top)="[^"]*"[^>]*\s\2="/.test(entry.mjml), `${entry.id}: no duplicate attribute`);
     if (entry.id !== 'blank') {

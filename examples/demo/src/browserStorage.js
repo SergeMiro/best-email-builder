@@ -73,9 +73,19 @@ export function createDemoStorage() {
     }
   })();
 
+  // The memory storage counts time in test ticks: the demo keeps real dates beside it.
+  const withDates = (template) => {
+    const entry = template && index.get(String(template.id));
+    return entry?.createdAt ? { ...template, createdAt: entry.createdAt, updatedAt: entry.updatedAt ?? null } : template;
+  };
+
   const persistTemplate = async (id) => {
     const template = await storage.load(id);
+    const previous = index.get(String(id));
+    const at = new Date().toISOString();
     index.set(String(id), {
+      createdAt: previous?.createdAt || at,
+      updatedAt: previous ? at : null,
       payload: {
         name: template.name,
         subject: template.subject,
@@ -109,9 +119,13 @@ export function createDemoStorage() {
     },
     async list() {
       await ready;
-      const out = [];
-      for (const id of index.keys()) out.push(await storage.load(id));
-      return out;
+      return (await storage.list())
+        .map(withDates)
+        .sort((a, b) => String(b.updatedAt || b.createdAt).localeCompare(String(a.updatedAt || a.createdAt)));
+    },
+    async load(id) {
+      await ready;
+      return withDates(await storage.load(id));
     },
     async create(payload) {
       const result = await storage.create(payload);
@@ -129,6 +143,7 @@ export function createDemoStorage() {
       return result;
     },
     async remove(id) {
+      await storage.remove(id);
       index.delete(String(id));
       localStorage.setItem(TEMPLATES_KEY, JSON.stringify([...index.values()]));
     },

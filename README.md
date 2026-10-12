@@ -103,6 +103,43 @@ component (the canvas needs the DOM). With Next.js, load it with
 `dynamic(() => import(...), { ssr: false })` or render it from a
 `'use client'` component.
 
+### Two screens, each optional
+
+The package has two levels, and an application installs one, the other, or
+both:
+
+| Level | Component | What it is |
+|---|---|---|
+| 1 | `TemplateLibrary` | The template bank: your templates and the ready-made bases in a searchable list, the selected one's details, and its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts the editor. |
+| 2 | `EmailBuilder` | The editor (above). Works without the library. |
+| 1 + 2 | `EmailStudio` | The two wired together: the library, then the editor, then back to the library with the template just saved selected. |
+
+```jsx
+import { EmailStudio, TemplateLibrary, EmailBuilder } from 'best-email-builder';
+
+// Both levels, nothing to wire:
+<EmailStudio storage={storage} locale="fr" sender={sender} />
+
+// Only the library, opening your own route or modal:
+<TemplateLibrary
+  storage={storage}
+  onEdit={(template) => router.push(`/emails/${template.id}`)}
+  onCreate={(start) => openEditor(start)}   // start: null, or { baseId, mjml, meta }
+  onClose={closeModal}                      // optional: shows a close button
+/>
+
+// Only the editor: EmailBuilder, as in the example above.
+```
+
+To open the editor from the library yourself, pass `start.mjml` and
+`start.meta` to `EmailBuilder` as `initialMjml` and `initialMeta`. The library
+needs `storage.list()`; *Delete* appears when the storage has `remove()`, the
+preview uses `render()` (else the HTML compiled at the last save). Its props:
+`storage`, `locale`, `messages`, `onNotify`, `sender`, `templates` (the bases,
+`[]` hides them), `title`, `description`, `selectedId`, `onEdit`, `onCreate`,
+`onClose`, `className`. Like the builder, it fills its parent and follows its
+own width (three columns, then two, then list and details as two screens).
+
 ### 2. The server routes
 
 ```js
@@ -194,7 +231,9 @@ or use `createHttpStorage()` with the server handler:
 
 ```ts
 interface TemplateStorage {
+  list?(): Promise<Template[]>;            // TemplateLibrary: newest first, no document/MJML
   load(id): Promise<Template>;
+  remove?(id): Promise<void>;              // TemplateLibrary: enables Delete
   create(payload): Promise<{ template; warnings }>;
   duplicate(id): Promise<{ template; warnings }>;
   save(id, payload): Promise<{ template; warnings; version }>;

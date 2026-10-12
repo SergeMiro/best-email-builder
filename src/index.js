@@ -40,6 +40,8 @@ export function createDefaultEmailEditor(options = {}) {
 
 /* ── React interface ─────────────────────────────────────────────────────── */
 export { default as EmailBuilder } from './ui/EmailBuilder.jsx';
+export { default as TemplateLibrary } from './ui/library/TemplateLibrary.jsx';
+export { default as EmailStudio } from './ui/EmailStudio.jsx';
 export { default as EmailBuilderBoundary } from './ui/EmailBuilderBoundary.jsx';
 export { default as EmailCanvas } from './ui/EmailCanvas.jsx';
 export { UiProvider, useUi, useT } from './ui/context.jsx';
@@ -65,7 +67,7 @@ export {
 } from './features/variables/catalog.js';
 export { applyVariables, applyVariablesToText, usedVariables, unknownVariables } from './features/variables/service.js';
 export { createStarterMjml, STARTER_MJML } from './features/templates/starter.js';
-export { TEMPLATE_GALLERY, buildGallery } from './features/templates/gallery.js';
+export { TEMPLATE_GALLERY, buildGallery, withPlaceholderImages } from './features/templates/gallery.js';
 export { isAssetPath, absoluteAssetUrls, DEFAULT_ASSETS_PATH } from './renderer/links.js';
 
 /* ── Translations ────────────────────────────────────────────────────────── */

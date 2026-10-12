@@ -2,7 +2,11 @@
 /**
  * STORAGE on the browser side — the interface only knows this contract.
  *
+ *   list()                      → templates, most recently changed first,
+ *                                 without document, MJML or HTML  (optional:
+ *                                 the library — `TemplateLibrary`)
  *   load(id)                    → template (document, mjml, revision…)
+ *   remove(id)                  → void                          (optional)
  *   create(payload)             → { template, warnings }
  *   duplicate(id)               → { template, warnings }
  *   save(id, payload)           → { template, warnings, version }
@@ -73,7 +77,9 @@ import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables
  * @typedef {{sent: number, failed: number, invalid: string[], results: TestResult[]}} SendTestResult
  *
  * @typedef {{
+ *   list?: () => Promise<StoredTemplate[]>,
  *   load: (id: number|string) => Promise<StoredTemplate>,
+ *   remove?: (id: number|string) => Promise<void>,
  *   create: (payload: SavePayload & {name: string}) => Promise<{template: StoredTemplate, warnings: object[]}>,
  *   duplicate: (id: number|string) => Promise<{template: StoredTemplate, warnings: object[]}>,
  *   save: (id: number|string, payload: SavePayload) => Promise<{template: StoredTemplate, warnings: object[], version: {id: number|string, versionNumber: number}|null}>,
@@ -149,7 +155,11 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
   }
 
   return {
+    list: async () => call('/templates'),
     load: async (id) => withDocument(await call(`/templates/${encodeURIComponent(id)}`)),
+    remove: async (id) => {
+      await call(`/templates/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    },
     create: async (payload) => call('/templates', { method: 'POST', body: body(payload) }),
     duplicate: async (id) => call('/templates', { method: 'POST', body: JSON.stringify({ duplicateOf: id }) }),
     save: async (id, payload) => call(`/templates/${encodeURIComponent(id)}`, { method: 'PUT', body: body(payload) }),
@@ -246,8 +256,21 @@ export function createMemoryStorage({ render, sendTest, assetsPath = DEFAULT_ASS
 
   /** @type {TemplateStorage & {dump: () => object}} */
   const storage = {
+    async list() {
+      return [...rows.values()]
+        .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))
+        .map((row) => {
+          const { document: _d, mjml: _m, ...summary } = toTemplate(row);
+          return summary;
+        });
+    },
     async load(id) {
       return toTemplate(rowOf(id));
+    },
+    async remove(id) {
+      rowOf(id);
+      rows.delete(String(id));
+      versions.delete(String(id));
     },
     async create(payload) {
       if (!payload.name?.trim()) throw new StorageError('Name required', 400, 'NAME_REQUIRED');

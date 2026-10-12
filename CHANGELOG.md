@@ -4,6 +4,27 @@ All notable changes are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **`TemplateLibrary`** — the first screen: a template bank in three columns
+  (searchable list of your templates and of the ready-made bases, details of
+  the selected one, rendered preview on desktop / mobile). *Edit*, *New
+  template* and *Start from this base* hand the template to the host through
+  `onEdit` / `onCreate`; *Duplicate*, *Delete*, *Copy HTML* and *Download*
+  work in place. Follows its own width down to phones. French included.
+- **`EmailStudio`** — `TemplateLibrary` and `EmailBuilder` wired together.
+  Each screen still works alone.
+- Storage contract: optional `list()` and `remove(id)`, implemented by
+  `createHttpStorage()` (the server already had the routes) and
+  `createMemoryStorage()`.
+- `withPlaceholderImages(html)` draws a grey frame for images not chosen yet
+  in compiled HTML.
+
+### Changed
+- Demo: new landing page — the library in a window, the editor full screen,
+  a background that follows the pointer, a new mark.
+
 ## [0.2.0] — 2026-10-12
 
 ### Added

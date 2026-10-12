@@ -89,6 +89,21 @@ test('memory storage: create → save → reload, versions, conflicts, duplicate
   await assert.rejects(storage.create({ name: ' ', document: doc, mjml: MJML }), /Name required/);
 });
 
+test('memory storage: list (newest first, no heavy fields) and remove', async () => {
+  const storage = createMemoryStorage();
+  const a = (await storage.create({ name: 'A', document: doc, mjml: MJML })).template;
+  const b = (await storage.create({ name: 'B', document: doc, mjml: MJML })).template;
+  assert.deepEqual((await storage.list()).map((t) => t.name), ['B', 'A']);
+  await storage.save(a.id, { document: doc, mjml: MJML, revision: a.revision });
+  const list = await storage.list();
+  assert.deepEqual(list.map((t) => t.name), ['A', 'B'], 'last changed first');
+  assert.ok(list.every((t) => !('document' in t) && !('mjml' in t)), 'summaries only');
+  await storage.remove(b.id);
+  assert.deepEqual((await storage.list()).map((t) => t.name), ['A']);
+  await assert.rejects(storage.load(b.id), /not found/);
+  await assert.rejects(storage.remove(b.id), /not found/);
+});
+
 test('URLs: safe links and images', () => {
   const cases = [
     ['https://www.example.com', 'link', true],

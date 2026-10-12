@@ -313,3 +313,13 @@ const THUMBNAIL_IMAGE =
 export function withThumbnailImages(mjml) {
   return String(mjml || '').replace(/<mj-image(?![^>]*\ssrc=)([^>]*)>/g, `<mj-image src="${THUMBNAIL_IMAGE}"$1>`);
 }
+
+/**
+ * Compiled HTML for a thumbnail or a preview: an image not chosen yet (an
+ * `<img>` with no `src`) gets the same grey frame. For HTML that went through
+ * the server's validator, which rightly refuses `data:` images in MJML.
+ * @param {string} html
+ */
+export function withPlaceholderImages(html) {
+  return String(html || '').replace(/<img(?![^>]*\ssrc=)(\s[^>]*)?>/g, (_m, attrs = '') => `<img src="${THUMBNAIL_IMAGE}"${attrs}>`);
+}

@@ -35,11 +35,13 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText(/^Saved at/)).toBeVisible();
   await page.getByRole('button', { name: 'Back' }).click();
-  await expect(page.getByTestId('template-list')).toContainText('Demo letter');
+  // Back on the library (level 1): the template just saved is selected.
+  await expect(page.getByTestId('eb-library-templates')).toContainText('Demo letter');
+  await expect(page.getByTestId('eb-library-details').getByRole('heading', { name: 'Demo letter' })).toBeVisible();
 
   await page.reload();
-  await expect(page.getByTestId('template-list')).toContainText('Demo letter');
-  await page.getByTestId('template-list').getByRole('button', { name: 'Open' }).first().click();
+  await page.getByTestId('eb-library-template').filter({ hasText: 'Demo letter' }).click();
+  await page.getByTestId('eb-library-details').getByRole('button', { name: 'Edit' }).click();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   await expect(page.frameLocator('.gjs-frame').locator('[data-gjs-type="mj-divider"]')).toHaveCount(1);
   await page.getByRole('button', { name: 'Variables' }).click();
