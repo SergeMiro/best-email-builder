@@ -47,7 +47,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build:js && npm run build:css && npm run build:types",
+    "build": "npm run clean && npm run build:js && npm run build:css && npm run build:types",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "build:js": "tsup",
     "build:css": "tailwindcss -i src/styles.css -o dist/styles.css --minify",
     "build:types": "tsc -p tsconfig.build.json",

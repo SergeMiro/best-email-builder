@@ -11,6 +11,8 @@ All notable changes are documented here. The format follows
   wrapped twice by the bundler's CommonJS interop ("mjmlPlugin is not a
   function"), and its French labels were lost the same way. Every interop
   layer is now unwrapped, whatever the bundler.
+- The published package no longer carries stale chunks from earlier builds:
+  `npm run build` starts from an empty `dist/`.
 
 ## [0.1.0] — 2026-10-10
 
