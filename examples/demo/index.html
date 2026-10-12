@@ -45,7 +45,7 @@
       .landing *, .landing *::before, .landing *::after { box-sizing: border-box; }
       .landing :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
       .wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 16px; }
-      .wrap-wide { max-width: 1440px; padding: 0 24px; }
+      .wrap-wide { max-width: 1608px; padding: 0 24px; }
 
       /* ── background ──────────────────────────────────────────────────────
          Three layers, all quiet: a slow aurora that shifts by itself, a light
@@ -173,9 +173,72 @@
       .code .t { color: #f07178; }
       .code .a { color: #ffcb6b; }
 
-      /* the demo itself, in a window */
+      /* call to action */
+      .cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 28px; }
+      .btn-lg { padding: 12px 18px; font-size: 14px; border-radius: 10px; }
+      .btn-primary {
+        background: linear-gradient(135deg, oklch(0.58 0.21 280), oklch(0.5 0.2 272)); border-color: transparent; color: #fff;
+        box-shadow: 0 10px 24px -12px oklch(0.5 0.2 277 / 0.9), inset 0 1px 0 rgb(255 255 255 / 0.2);
+      }
+      .btn-primary:hover { background: linear-gradient(135deg, oklch(0.55 0.21 280), oklch(0.46 0.2 272)); border-color: transparent; }
+      .btn-primary svg { transition: transform 0.2s; }
+      .btn-primary:hover svg { transform: translateX(3px); }
+
+      /* alternatives: a slow marquee of the editors this one can replace */
+      .alt { padding: 72px 0 8px; text-align: center; }
+      .alt-label {
+        margin: 0 0 22px; padding: 0 16px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--muted);
+      }
+      .marquee {
+        overflow: hidden; padding: 6px 0;
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+      }
+      .marquee-track { display: flex; width: max-content; animation: marquee 48s linear infinite; }
+      .marquee:hover .marquee-track { animation-play-state: paused; }
+      .marquee-list { display: flex; align-items: center; gap: 14px; margin: 0; padding: 0 7px; list-style: none; }
+      @keyframes marquee { to { transform: translateX(-50%); } }
+      .rival {
+        display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 12px; white-space: nowrap;
+        background: rgb(255 255 255 / 0.65); border: 1px solid var(--line); backdrop-filter: blur(8px);
+        font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: #7a8091;
+        transition: color 0.25s, border-color 0.25s, background 0.25s;
+      }
+      .rival svg { width: 20px; height: 20px; fill: currentColor; flex-shrink: 0; }
+      .rival-mono {
+        display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
+        background: currentColor; color: inherit; font-size: 12px; font-weight: 800; line-height: 1;
+      }
+      .rival-mono { background: #7a8091; color: #fff; }
+      .rival:hover { color: var(--ink); border-color: #cfd3dc; background: #fff; }
+      .rival:hover .rival-mono { background: var(--ink); }
+      .alt-note { margin: 22px auto 0; max-width: 620px; padding: 0 16px; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+
+      /* three short promises */
+      .features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; padding-top: 56px; }
+      .feature {
+        padding: 20px; border-radius: 14px; border: 1px solid var(--line);
+        background: rgb(255 255 255 / 0.72); backdrop-filter: blur(10px);
+        transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      }
+      .feature:hover { transform: translateY(-2px); border-color: oklch(0.85 0.06 277); box-shadow: 0 18px 36px -24px rgb(40 30 120 / 0.35); }
+      .feature-icon {
+        display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px;
+        background: var(--primary-soft); color: var(--primary);
+      }
+      .feature-icon svg { width: 18px; height: 18px; }
+      .feature h2 { margin: 14px 0 6px; font-size: 15px; font-weight: 650; color: var(--ink); letter-spacing: -0.01em; }
+      .feature p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+
+      /* page 2: the template bank, in a window like the extranet's dialog */
+      .brand-row { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+      .brand { text-decoration: none; }
+      .crumb { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+      .crumb svg { width: 15px; height: 15px; color: #b3b8c4; }
+      .bank { padding-top: 20px; }
       .window {
-        height: min(760px, calc(100vh - 40px)); min-height: 560px; border-radius: 16px; overflow: clip;
+        height: calc(100vh - 150px); min-height: 560px; max-width: 1560px; margin: 0 auto; border-radius: 14px; overflow: clip;
         border: 1px solid var(--line); background: #fff;
         box-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 30px 60px -30px rgb(40 30 120 / 0.35), 0 0 0 6px rgb(255 255 255 / 0.5);
       }
@@ -184,6 +247,7 @@
         font-size: 12.5px; line-height: 1.5; color: var(--muted); text-align: center;
       }
       .note svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; color: var(--primary); }
+      .page-templates .footer { padding-top: 28px; }
 
       /* footer: the author's signature, set like the one on smiro.dev, in the page's violet */
       .footer { margin-top: auto; padding: 56px 0 28px; display: flex; justify-content: center; }
@@ -201,10 +265,14 @@
       .made:hover .made-sig { color: var(--primary); }
       .made:hover .made-mark { transform: rotate(-8deg) scale(1.08); filter: drop-shadow(0 0 7px oklch(0.55 0.2 277 / 0.45)); }
       @media (prefers-reduced-motion: reduce) {
-        .made-mark, .eyebrow i, .hero h1 span { transition: none; animation: none; }
+        .made-mark, .eyebrow i, .hero h1 span, .marquee-track { transition: none; animation: none; }
+        .marquee { overflow-x: auto; }
         .made:hover .made-mark { transform: none; }
       }
 
+      @media (max-width: 860px) {
+        .features { grid-template-columns: minmax(0, 1fr); }
+      }
       @media (max-width: 560px) {
         .brand-name { display: none; }
         .hero { padding-top: 44px; padding-bottom: 30px; }
@@ -212,7 +280,9 @@
         .topbar .btn-label { display: none; }
         .wrap-wide { padding: 0 16px; }
         .code pre { font-size: 11.5px; }
-        .window { height: 680px; min-height: 0; border-radius: 12px; }
+        .window { height: calc(100vh - 120px); min-height: 520px; border-radius: 12px; }
+        .crumb { display: none; }
+        .rival { font-size: 14px; padding: 8px 14px; }
       }
     </style>
   </head>

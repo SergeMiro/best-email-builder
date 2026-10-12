@@ -136,8 +136,10 @@ To open the editor from the library yourself, pass `start.mjml` and
 needs `storage.list()`; *Delete* appears when the storage has `remove()`, the
 preview uses `render()` (else the HTML compiled at the last save). Its props:
 `storage`, `locale`, `messages`, `onNotify`, `sender`, `templates` (the bases,
-`[]` hides them), `title`, `description`, `selectedId`, `onEdit`, `onCreate`,
-`onClose`, `className`. Like the builder, it fills its parent and follows its
+`[]` hides them), `title`, `description`, `selectedId`, `favoritesKey` (the
+star of the details moves an entry to a *Favorites* section at the top; kept in
+`localStorage` under this key, `null` turns favorites off), `onEdit`,
+`onCreate`, `onClose`, `className`. Like the builder, it fills its parent and follows its
 own width (three columns, then two, then list and details as two screens).
 
 ### 2. The server routes

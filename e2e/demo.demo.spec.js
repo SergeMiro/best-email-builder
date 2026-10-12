@@ -12,7 +12,11 @@ const builder = (page) => page.getByTestId('email-builder');
 test('build a template, preview it, find it again after a reload', async ({ page }) => {
   await page.goto(`${HOME}?lang=en`);
   await expect(page.getByRole('heading', { name: 'Best Email Builder' })).toBeVisible();
+  // Page 1 → page 2 (the template bank) → page 3 (the editor).
+  await page.getByRole('link', { name: 'Open the live demo' }).click();
+  await expect(page).toHaveURL(/#\/templates$/);
   await page.getByRole('button', { name: 'New template' }).click();
+  await expect(page).toHaveURL(/#\/editor\/new$/);
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
 
   await page.getByTestId('eb-properties').getByLabel(/^Name/).fill('Demo letter');
@@ -34,7 +38,9 @@ test('build a template, preview it, find it again after a reload', async ({ page
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText(/^Saved at/)).toBeVisible();
+  await expect(page).toHaveURL(/#\/editor\/\d+$/);
   await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page).toHaveURL(/#\/templates$/);
   // Back on the library (level 1): the template just saved is selected.
   await expect(page.getByTestId('eb-library-templates')).toContainText('Demo letter');
   await expect(page.getByTestId('eb-library-details').getByRole('heading', { name: 'Demo letter' })).toBeVisible();
@@ -50,7 +56,28 @@ test('build a template, preview it, find it again after a reload', async ({ page
 
 test('French switch', async ({ page }) => {
   await page.goto(`${HOME}?lang=fr`);
+  await page.getByRole('link', { name: 'Ouvrir la démo' }).click();
   await page.getByRole('button', { name: 'Nouveau modèle' }).click();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   await expect(page.getByRole('button', { name: 'Enregistrer', exact: true })).toBeVisible();
+});
+
+test('a base opens the editor on its content, and the address survives a reload', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en#/templates`);
+  await page.getByTestId('eb-library-base').filter({ hasText: 'Promotion' }).click();
+  await page.getByRole('button', { name: 'Start from this base' }).click();
+  await expect(page).toHaveURL(/#\/editor\/base\/promotion$/);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await expect(page.frameLocator('.gjs-frame').getByText('30% off everything')).toBeVisible();
+  await page.reload();
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await expect(page.frameLocator('.gjs-frame').getByText('30% off everything')).toBeVisible();
+});
+
+test('landing: the marquee lists the editors this one can replace', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en`);
+  const marquee = page.locator('.marquee-list').first();
+  await expect(marquee).toContainText('Brevo');
+  await expect(marquee).toContainText('Mailchimp');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
 });

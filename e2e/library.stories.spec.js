@@ -33,8 +33,12 @@ test('standalone: lists templates and bases, previews, searches, hands Edit and 
   await expect(page.getByRole('searchbox', { name: 'Search templates' })).toBeFocused();
   await page.keyboard.type('october');
   await expect(mine.getByTestId('eb-library-template')).toHaveCount(1);
-  await expect(page.getByText('Nothing matches “october”.')).toBeVisible();
-  await page.getByRole('searchbox', { name: 'Search templates' }).fill('');
+  await expect(page.getByTestId('eb-library-bases')).toHaveCount(0);
+  await page.keyboard.type('zzz');
+  await expect(page.getByText('Nothing matches “octoberzzz”.')).toBeVisible();
+  await page.keyboard.press('Escape'); // clears the search, as in the extranet
+  await expect(page.getByRole('searchbox', { name: 'Search templates' })).toHaveValue('');
+  await expect(page.getByTestId('eb-library-base')).toHaveCount(6);
 
   // A base is read-only: "Start from this base" hands its MJML to the host.
   await page.getByTestId('eb-library-base').filter({ hasText: 'Promotion' }).click();
@@ -52,6 +56,23 @@ test('standalone: lists templates and bases, previews, searches, hands Edit and 
   expect(seen[0].mjml).toContain('SPRING30');
   expect(seen[1].id).toBe(1);
   expect(seen[2].baseId).toBeNull();
+});
+
+test('favorites: the star moves an entry to the top section, and it stays after a reload', async ({ page }) => {
+  await page.goto(STANDALONE);
+  await page.evaluate(() => localStorage.removeItem('best-email-builder:favorites'));
+  await page.reload();
+  await expect(page.getByTestId('eb-library-favorites')).toHaveCount(0);
+  await page.getByTestId('eb-library-base').filter({ hasText: 'Newsletter' }).click();
+  await details(page).getByRole('button', { name: 'Add to favorites' }).click();
+  const favorites = page.getByTestId('eb-library-favorites');
+  await expect(favorites.getByTestId('eb-library-base')).toHaveText(/Newsletter/);
+  await expect(page.getByTestId('eb-library-bases').getByTestId('eb-library-base')).toHaveCount(5);
+  await page.reload();
+  await expect(page.getByTestId('eb-library-favorites').getByTestId('eb-library-base')).toHaveText(/Newsletter/);
+  await page.getByTestId('eb-library-favorites').getByTestId('eb-library-base').click();
+  await details(page).getByRole('button', { name: 'Remove from favorites' }).click();
+  await expect(page.getByTestId('eb-library-favorites')).toHaveCount(0);
 });
 
 test('standalone: duplicate and delete', async ({ page }) => {
@@ -84,7 +105,7 @@ test('phone width: list then details as two screens', async ({ page }) => {
 
 test('studio: base → builder → save → back to the library → edit again', async ({ page }) => {
   await page.goto(STUDIO);
-  await expect(page.getByText('No template yet.')).toBeVisible();
+  await expect(page.getByText('No template yet. Start from a base, or create a new one.')).toBeVisible();
   await page.getByTestId('eb-library-base').filter({ hasText: 'Promotion' }).click();
   await page.getByRole('button', { name: 'Start from this base' }).click();
 
@@ -108,6 +129,7 @@ test('studio: base → builder → save → back to the library → edit again',
 test('French', async ({ page }) => {
   await page.goto(`${STANDALONE}&lang=fr`);
   await expect(page.getByRole('heading', { name: 'Banque de modèles emails' })).toBeVisible();
+  await expect(page.getByTestId('eb-library-templates')).toContainText('Modèles (2)');
   await expect(page.getByRole('button', { name: 'Nouveau modèle' })).toBeVisible();
   await page.getByTestId('eb-library-base').first().click();
   await expect(page.getByRole('button', { name: 'Partir de cette base' })).toBeVisible();

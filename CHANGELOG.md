@@ -12,7 +12,9 @@ All notable changes are documented here. The format follows
   the selected one, rendered preview on desktop / mobile). *Edit*, *New
   template* and *Start from this base* hand the template to the host through
   `onEdit` / `onCreate`; *Duplicate*, *Delete*, *Copy HTML* and *Download*
-  work in place. Follows its own width down to phones. French included.
+  work in place. *Favorites*: the star of the details moves an entry to a
+  section at the top (`favoritesKey`). Search with Ctrl+K, Esc clears it.
+  Follows its own width down to phones. French included.
 - **`EmailStudio`** — `TemplateLibrary` and `EmailBuilder` wired together.
   Each screen still works alone.
 - Storage contract: optional `list()` and `remove(id)`, implemented by
@@ -22,8 +24,11 @@ All notable changes are documented here. The format follows
   in compiled HTML.
 
 ### Changed
-- Demo: new landing page — the library in a window, the editor full screen,
-  a background that follows the pointer, a new mark.
+- Demo, three pages: a landing page (a background that follows the pointer,
+  a marquee of the editors it can replace, a new mark), the template bank,
+  and the editor full screen — each page has its own address (`#/templates`,
+  `#/editor/…`), so a reload keeps it.
+- The preview frame gets thin scrollbars (preview only, never the saved HTML).
 
 ## [0.2.0] — 2026-10-12
 
