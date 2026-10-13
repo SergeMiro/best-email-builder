@@ -128,7 +128,7 @@ test('studio: base → builder → save → back to the library → edit again',
 
 test('French', async ({ page }) => {
   await page.goto(`${STANDALONE}&lang=fr`);
-  await expect(page.getByRole('heading', { name: 'Banque de modèles emails' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bibliothèque de modèles e-mail' })).toBeVisible();
   await expect(page.getByTestId('eb-library-templates')).toContainText('Modèles (2)');
   await expect(page.getByRole('button', { name: 'Nouveau modèle' })).toBeVisible();
   await page.getByTestId('eb-library-base').first().click();

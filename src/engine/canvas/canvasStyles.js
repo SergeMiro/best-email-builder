@@ -33,6 +33,9 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
   color: #fff; border-radius: 4px; cursor: pointer; }
 .eb-ui-tools button:hover, .eb-ui-tools button:focus-visible { background: rgba(255, 255, 255, 0.2); }
 .eb-ui-tools button[data-action="move"] { cursor: grab; touch-action: none; }
+.eb-ui-tools button.eb-ui-parent { width: auto; gap: 4px; padding: 0 7px 0 5px; display: inline-flex; align-items: center;
+  font-weight: 600; white-space: nowrap; }
+.eb-ui-tools button.eb-ui-parent + button { margin-left: 2px; box-shadow: -1px 0 0 rgba(255, 255, 255, 0.25); }
 .eb-ui-drop { position: absolute; height: 4px; margin-top: -2px; border-radius: 2px; background: ${PRIMARY};
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); pointer-events: none; }
 .eb-ui-drop::before, .eb-ui-drop::after { content: ''; position: absolute; top: -3px; width: 10px; height: 10px;

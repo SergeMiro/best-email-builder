@@ -79,7 +79,7 @@ test('landing: the marquee lists the editors this one can replace', async ({ pag
   // The code sample shows each block installed alone.
   await page.getByRole('tab', { name: 'Editor only' }).click();
   await expect(page.locator('.code pre')).toContainText("from 'best-email-builder/builder'");
-  await page.getByRole('tab', { name: 'Bank only' }).click();
+  await page.getByRole('tab', { name: 'Library only' }).click();
   await expect(page.locator('.code pre')).toContainText("from 'best-email-builder/library'");
   await page.keyboard.press('ArrowLeft');
   await expect(page.getByRole('tab', { name: 'Editor only' })).toBeFocused();
@@ -95,7 +95,7 @@ test('bank and editor share one window; it spreads over the screen and back', as
   await page.goto(`${HOME}?lang=en#/templates`);
   const frame = page.getByTestId('demo-window');
   const window = frame.locator('.window');
-  await expect(frame.locator('li[aria-current="step"]')).toContainText('Template bank');
+  await expect(frame.locator('li[aria-current="step"]')).toContainText('Template library');
   const bank = await window.boundingBox();
 
   await page.getByRole('button', { name: 'New template' }).click();

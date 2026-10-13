@@ -229,6 +229,67 @@ test.describe('Moving, selecting, the toolbar', () => {
     await expect.poll(async () => (await nodes(page, 'mj-column')).length).toBe(2);
   });
 
+  test('the parent button says where it goes, and climbs text → column → section', async ({ page }) => {
+    await openBuilder(page, { lang: 'fr' });
+    await loadSample(page);
+    await canvas(page).getByText('Right').click();
+    await expect(panel(page).getByRole('heading', { name: 'Texte' })).toBeVisible();
+    const parent = canvas(page).locator('button[data-action="parent"]');
+    await expect(parent).toHaveText('Colonne');
+    await parent.click();
+    await expect(panel(page).getByRole('heading', { name: 'Colonne' })).toBeVisible();
+    await expect(parent).toHaveText('2 colonnes');
+    await parent.click();
+    await expect(panel(page).getByRole('heading', { name: '2 colonnes' })).toBeVisible();
+    // A section's parent is the page: no button, a click beside the email shows the email's settings.
+    await expect(parent).toHaveCount(0);
+  });
+
+  test('Ctrl+A selects every block, Delete removes them all, Ctrl+Z brings them back', async ({ page }) => {
+    await openBuilder(page, { lang: 'fr' });
+    await canvas(page).getByText('Titre du message').click();
+    const before = await mjml(page);
+    const sections = (await nodes(page, 'mj-section')).length;
+    await page.keyboard.press('Control+a');
+    await expect(panel(page).getByRole('heading', { name: 'Tous les blocs' })).toBeVisible();
+    await expect(panel(page).getByTestId('eb-select-all')).toContainText(`${sections} sections sélectionnées`);
+    await expect(canvas(page).getByTestId('eb-canvas-multi')).toHaveCount(sections);
+    await page.keyboard.press('Delete');
+    await expect.poll(async () => (await nodes(page, 'mj-section')).length).toBe(0);
+    await expect(canvas(page).getByText('Déposez un bloc ici')).toBeVisible();
+    await page.keyboard.press('Control+z');
+    await expect.poll(() => mjml(page)).toBe(before);
+
+    // From the panel's delete button too.
+    await canvas(page).getByText('Titre du message').click();
+    await page.keyboard.press('Control+a');
+    await panel(page).getByRole('button', { name: 'Supprimer' }).click();
+    await expect.poll(async () => (await nodes(page, 'mj-section')).length).toBe(0);
+    await page.keyboard.press('Control+z');
+
+    // Escape or a click ends the selection of everything.
+    await canvas(page).getByText('Titre du message').click();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.press('Escape');
+    await expect(canvas(page).getByTestId('eb-canvas-multi').first()).toBeHidden();
+    await expect(panel(page).getByRole('heading', { name: 'Courriel' })).toBeVisible();
+  });
+
+  test('Ctrl+A inside a text selects its words only; in a field of the panel, the field', async ({ page }) => {
+    await openBuilder(page);
+    await loadSample(page);
+    await canvas(page).getByText('Top').dblclick();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.type('Replaced');
+    await page.keyboard.press('Escape');
+    await expect.poll(() => mjml(page)).toMatch(/>Replaced<\/mj-text>/);
+    expect((await nodes(page, 'mj-section')).length).toBe(2);
+    await canvas(page).getByText('Right').click();
+    await panel(page).getByLabel('Size', { exact: true }).click();
+    await page.keyboard.press('Control+a');
+    await expect(panel(page).getByRole('heading', { name: 'Text' })).toBeVisible();
+  });
+
   test('a link in the canvas never navigates away', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Unsubscribe').click();

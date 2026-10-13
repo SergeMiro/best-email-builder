@@ -101,8 +101,11 @@ import { identity } from '../i18n/index.js';
  *   canMoveUp: boolean,
  *   canMoveDown: boolean,
  *   columnCount?: number,
+ *   multiple?: number,
  * }} EngineSelection
  *   `columnCount`: for a section, how many columns it holds (its name).
+ *   `multiple`: the whole email is selected (Ctrl+A) — how many sections;
+ *   the selection is then described as the body, and only removal applies.
  */
 
 /**
@@ -173,6 +176,7 @@ import { identity } from '../i18n/index.js';
  *   startBlockDrag: (block: EmailBlock, event: Event) => void,
  *   endBlockDrag: (cancel?: boolean) => void,
  *   addShortcut: (id: string, keys: string, handler: () => void) => (() => void),
+ *   selectAll?: () => void,
  * }} EmailEditorAdapter
  */
 
@@ -212,6 +216,7 @@ import { identity } from '../i18n/index.js';
  *   duplicate: (id?: string|null) => string|null,
  *   move: (direction: -1|1, id?: string|null) => boolean,
  *   select: (id: string|null) => void,
+ *   selectAll: () => void,
  *   getSelection: () => EmailSelection|null,
  *   getElement: (id: string) => EmailSelection|null,
  *   getRootId: () => string|null,
@@ -304,6 +309,7 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
    * @param {EngineSelection} selection @param {EmailBlock|null} block
    */
   function labelFor(selection, block) {
+    if (selection.multiple) return 'All blocks';
     if (selection.tagName === 'mj-section' && typeof selection.columnCount === 'number') {
       const layout = blocks.get(`columns-${selection.columnCount}`);
       if (layout) return layout.label;
@@ -447,6 +453,12 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
     select(id) {
       requireReady('select');
       adapter.select(id);
+    },
+
+    /** Every section of the email at once (Ctrl+A); Delete then empties it. */
+    selectAll() {
+      requireReady('selectAll');
+      adapter.selectAll?.();
     },
 
     getSelection() {

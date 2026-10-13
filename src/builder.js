@@ -2,10 +2,10 @@
 /**
  * BLOCK B alone — the editor (`best-email-builder/builder`).
  *
- * Imports nothing of the template bank: an application that has its own list
+ * Imports nothing of the template library: an application that has its own list
  * of templates connects it through `EmailBuilder`'s props (`templateId`,
  * `initialMjml`, `initialMeta` in; `onSaved`, `onClose` out). See the README,
- * "Block B with your own bank".
+ * "Block B with your own library".
  */
 
 export { default as EmailBuilder } from './ui/EmailBuilder.jsx';

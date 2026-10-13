@@ -32,6 +32,14 @@ All notable changes are documented here. The format follows
 - On the selection: its name, and a toolbar — select the parent, move,
   duplicate, delete. Keyboard: Delete, Ctrl+Z / Ctrl+Y, Ctrl+C / Ctrl+V,
   Ctrl+D, Escape (parent), Enter (edit the text).
+- Ctrl+A selects every block of the email (each section outlined, "All
+  blocks" in the panel); Delete — or the panel's delete button — removes them
+  in one step, Ctrl+Z brings them back. Inside a text being edited or a field,
+  Ctrl+A keeps selecting the text. `editor.selectAll()` does the same.
+- The toolbar's first button names where it goes ("⤴ Column", "⤴ 2 columns"):
+  it selects the parent element; a bare up arrow read as "move up".
+- The template library is called a library everywhere ("Bibliothèque de
+  modèles e-mail" in French, instead of "Banque").
 - Text edited in place (double-click, or a click on a selected text) with a
   formatting bar: bold, italic, underline, strike, link, unlink, clear. Pasted
   content arrives as plain text, Enter is a line break, the HTML is reduced to

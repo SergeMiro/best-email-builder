@@ -22,7 +22,7 @@ component knows the model or the canvas: everything goes through the
 | `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
 | `features/` | one folder per feature + the `emailBuilderFeatures` registry (variables, autosave, versions, preview, test send) and the starter template |
-| `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template bank (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
+| `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template library (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |
 | `renderer/` | MJML preparation, service links, uploaded image URLs (shared browser/server) |
 | `validation/` | what a template may contain (MJML, project, URLs, images, quality checks) |

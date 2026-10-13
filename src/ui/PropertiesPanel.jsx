@@ -193,6 +193,13 @@ export default function PropertiesPanel({
             closeLabel={onDismiss ? 'Close' : 'Deselect'}
           />
           {actions}
+          {selection.multiple ? (
+            <p className="eb:p-4 eb:text-[13px] eb:leading-relaxed eb:text-foreground-lighter" data-testid="eb-select-all">
+              {t('{count} sections selected. Press Delete to remove them (Ctrl+Z brings them back).', {
+                count: selection.multiple,
+              })}
+            </p>
+          ) : (
           <div className="eb:space-y-5 eb:p-4">
             {selection.content !== null && selection.content !== undefined && (
               <section className="eb:space-y-3">
@@ -211,6 +218,7 @@ export default function PropertiesPanel({
             )}
             <PropertyGroups editor={editor} element={selection} block={block} idPrefix="eb-prop" services={services} />
           </div>
+          )}
         </>
       )}
     </aside>

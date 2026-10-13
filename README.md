@@ -118,9 +118,9 @@ and each has its own entry point, so one never brings the other's code:
 
 | Block | Import | What it is |
 |---|---|---|
-| A — the bank | `import { TemplateLibrary } from 'best-email-builder/library'` | Your templates and the ready-made bases in a searchable list, the selected one's details, its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts an editor, and loads neither the editor's engine nor its MJML compiler. |
-| B — the editor | `import { EmailBuilder } from 'best-email-builder/builder'` | The editor (above). Opens whatever the host hands it; knows nothing of the bank. |
-| A + B | `import { EmailStudio } from 'best-email-builder'` | The two wired together: the bank, then the editor, then back to the bank with the template just saved selected. The editor has no *Templates* button there — the bases are in the bank. |
+| A — the library | `import { TemplateLibrary } from 'best-email-builder/library'` | Your templates and the ready-made bases in a searchable list, the selected one's details, its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts an editor, and loads neither the editor's engine nor its MJML compiler. |
+| B — the editor | `import { EmailBuilder } from 'best-email-builder/builder'` | The editor (above). Opens whatever the host hands it; knows nothing of the library. |
+| A + B | `import { EmailStudio } from 'best-email-builder'` | The two wired together: the library, then the editor, then back to the library with the template just saved selected. The editor has no *Templates* button there — the bases are in the library. |
 
 `best-email-builder` (the main entry) still exports everything; the two
 sub-entries are for an application that wants one block only. Both use the
@@ -134,12 +134,12 @@ import { EmailStudio, createHttpStorage } from 'best-email-builder';
 <EmailStudio storage={createHttpStorage()} locale="fr" sender={sender} />
 ```
 
-#### Block B with your own bank
+#### Block B with your own library
 
-Your bank (a table, a sidebar, a modal — anything) only decides what the
+Your library (a table, a sidebar, a modal — anything) only decides what the
 editor opens, and hears back when it saves or closes:
 
-| Your bank wants to… | Pass to `EmailBuilder` |
+| Your library wants to… | Pass to `EmailBuilder` |
 |---|---|
 | open a saved template | `templateId={id}` (the editor loads it from `storage`) |
 | start from content it has (a base, an import, a copy) | `initialMjml={mjml}` and, optionally, `initialMeta={{ subject, preheader }}` |
@@ -158,7 +158,7 @@ import { EmailBuilder, createHttpStorage } from 'best-email-builder/builder';
 const storage = createHttpStorage();
 
 function Emails() {
-  const [open, setOpen] = useState(null); // null = my bank
+  const [open, setOpen] = useState(null); // null = my library
 
   if (!open) {
     return (

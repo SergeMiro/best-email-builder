@@ -49,7 +49,7 @@ const EDGE = 56;
  *   compile: (mjml: string) => Promise<{html: string, errors: any[]}>,
  *   getRoot: () => EmailNode,
  *   t: (key: string, values?: Record<string, any>) => string,
- *   info: (id: string) => {label: string, tag: string, canRemove: boolean, canDuplicate: boolean, canMove: boolean, hasParent: boolean}|null,
+ *   info: (id: string) => {label: string, tag: string, canRemove: boolean, canDuplicate: boolean, canMove: boolean, hasParent: boolean, parentLabel: string}|null,
  *   onSelect: (id: string|null) => void,
  *   onAction: (action: 'parent'|'duplicate'|'remove', id: string) => void,
  *   onDrop: (payload: DragPayload, target: DropTarget) => void,
@@ -111,6 +111,9 @@ export function createCanvasView(options) {
   textTools.setAttribute('aria-label', t('Text formatting'));
 
   /** @type {string|null} */ let selectedId = null;
+  /** Ctrl+A: the sections drawn as selected, and their boxes. */
+  /** @type {string[]} */ let multiIds = [];
+  /** @type {HTMLElement[]} */ const multiBoxes = [];
   /** @type {string|null} */ let hoverId = null;
   /** @type {string|null} */ let editingId = null;
   /** @type {HTMLElement|null} */ let editingEl = null;
@@ -163,7 +166,7 @@ export function createCanvasView(options) {
   /* ── Overlays ──────────────────────────────────────────────────────────── */
 
   function drawHover() {
-    const box = hoverId && hoverId !== selectedId && !drag ? docBoxOf(hoverId) : null;
+    const box = hoverId && hoverId !== selectedId && !drag && !multiIds.length ? docBoxOf(hoverId) : null;
     hoverBox.hidden = hoverChip.hidden = !box;
     if (!box || !hoverId) return;
     place(hoverBox, box);
@@ -179,14 +182,16 @@ export function createCanvasView(options) {
     placeChip(selectChip, box, details.label);
     // While a text is edited its formatting bar takes that place.
     if (editingId) selectChip.hidden = true;
-    // Toolbar: top-right, above the element when there is room.
+    // Toolbar: top-right, above the element when there is room. The first
+    // button climbs to the parent and says which one ("⤴ Column"): an arrow
+    // alone read as "move up".
     const buttons = [
-      details.hasParent && ['parent', t('Select the parent')],
+      details.hasParent && ['parent', `${t('Select the parent')}: ${details.parentLabel}`],
       details.canMove && ['move', t('Drag to move')],
       details.canDuplicate && ['duplicate', t('Duplicate')],
       details.canRemove && ['remove', t('Delete')],
     ].filter(Boolean);
-    const signature = buttons.map((b) => b && b[0]).join(',');
+    const signature = buttons.map((b) => b && b[1]).join(',');
     if (tools.dataset.signature !== signature || tools.dataset.lang !== t('Delete')) {
       tools.textContent = '';
       for (const button of buttons) {
@@ -198,13 +203,19 @@ export function createCanvasView(options) {
         el.title = label;
         el.setAttribute('aria-label', label);
         el.innerHTML = ICONS[action];
+        if (action === 'parent') {
+          el.classList.add('eb-ui-parent');
+          const name = doc.createElement('span');
+          name.textContent = details.parentLabel;
+          el.appendChild(name);
+        }
         tools.appendChild(el);
       }
       tools.dataset.signature = signature;
       tools.dataset.lang = t('Delete');
     }
     tools.hidden = editingId !== null || buttons.length === 0;
-    const toolsWidth = buttons.length * 27 + 4;
+    const toolsWidth = tools.offsetWidth || buttons.length * 27 + 4;
     const above = box.top - win.scrollY > 30;
     tools.style.top = `${above ? box.top - 28 : box.top + 2}px`;
     // Right-aligned on the element, but never over its name.
@@ -227,8 +238,22 @@ export function createCanvasView(options) {
     refreshTextState();
   }
 
+  function drawMulti() {
+    while (multiBoxes.length < multiIds.length) {
+      const box = make('eb-ui-box eb-ui-select');
+      box.setAttribute('data-testid', 'eb-canvas-multi');
+      multiBoxes.push(box);
+    }
+    multiBoxes.forEach((box, i) => {
+      const r = i < multiIds.length ? docBoxOf(multiIds[i]) : null;
+      box.hidden = !r;
+      if (r) place(box, r);
+    });
+  }
+
   function refreshOverlays() {
     if (destroyed) return;
+    drawMulti();
     drawSelection();
     drawHover();
     drawTextTools();
@@ -822,6 +847,11 @@ export function createCanvasView(options) {
           if (r.bottom < 0 || r.top > win.innerHeight) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
       }
+    },
+    /** Ctrl+A: boxes on every given element (empty array: none). @param {string[]} ids */
+    setMultiSelection(ids) {
+      multiIds = [...ids];
+      refreshOverlays();
     },
     /** @param {'desktop'|'mobile'} next */
     setDevice(next) {

@@ -40,15 +40,15 @@ const TEXT = {
     alternative: 'An open-source alternative to the editors of',
     alternativeNote: 'The same drag-and-drop, inside your own app: no per-seat price, and your templates stay on your server.',
     features: [
-      ['Two screens, take one or both', 'A template bank, then the editor — or only the editor. Each one installs on its own.'],
+      ['Two screens, take one or both', 'A template library, then the editor — or only the editor. Each one installs on its own.'],
       ['Renders everywhere', 'MJML compiled on your server: tables Outlook understands, layouts that hold in Gmail and Apple Mail.'],
       ['Yours, end to end', 'Templates, versions and images in your database. A strict allow-list checks every template before saving.'],
     ],
     demo: 'Demo',
     home: 'Home',
     codeTitle: 'How to install it',
-    codeTabs: { both: 'Bank + editor', builder: 'Editor only', library: 'Bank only' },
-    stepBank: 'Template bank',
+    codeTabs: { both: 'Library + editor', builder: 'Editor only', library: 'Library only' },
+    stepBank: 'Template library',
     stepEditor: 'Editor',
     expand: 'Full screen',
     shrink: 'Exit full screen',
@@ -67,15 +67,15 @@ const TEXT = {
     alternative: 'Une alternative open source aux éditeurs de',
     alternativeNote: 'Le même glisser-déposer, dans votre propre application : aucun prix par siège, et vos modèles restent sur votre serveur.',
     features: [
-      ['Deux écrans, l’un ou les deux', 'Une banque de modèles, puis l’éditeur — ou l’éditeur seul. Chacun s’installe séparément.'],
+      ['Deux écrans, l’un ou les deux', 'Une bibliothèque de modèles, puis l’éditeur — ou l’éditeur seul. Chacun s’installe séparément.'],
       ['Un rendu partout', 'Du MJML compilé sur votre serveur : des tableaux qu’Outlook comprend, des mises en page qui tiennent dans Gmail et Apple Mail.'],
       ['À vous, de bout en bout', 'Modèles, versions et images dans votre base. Une liste blanche stricte vérifie chaque modèle avant l’enregistrement.'],
     ],
     demo: 'Démo',
     home: 'Accueil',
     codeTitle: 'Comment l’installer',
-    codeTabs: { both: 'Banque + éditeur', builder: 'Éditeur seul', library: 'Banque seule' },
-    stepBank: 'Banque de modèles',
+    codeTabs: { both: 'Bibliothèque + éditeur', builder: 'Éditeur seul', library: 'Bibliothèque seule' },
+    stepBank: 'Bibliothèque de modèles',
     stepEditor: 'Éditeur',
     expand: 'Plein écran',
     shrink: 'Réduire',
@@ -198,7 +198,7 @@ const CODE_SAMPLES = [
 
 <EmailBuilder
   storage={storage}
-  templateId={id}           // opened from your own bank
+  templateId={id}           // opened from your own library
   onSaved={refreshMyList}
   onClose={backToMyList}
 />`,

@@ -112,6 +112,11 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
   /** @type {Map<string, {keys: string[], handler: () => void}>} */
   const shortcuts = new Map();
   /** @type {EmailNode|null} */ let clipboard = null;
+  /**
+   * Ctrl+A: every section of the email selected at once (their ids), or null.
+   * Any other selection, change or load ends it.
+   */
+  /** @type {string[]|null} */ let selectedAll = null;
   /** @type {(() => void)|null} */ let removeHostKeys = null;
 
   function requireRoot() {
@@ -161,10 +166,65 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
       // A section's parent is the page: "select the parent" would only show
       // the page settings, which a click beside the email does already.
       hasParent: Boolean(parent && parent.tag !== 'mjml' && parent.tag !== 'mj-body'),
+      parentLabel: parent && parent.tag !== 'mjml' && parent.tag !== 'mj-body' ? labelOf(/** @type {EngineSelection} */ (describe(parent.id))) : '',
     };
   }
 
-  const emitSelection = () => emit('selection', describe(selectedId));
+  /**
+   * The whole email selected (Ctrl+A): described as the body, with the
+   * number of sections it holds (`multiple`); only "delete" applies.
+   * @returns {EngineSelection|null}
+   */
+  function describeAll() {
+    if (!root || !selectedAll) return null;
+    const node = findFirst(root, 'mj-body');
+    if (!node) return null;
+    return {
+      id: node.id,
+      tagName: 'mj-body',
+      attributes: { ...node.attributes },
+      content: null,
+      canRemove: true,
+      canDuplicate: false,
+      canMoveUp: false,
+      canMoveDown: false,
+      multiple: selectedAll.length,
+    };
+  }
+
+  const currentSelection = () => (selectedAll ? describeAll() : describe(selectedId));
+  const emitSelection = () => emit('selection', currentSelection());
+
+  /** Ctrl+A: every section of the email. */
+  function selectAll() {
+    if (!root || !view) return;
+    view.finishEditing();
+    const ids = body().children.map((child) => child.id);
+    if (!ids.length) return;
+    selectedAll = ids;
+    selectedId = null;
+    view.setSelection(null);
+    view.setMultiSelection(ids);
+    emitSelection();
+  }
+
+  /** Ends a Ctrl+A selection (without emitting). */
+  function clearAll() {
+    if (!selectedAll) return;
+    selectedAll = null;
+    view?.setMultiSelection([]);
+  }
+
+  /** Delete with everything selected: the email's sections, in one step. */
+  function removeAll() {
+    const current = requireRoot();
+    const all = selectedAll || [];
+    clearAll();
+    let next = current;
+    for (const id of all) next = removeNode(next, id);
+    commit(next, { select: null });
+    if (next === current) emitSelection();
+  }
   const emitHistory = () => emit('history', { canUndo: history.past.length > 0, canRedo: history.future.length > 0 });
 
   /* ── Changing ────────────────────────────────────────────────────────── */
@@ -180,6 +240,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
   function commit(next, { merge = null, select, render = true } = {}) {
     const current = requireRoot();
     if (next === current) return;
+    clearAll();
     const now = Date.now();
     const merged = merge !== null && merge === history.key && now - history.at < MERGE_MS;
     if (!merged) {
@@ -205,6 +266,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
    */
   function replace(next) {
     view?.finishEditing();
+    clearAll();
     root = next;
     selectedId = null;
     history = { past: [], future: [], key: null, at: 0 };
@@ -218,6 +280,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
   /** @param {'undo'|'redo'} direction */
   function travel(direction) {
     view?.finishEditing();
+    clearAll();
     const from = direction === 'undo' ? history.past : history.future;
     const to = direction === 'undo' ? history.future : history.past;
     const step = from.pop();
@@ -371,6 +434,13 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
     } else if (mod && ((key === 'z' && event.shiftKey) || key === 'y')) {
       event.preventDefault();
       travel('redo');
+    } else if (mod && key === 'a' && !event.shiftKey) {
+      // The whole email (inside a text being edited, Ctrl+A stays the text's).
+      event.preventDefault();
+      selectAll();
+    } else if (!mod && (event.key === 'Delete' || event.key === 'Backspace') && selectedAll) {
+      event.preventDefault();
+      removeAll();
     } else if (!mod && (event.key === 'Delete' || event.key === 'Backspace') && selectedId) {
       event.preventDefault();
       removeById(selectedId);
@@ -383,6 +453,9 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
     } else if (mod && key === 'd' && selectedId) {
       event.preventDefault();
       duplicateNode(selectedId);
+    } else if (event.key === 'Escape' && selectedAll) {
+      event.preventDefault();
+      adapter.select(null);
     } else if (event.key === 'Escape' && selectedId) {
       event.preventDefault();
       const parent = parentOf(root, selectedId);
@@ -504,7 +577,14 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
       return insertBlock(block, placement);
     },
 
-    remove: (id) => removeById(id),
+    remove(id) {
+      // With everything selected, removing the body means removing its content.
+      if (selectedAll && root && id === findFirst(root, 'mj-body')?.id) {
+        removeAll();
+        return true;
+      }
+      return removeById(id);
+    },
     duplicate: (id) => duplicateNode(id),
 
     move(id, direction) {
@@ -522,6 +602,13 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
     select(id) {
       if (!root) return;
       const next = id && findNode(root, id) && describe(id) ? id : null;
+      if (selectedAll) {
+        clearAll();
+        selectedId = next;
+        view?.setSelection(next);
+        emitSelection();
+        return;
+      }
       if (next === selectedId) {
         view?.setSelection(next);
         return;
@@ -531,7 +618,9 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
       emitSelection();
     },
 
-    getSelection: () => describe(selectedId),
+    selectAll: () => selectAll(),
+
+    getSelection: () => currentSelection(),
     describe: (id) => describe(id),
     getRootId: () => (root ? findFirst(root, 'mj-body')?.id || null : null),
 

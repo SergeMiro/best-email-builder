@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * BLOCK A alone — the template bank (`best-email-builder/library`).
+ * BLOCK A alone — the template library (`best-email-builder/library`).
  *
  * Imports nothing of the editor (no engine, no canvas, no MJML compiler):
  * *Edit*, *New template* and *Start from this base* only call
