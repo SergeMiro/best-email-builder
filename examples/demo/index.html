@@ -8,12 +8,23 @@
     <link
       rel="icon"
       type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%236d5ef0'/%3E%3Cstop offset='1' stop-color='%233b2fa8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Crect x='6' y='9' width='20' height='15' rx='2.6' fill='none' stroke='white' stroke-width='1.8'/%3E%3Cpath d='M7.2 10.6 16 16 24.8 10.6' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237d6ff7'/%3E%3Cstop offset='1' stop-color='%233b2fa8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg transform='translate(0 5)'%3E%3Crect x='1' y='1' width='38' height='28' rx='7' fill='url(%23g)'/%3E%3Cpath d='M3.4 3.4 20 13.4 36.6 3.4' fill='none' stroke='white' stroke-opacity='.45' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cg fill='none' stroke='white' stroke-width='2.7' stroke-linecap='round'%3E%3Cpath d='M6.3 12.6v11.8'/%3E%3Ccircle cx='9.5' cy='21.2' r='3.2'/%3E%3Cpath d='M16.8 21.2h6.4'/%3E%3Cpath d='M23.2 21.2a3.2 3.2 0 1 0-1.06 2.38' stroke-linecap='butt'/%3E%3Cpath d='M27.3 12.6v11.8'/%3E%3Ccircle cx='30.5' cy='21.2' r='3.2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@1&display=swap"
     />
     <style>
       html, body, #root { height: 100%; margin: 0; }
       body {
-        font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        /* the builder and the template bank use the same faces as the page */
+        --eb-font-sans: var(--sans);
+        --eb-font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+        font-family: var(--sans);
+        text-rendering: optimizeLegibility;
         background: #f6f7fb;
         color: #1f2433;
         -webkit-font-smoothing: antialiased;
@@ -80,13 +91,10 @@
 
       /* top bar */
       .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; }
-      .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; font-size: 14px; color: var(--ink); letter-spacing: -0.01em; }
-      .brand-mark {
-        width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: #fff;
-        background: linear-gradient(135deg, oklch(0.62 0.2 280), oklch(0.42 0.17 272));
-        box-shadow: 0 6px 16px -6px oklch(0.5 0.2 277 / 0.7), inset 0 1px 0 rgb(255 255 255 / 0.25);
-      }
-      .brand-mark svg { width: 26px; height: 26px; display: block; }
+      .brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 600; font-size: 15px; color: var(--ink); letter-spacing: -0.02em; }
+      .brand-mark { display: block; filter: drop-shadow(0 5px 10px oklch(0.5 0.2 277 / 0.35)); transition: transform 0.2s; }
+      .brand-mark svg { width: 44px; height: 33px; display: block; }
+      .brand:hover .brand-mark { transform: translateY(-1px) rotate(-3deg); }
       .topbar-actions { display: flex; align-items: center; gap: 8px; }
       .segmented {
         display: inline-flex; padding: 3px; border-radius: 999px; border: 1px solid var(--line);
@@ -119,17 +127,19 @@
       .eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: #22a06b; box-shadow: 0 0 0 3px rgb(34 160 107 / 0.18); animation: pulse 2.4s ease-in-out infinite; }
       @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgb(34 160 107 / 0.06); } }
       .hero h1 {
-        margin: 20px 0 0; font-size: clamp(36px, 6.4vw, 60px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 750;
+        margin: 20px 0 0; font-size: clamp(38px, 6.8vw, 66px); line-height: 1.02; letter-spacing: -0.045em; font-weight: 700;
         color: var(--ink);
       }
       .hero h1 span {
+        font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400;
+        font-size: 1.12em; letter-spacing: -0.02em; padding: 0 0.06em 0 0.02em;
         background: linear-gradient(110deg, oklch(0.55 0.21 280), oklch(0.6 0.17 240), oklch(0.58 0.2 300), oklch(0.55 0.21 280));
         background-size: 250% 100%;
         -webkit-background-clip: text; background-clip: text; color: transparent;
         animation: sheen 9s ease-in-out infinite alternate;
       }
       @keyframes sheen { to { background-position: 100% 0; } }
-      .tagline { margin: 18px auto 0; max-width: 620px; font-size: 17px; line-height: 1.55; color: var(--ink-2); }
+      .tagline { margin: 18px auto 0; max-width: 620px; text-wrap: balance; font-size: 17px; line-height: 1.55; color: var(--ink-2); }
       .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 22px; }
       .chip {
         display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px;
