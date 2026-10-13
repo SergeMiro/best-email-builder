@@ -134,3 +134,21 @@ test('French', async ({ page }) => {
   await page.getByTestId('eb-library-base').first().click();
   await expect(page.getByRole('button', { name: 'Partir de cette base' })).toBeVisible();
 });
+
+test('preview: the editor’s device switch, and the frame narrows and widens smoothly', async ({ page }) => {
+  await page.goto(STANDALONE);
+  const preview = page.getByTestId('eb-library-preview');
+  const box = preview.locator('[data-device]');
+  await expect(preview.frameLocator('iframe').locator('[data-preview]')).toBeVisible();
+  const wide = (await box.boundingBox()).width;
+  await preview.getByRole('tab', { name: 'Mobile' }).click();
+  await expect(box).toHaveAttribute('data-device', 'mobile');
+  // Mid-way through the 350 ms transition the width is between the two.
+  await page.waitForTimeout(120);
+  const midway = (await box.boundingBox()).width;
+  expect(midway).toBeLessThan(wide);
+  expect(midway).toBeGreaterThan(375);
+  await expect.poll(async () => Math.round((await box.boundingBox()).width)).toBe(375);
+  await preview.getByRole('tab', { name: 'Desktop' }).click();
+  await expect.poll(async () => Math.round((await box.boundingBox()).width)).toBe(Math.round(wide));
+});

@@ -5,7 +5,7 @@ import { FRAME_SCROLLBAR_CSS } from '../../core/scrollbars.js';
 import { useUi } from '../../ui/context.jsx';
 import { Button } from '../../ui/primitives/button.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
-import { SectionLabel } from '../../ui/primitives/misc.jsx';
+import { SectionLabel, Tabs, TabsList, TabsTrigger } from '../../ui/primitives/misc.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 
 /**
@@ -76,26 +76,19 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
   return (
     <div className="eb:flex eb:h-full eb:min-h-0 eb:flex-col">
       <div className="eb:mb-2 eb:flex eb:shrink-0 eb:items-center eb:justify-between eb:gap-2">
-        <div className="eb:inline-flex eb:rounded-lg2 eb:border eb:border-border-strong eb:bg-surface-75 eb:p-0.5">
-          <Button
-            variant={isMobile ? 'ghost' : 'secondary'}
-            size="sm-compact"
-            onClick={() => onDeviceChange?.('desktop')}
-            aria-pressed={!isMobile}
-          >
-            <Monitor />
-            {t('Desktop')}
-          </Button>
-          <Button
-            variant={isMobile ? 'secondary' : 'ghost'}
-            size="sm-compact"
-            onClick={() => onDeviceChange?.('mobile')}
-            aria-pressed={isMobile}
-          >
-            <Smartphone />
-            {t('Mobile')}
-          </Button>
-        </div>
+        {/* The same switch as the editor's toolbar. */}
+        <Tabs value={device} onValueChange={(value) => onDeviceChange?.(value)}>
+          <TabsList aria-label={t('Device')}>
+            <TabsTrigger value="desktop">
+              <Monitor />
+              {t('Desktop')}
+            </TabsTrigger>
+            <TabsTrigger value="mobile">
+              <Smartphone />
+              {t('Mobile')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         {onRefresh && (
           <Button variant="outline" size="sm-compact" onClick={onRefresh} disabled={loading}>
             {loading ? <Loader2 className="eb:animate-spin" /> : <RefreshCw />}
@@ -112,15 +105,20 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
             {loading ? t('Rendering…') : t('Nothing to show yet.')}
           </div>
         ) : (
+          // Narrows and widens like the editor's canvas (GrapesJS: width .35s ease).
           <div
-            className={cn('eb:mx-auto eb:bg-white', isMobile && 'eb:shadow-sm')}
-            style={isMobile ? { width: EMAIL_MOBILE_WIDTH } : undefined}
+            className={cn(
+              'eb:mx-auto eb:max-w-full eb:bg-white eb:transition-[width,box-shadow] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none',
+              isMobile && 'eb:shadow-sm'
+            )}
+            style={{ width: isMobile ? EMAIL_MOBILE_WIDTH : '100%' }}
+            data-device={device}
           >
             <iframe
               sandbox=""
               srcDoc={srcDoc}
               title={t('Email preview')}
-              className="eb:block eb:w-full eb:border-0 eb:bg-white"
+              className="eb:block eb:w-full eb:border-0 eb:bg-white eb:transition-[height] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none"
               style={{ height: isMobile ? 760 : 900 }}
             />
           </div>

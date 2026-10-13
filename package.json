@@ -30,6 +30,14 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./builder": {
+      "types": "./dist/types/builder.d.ts",
+      "import": "./dist/builder.js"
+    },
+    "./library": {
+      "types": "./dist/types/library.d.ts",
+      "import": "./dist/library.js"
+    },
     "./server": {
       "types": "./dist/types/server/index.d.ts",
       "import": "./dist/server.js"

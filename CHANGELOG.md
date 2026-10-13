@@ -20,6 +20,12 @@ All notable changes are documented here. The format follows
   The editor opened from the bank has no *Templates* button: the bases are
   picked in the bank, and the gallery would replace the email being edited
   (`builderProps.templates` brings it back).
+- **Two entry points, one per block**: `best-email-builder/library` (block A,
+  the bank — no editor, no GrapesJS) and `best-email-builder/builder`
+  (block B, the editor — nothing of the bank). A unit test bundles each one
+  and fails if it reaches the other. The README shows block B under a bank
+  of your own (what to pass in, what comes back) and block A with your own
+  editor; a story drives block B from a home-made bank.
 - Storage contract: optional `list()` and `remove(id)`, implemented by
   `createHttpStorage()` (the server already had the routes) and
   `createMemoryStorage()`.
@@ -37,6 +43,11 @@ All notable changes are documented here. The format follows
   bank, inside the canvas and the preview frames (preview only, never the
   saved HTML): a 5.6 px gutter, a thin thumb, no arrows, shown only while the
   pointer is over the block. They also replace GrapesJS's own dark ones.
+- The preview (in the bank and in the editor's *Preview*) switches device
+  with the editor toolbar's switch, and narrows and widens like the canvas
+  (350 ms).
+- `EmailBuilder` no longer imports the package entry
+  (`createDefaultEmailEditor` lives in its own module).
 
 ## [0.2.0] — 2026-10-12
 

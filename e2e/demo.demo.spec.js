@@ -76,6 +76,11 @@ test('a base opens the editor on its content, and the address survives a reload'
 
 test('landing: the marquee lists the editors this one can replace', async ({ page }) => {
   await page.goto(`${HOME}?lang=en`);
+  // The code sample shows each block installed alone.
+  await page.getByRole('tab', { name: 'Editor only' }).click();
+  await expect(page.locator('.code pre')).toContainText("from 'best-email-builder/builder'");
+  await page.getByRole('tab', { name: 'Bank only' }).click();
+  await expect(page.locator('.code pre')).toContainText("from 'best-email-builder/library'");
   const marquee = page.locator('.marquee-list').first();
   await expect(marquee).toContainText('Brevo');
   await expect(marquee).toContainText('Mailchimp');

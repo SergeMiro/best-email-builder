@@ -103,44 +103,104 @@ component (the canvas needs the DOM). With Next.js, load it with
 `dynamic(() => import(...), { ssr: false })` or render it from a
 `'use client'` component.
 
-### Two screens, each optional
+### Two blocks, each one on its own
 
-The package has two levels, and an application installs one, the other, or
-both:
+The package has two blocks. An application installs one, the other, or both,
+and each has its own entry point, so one never brings the other's code:
 
-| Level | Component | What it is |
+| Block | Import | What it is |
 |---|---|---|
-| 1 | `TemplateLibrary` | The template bank: your templates and the ready-made bases in a searchable list, the selected one's details, and its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts the editor. |
-| 2 | `EmailBuilder` | The editor (above). Works without the library. |
-| 1 + 2 | `EmailStudio` | The two wired together: the library, then the editor, then back to the library with the template just saved selected. The editor has no *Templates* button there — the bases are in the library. |
+| A — the bank | `import { TemplateLibrary } from 'best-email-builder/library'` | Your templates and the ready-made bases in a searchable list, the selected one's details, its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts an editor, and does not load GrapesJS. |
+| B — the editor | `import { EmailBuilder } from 'best-email-builder/builder'` | The editor (above). Opens whatever the host hands it; knows nothing of the bank. |
+| A + B | `import { EmailStudio } from 'best-email-builder'` | The two wired together: the bank, then the editor, then back to the bank with the template just saved selected. The editor has no *Templates* button there — the bases are in the bank. |
+
+`best-email-builder` (the main entry) still exports everything; the two
+sub-entries are for an application that wants one block only. Both use the
+same stylesheet, `best-email-builder/styles.css`.
+
+#### A + B, nothing to wire
 
 ```jsx
-import { EmailStudio, TemplateLibrary, EmailBuilder } from 'best-email-builder';
+import { EmailStudio, createHttpStorage } from 'best-email-builder';
 
-// Both levels, nothing to wire:
-<EmailStudio storage={storage} locale="fr" sender={sender} />
-
-// Only the library, opening your own route or modal:
-<TemplateLibrary
-  storage={storage}
-  onEdit={(template) => router.push(`/emails/${template.id}`)}
-  onCreate={(start) => openEditor(start)}   // start: null, or { baseId, mjml, meta }
-  onClose={closeModal}                      // optional: shows a close button
-/>
-
-// Only the editor: EmailBuilder, as in the example above.
+<EmailStudio storage={createHttpStorage()} locale="fr" sender={sender} />
 ```
 
-To open the editor from the library yourself, pass `start.mjml` and
-`start.meta` to `EmailBuilder` as `initialMjml` and `initialMeta`. The library
-needs `storage.list()`; *Delete* appears when the storage has `remove()`, the
-preview uses `render()` (else the HTML compiled at the last save). Its props:
-`storage`, `locale`, `messages`, `onNotify`, `sender`, `templates` (the bases,
-`[]` hides them), `title`, `description`, `selectedId`, `favoritesKey` (the
-star of the details moves an entry to a *Favorites* section at the top; kept in
-`localStorage` under this key, `null` turns favorites off), `onEdit`,
-`onCreate`, `onClose`, `className`. Like the builder, it fills its parent and follows its
-own width (three columns, then two, then list and details as two screens).
+#### Block B with your own bank
+
+Your bank (a table, a sidebar, a modal — anything) only decides what the
+editor opens, and hears back when it saves or closes:
+
+| Your bank wants to… | Pass to `EmailBuilder` |
+|---|---|
+| open a saved template | `templateId={id}` (the editor loads it from `storage`) |
+| start from content it has (a base, an import, a copy) | `initialMjml={mjml}` and, optionally, `initialMeta={{ subject, preheader }}` |
+| start from a blank email | neither |
+| refresh its list after a save | `onSaved={(template) => …}` — `template.id` is set from the first save on |
+| show itself again | `onClose={() => …}` (the *Back* button) |
+| hide the editor's own gallery of bases | `templates={[]}` |
+
+Give the editor a `key` that changes with what it opens, so switching from one
+template to another starts a fresh editor.
+
+```jsx
+import { EmailBuilder, createHttpStorage } from 'best-email-builder/builder';
+
+const storage = createHttpStorage();
+
+function Emails() {
+  const [open, setOpen] = useState(null); // null = my bank
+
+  if (!open) {
+    return (
+      <MyTemplateList                                     // your block A
+        onOpen={(id) => setOpen({ key: id, templateId: id })}
+        onNew={() => setOpen({ key: `new-${Date.now()}` })}
+      />
+    );
+  }
+  return (
+    <EmailBuilder
+      key={open.key}
+      storage={storage}
+      locale="fr"
+      templates={[]}
+      templateId={open.templateId ?? null}
+      initialMjml={open.mjml}
+      initialMeta={open.meta}
+      onSaved={() => refreshMyList()}
+      onClose={() => setOpen(null)}
+    />
+  );
+}
+```
+
+Your list can read the same templates with `storage.list()` (summaries, newest
+first) or from your own API — the editor only needs the `id`.
+
+#### Block A with your own editor
+
+```jsx
+import { TemplateLibrary, createHttpStorage } from 'best-email-builder/library';
+
+<TemplateLibrary
+  storage={createHttpStorage()}
+  locale="fr"
+  onEdit={(template) => router.push(`/emails/${template.id}`)}
+  onCreate={(start) => openMyEditor(start)}   // start: null (new), or { baseId, mjml, meta: { subject, preheader } }
+  onClose={closeModal}                        // optional: shows a close button
+/>
+```
+
+The library needs `storage.list()`; *Delete* appears when the storage has
+`remove()`, the preview uses `render()` (else the HTML compiled at the last
+save). Its props: `storage`, `locale`, `messages`, `onNotify`, `sender`,
+`templates` (the bases, `[]` hides them), `title`, `description`,
+`selectedId`, `favoritesKey` (the star of the details moves an entry to a
+*Favorites* section at the top; kept in `localStorage` under this key, `null`
+turns favorites off), `onEdit`, `onCreate`, `onClose`, `className`. Like the
+builder, it fills its parent and follows its own width (three columns, then
+two, then list and details as two screens).
 
 ### 2. The server routes
 

@@ -15,28 +15,10 @@
  * See `docs/ARCHITECTURE.md`.
  */
 
-import { createEmailEditor } from './core/EmailEditor.js';
-import { createGrapesJsAdapter } from './adapters/grapesjs/GrapesJsAdapter.js';
-import { emailBlocks } from './blocks/index.js';
-import { emailBuilderFeatures } from './features/index.js';
-
 export { createEmailEditor } from './core/EmailEditor.js';
 export { emailBlocks } from './blocks/index.js';
 export { emailBuilderFeatures, isFeatureEnabled } from './features/index.js';
-
-/**
- * An editor wired to the default engine and the built-in registries.
- *
- * @param {{locale?: string}} [options]  `locale`: engine UI locale (`'en'` by default)
- */
-export function createDefaultEmailEditor(options = {}) {
-  const { locale } = options;
-  return createEmailEditor({
-    adapter: createGrapesJsAdapter({ locale }),
-    blocks: emailBlocks,
-    features: emailBuilderFeatures,
-  });
-}
+export { createDefaultEmailEditor } from './defaultEditor.js';
 
 /* ── React interface ─────────────────────────────────────────────────────── */
 export { default as EmailBuilder } from './ui/EmailBuilder.jsx';

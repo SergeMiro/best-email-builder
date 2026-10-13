@@ -1,6 +1,8 @@
 import { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { EmailBuilder, TemplateLibrary, TEMPLATE_GALLERY, buildGallery, translatorFor } from 'best-email-builder';
+// The two blocks through their own entries, as an application using them apart would.
+import { EmailBuilder, TEMPLATE_GALLERY, buildGallery, translatorFor } from 'best-email-builder/builder';
+import { TemplateLibrary } from 'best-email-builder/library';
 import 'best-email-builder/styles.css';
 import {
   ArrowRight,
@@ -44,6 +46,8 @@ const TEXT = {
     ],
     demo: 'Demo',
     home: 'Home',
+    codeTitle: 'How to install it',
+    codeTabs: { both: 'Bank + editor', builder: 'Editor only', library: 'Bank only' },
     stepBank: 'Template bank',
     stepEditor: 'Editor',
     expand: 'Full screen',
@@ -69,6 +73,8 @@ const TEXT = {
     ],
     demo: 'Démo',
     home: 'Accueil',
+    codeTitle: 'Comment l’installer',
+    codeTabs: { both: 'Banque + éditeur', builder: 'Éditeur seul', library: 'Banque seule' },
     stepBank: 'Banque de modèles',
     stepEditor: 'Éditeur',
     expand: 'Plein écran',
@@ -179,24 +185,84 @@ function InstallCommand({ text }) {
 }
 
 /** Two lines of JSX: what a developer actually writes. */
-function CodeSample() {
+/** The three ways to install it: both blocks, the editor alone, the bank alone. */
+const CODE_SAMPLES = [
+  {
+    id: 'both',
+    code: `import { EmailStudio, createHttpStorage } from 'best-email-builder';
+
+<EmailStudio storage={createHttpStorage()} locale="fr" />`,
+  },
+  {
+    id: 'builder',
+    code: `import { EmailBuilder } from 'best-email-builder/builder';
+
+<EmailBuilder
+  storage={storage}
+  templateId={id}           // opened from your own bank
+  onSaved={refreshMyList}
+  onClose={backToMyList}
+/>`,
+  },
+  {
+    id: 'library',
+    code: `import { TemplateLibrary } from 'best-email-builder/library';
+
+<TemplateLibrary
+  storage={storage}
+  onEdit={(template) => openMyEditor(template.id)}
+  onCreate={(start) => openMyEditor(start)}
+/>`,
+  },
+];
+
+/** Just enough colouring for the samples above (our own text, never user input). */
+const TOKENS =
+  /(\/\/[^\n]*)|('[^']*'|"[^"]*")|\b(import|from)\b|(<\/?[A-Z]\w*|\/?>)|(\b\w+(?==))|(\b\w+(?=\())/g;
+const TOKEN_CLASSES = ['c', 's', 'k', 't', 'a', 'f'];
+
+function highlight(code) {
+  const out = [];
+  let last = 0;
+  for (const match of code.matchAll(TOKENS)) {
+    if (match.index > last) out.push(code.slice(last, match.index));
+    const group = match.slice(1).findIndex((part) => part !== undefined);
+    out.push(
+      <span key={match.index} className={TOKEN_CLASSES[group]}>
+        {match[0]}
+      </span>,
+    );
+    last = match.index + match[0].length;
+  }
+  out.push(code.slice(last));
+  return out;
+}
+
+function CodeSample({ text }) {
+  const [current, setCurrent] = useState('both');
+  const sample = CODE_SAMPLES.find((s) => s.id === current);
   return (
     <figure className="code">
       <figcaption className="code-bar">
         <i aria-hidden="true" />
         <i aria-hidden="true" />
         <i aria-hidden="true" />
-        <span>App.jsx</span>
+        <span className="code-tabs" role="tablist" aria-label={text.codeTitle}>
+          {CODE_SAMPLES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={s.id === current}
+              onClick={() => setCurrent(s.id)}
+            >
+              {text.codeTabs[s.id]}
+            </button>
+          ))}
+        </span>
       </figcaption>
-      <pre>
-        <code>
-          <span className="k">import</span> {'{ '}
-          <span className="f">EmailStudio</span>
-          {' }'} <span className="k">from</span> <span className="s">&apos;best-email-builder&apos;</span>;{'\n\n'}
-          <span className="t">&lt;EmailStudio</span> <span className="a">storage</span>={'{'}
-          <span className="f">createHttpStorage</span>(){'}'} <span className="a">locale</span>=<span className="s">&quot;fr&quot;</span>{' '}
-          <span className="t">/&gt;</span>
-        </code>
+      <pre role="tabpanel">
+        <code>{highlight(sample.code)}</code>
       </pre>
     </figure>
   );
@@ -395,7 +461,7 @@ function Landing({ text }) {
         </div>
         <div className="dev">
           <InstallCommand text={text} />
-          <CodeSample />
+          <CodeSample text={text} />
         </div>
       </section>
 

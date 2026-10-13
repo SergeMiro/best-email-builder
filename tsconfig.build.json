@@ -7,5 +7,5 @@
     "outDir": "dist/types",
     "noEmitOnError": false
   },
-  "include": ["src/index.js", "src/server/index.js", "src/**/*.d.ts"]
+  "include": ["src/index.js", "src/builder.js", "src/library.js", "src/server/index.js", "src/**/*.d.ts"]
 }

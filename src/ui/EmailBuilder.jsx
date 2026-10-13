@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, Plus, Save, SlidersHorizontal } from 'lucide-react';
-import { createDefaultEmailEditor } from '../index.js';
+import { createDefaultEmailEditor } from '../defaultEditor.js';
 import { emailBuilderFeatures, isFeatureEnabled } from '../features/index.js';
 import { DEFAULT_VARIABLES, defineVariables, mergeVariables } from '../features/variables/catalog.js';
 import { createStarterMjml } from '../features/templates/starter.js';

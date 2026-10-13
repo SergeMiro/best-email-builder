@@ -1,7 +1,12 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: { index: 'src/index.js', server: 'src/server/index.js' },
+  entry: {
+    index: 'src/index.js',
+    builder: 'src/builder.js',
+    library: 'src/library.js',
+    server: 'src/server/index.js',
+  },
   format: ['esm'],
   target: 'es2022',
   platform: 'neutral',

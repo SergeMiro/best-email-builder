@@ -6,7 +6,7 @@
  * be trusted with the HTML that gets stored or sent.
  */
 
-import { createMemoryStorage } from 'best-email-builder';
+import { createMemoryStorage } from 'best-email-builder/builder';
 import { prepareMjml } from '../../../src/renderer/prepareMjml.js';
 import { applyServiceLinks } from '../../../src/renderer/links.js';
 import { DEFAULT_VARIABLES, mergeVariables } from '../../../src/features/variables/catalog.js';

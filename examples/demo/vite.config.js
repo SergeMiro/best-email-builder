@@ -21,6 +21,8 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^best-email-builder\/styles\.css$/, replacement: `${src}styles.css` },
+      { find: /^best-email-builder\/builder$/, replacement: `${src}builder.js` },
+      { find: /^best-email-builder\/library$/, replacement: `${src}library.js` },
       { find: /^best-email-builder$/, replacement: `${src}index.js` },
     ],
   },

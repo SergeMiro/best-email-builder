@@ -34,7 +34,12 @@ never refers to one by name.
 The two screens do not import each other: `TemplateLibrary` reports *Edit* /
 *New* through callbacks and never mounts an editor, `EmailBuilder` knows
 nothing of a library. Only `EmailStudio` (a few lines of state) knows both, so
-an application can install either screen alone.
+an application can install either screen alone. Each has its own entry —
+`src/library.js` (`best-email-builder/library`) and `src/builder.js`
+(`best-email-builder/builder`) — and `tests/unit/entries.test.mjs` bundles
+both and fails if one reaches the other (or if the library reaches GrapesJS).
+Hence no module under `ui/` imports `src/index.js`: the default editor is
+built in `src/defaultEditor.js`.
 
 ## The document
 
