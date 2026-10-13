@@ -14,6 +14,8 @@
  *     template must not be able to execute anything in the host page.
  */
 
+import { FRAME_SCROLLBAR_CSS } from '../../core/scrollbars.js';
+
 /** Canvas devices: ids = `EmailDevice`. */
 export const DEVICES = [
   { id: 'desktop', name: 'desktop', width: '' },
@@ -50,6 +52,7 @@ const CANVAS_CSS = `
   body { background: #eceff4; }
   [data-gjs-highlightable] { outline-offset: -1px; }
   *::selection { background: rgba(53, 104, 168, .22); }
+${FRAME_SCROLLBAR_CSS}
 `;
 
 /**

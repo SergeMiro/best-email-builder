@@ -112,7 +112,7 @@ both:
 |---|---|---|
 | 1 | `TemplateLibrary` | The template bank: your templates and the ready-made bases in a searchable list, the selected one's details, and its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts the editor. |
 | 2 | `EmailBuilder` | The editor (above). Works without the library. |
-| 1 + 2 | `EmailStudio` | The two wired together: the library, then the editor, then back to the library with the template just saved selected. |
+| 1 + 2 | `EmailStudio` | The two wired together: the library, then the editor, then back to the library with the template just saved selected. The editor has no *Templates* button there — the bases are in the library. |
 
 ```jsx
 import { EmailStudio, TemplateLibrary, EmailBuilder } from 'best-email-builder';

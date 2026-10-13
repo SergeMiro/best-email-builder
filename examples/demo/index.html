@@ -18,6 +18,32 @@
     />
     <style>
       html, body, #root { height: 100%; margin: 0; }
+
+      /* Scrollbars as in the Fimainfo extranet (the builder has the same):
+         thin, no arrows, shown while the pointer is over the scrolling block.
+         Chromium >= 121 drops ::-webkit-scrollbar once scrollbar-width or
+         scrollbar-color is set, so those two are for Firefox only. */
+      :root { --scrollbar-thumb: rgb(156 163 175 / 0.45); --scrollbar-thumb-hover: rgb(107 114 128 / 0.7); }
+      @supports not selector(::-webkit-scrollbar) {
+        * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+      }
+      ::-webkit-scrollbar { width: 5.6px; height: 5.6px; background: transparent; }
+      ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+      ::-webkit-scrollbar-track, ::-webkit-scrollbar-track-piece, ::-webkit-scrollbar-corner { background: transparent; border: 0; box-shadow: none; }
+      ::-webkit-scrollbar-thumb {
+        background-color: var(--scrollbar-thumb); border: 1.4px solid transparent; background-clip: content-box;
+        border-radius: 9999px; min-height: 2rem; min-width: 2rem; transition: background-color 150ms ease;
+      }
+      ::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
+      @media (hover: hover) and (pointer: fine) {
+        @supports not selector(::-webkit-scrollbar) {
+          * { scrollbar-color: transparent transparent; }
+          *:hover, *:focus-visible { scrollbar-color: var(--scrollbar-thumb) transparent; }
+        }
+        ::-webkit-scrollbar-thumb { background-color: transparent; }
+        *:hover::-webkit-scrollbar-thumb, *:focus-visible::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); }
+        *:hover::-webkit-scrollbar-thumb:hover, *:focus-visible::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
+      }
       body {
         --display: 'Bricolage Grotesque', 'Geist', ui-sans-serif, system-ui, sans-serif;
         --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -246,8 +272,39 @@
       .crumb { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
       .crumb svg { width: 15px; height: 15px; color: #b3b8c4; }
       .bank { padding-top: 20px; }
+      /* pages 2 and 3 share one window, under a small control bar */
+      .demo-frame { max-width: 1560px; margin: 0 auto; }
+      .demo-frame-bar {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;
+        padding: 5px 5px 5px 12px; border-radius: 11px; border: 1px solid var(--line);
+        background: rgb(255 255 255 / 0.7); backdrop-filter: blur(8px);
+      }
+      .demo-frame-steps { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+      .demo-frame-steps li { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+      .demo-frame-steps li > svg { width: 14px; height: 14px; color: #b3b8c4; margin-right: 1px; }
+      .demo-frame-steps li span {
+        display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px;
+        font-family: var(--mono); font-size: 11px; font-weight: 600; background: #eef0f4; color: var(--muted);
+      }
+      .demo-frame-steps li[aria-current] { color: var(--ink); }
+      .demo-frame-steps li[aria-current] span { background: var(--primary); color: #fff; box-shadow: 0 3px 8px -3px oklch(0.5 0.2 277 / 0.7); }
+      .demo-frame-toggle {
+        font: inherit; font-size: 12.5px; font-weight: 500; line-height: 1; display: inline-flex; align-items: center; gap: 7px;
+        padding: 7px 11px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+        border: 1px solid var(--line); background: #fff; color: var(--ink);
+        transition: border-color 0.15s, color 0.15s, background 0.15s;
+      }
+      .demo-frame-toggle svg { width: 14px; height: 14px; color: var(--primary); }
+      .demo-frame-toggle:hover { border-color: oklch(0.8 0.08 277); background: var(--primary-soft); }
+      .demo-frame-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+      .demo-frame.is-expanded {
+        position: fixed; inset: 0; z-index: 40; max-width: none; margin: 0; padding: 8px;
+        display: flex; flex-direction: column; background: #f6f7fb;
+      }
+      .demo-frame.is-expanded .demo-frame-bar { margin-bottom: 8px; }
+      .demo-frame.is-expanded .window { flex: 1; width: 100%; max-width: none; margin: 0; height: auto; min-height: 0; border-radius: 10px; box-shadow: 0 1px 2px rgb(16 24 40 / 0.05); }
       .window {
-        height: calc(100vh - 150px); min-height: 560px; max-width: 1560px; margin: 0 auto; border-radius: 14px; overflow: clip;
+        height: calc(100vh - 200px); min-height: 560px; max-width: 1560px; margin: 0 auto; border-radius: 14px; overflow: clip;
         border: 1px solid var(--line); background: #fff;
         box-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 30px 60px -30px rgb(40 30 120 / 0.35), 0 0 0 6px rgb(255 255 255 / 0.5);
       }
@@ -256,7 +313,7 @@
         font-size: 12.5px; line-height: 1.5; color: var(--muted); text-align: center;
       }
       .note svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; color: var(--primary); }
-      .page-templates .footer { padding-top: 28px; }
+      .page-templates .footer, .page-editor .footer { padding-top: 28px; }
 
       /* footer: the author's signature, set like the one on smiro.dev, in the page's violet */
       .footer { margin-top: auto; padding: 56px 0 28px; display: flex; justify-content: center; }
@@ -289,7 +346,9 @@
         .topbar .btn-label { display: none; }
         .wrap-wide { padding: 0 16px; }
         .code pre { font-size: 11.5px; }
-        .window { height: calc(100vh - 120px); min-height: 520px; border-radius: 12px; }
+        .window { height: calc(100vh - 166px); min-height: 520px; border-radius: 12px; }
+        .demo-frame-toggle span, .demo-frame-steps li:not([aria-current]) { display: none; }
+        .demo-frame-steps li > svg { display: none; }
         .crumb { display: none; }
         .rival { font-size: 14px; padding: 8px 14px; }
       }

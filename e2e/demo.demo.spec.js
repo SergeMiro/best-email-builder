@@ -81,3 +81,29 @@ test('landing: the marquee lists the editors this one can replace', async ({ pag
   await expect(marquee).toContainText('Mailchimp');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440);
 });
+
+test('bank and editor share one window; it spreads over the screen and back', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${HOME}?lang=en#/templates`);
+  const frame = page.getByTestId('demo-window');
+  const window = frame.locator('.window');
+  await expect(frame.locator('li[aria-current="step"]')).toContainText('Template bank');
+  const bank = await window.boundingBox();
+
+  await page.getByRole('button', { name: 'New template' }).click();
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await expect(frame.locator('li[aria-current="step"]')).toContainText('Editor');
+  // Same window, same size as the bank's.
+  expect(await window.boundingBox()).toEqual(bank);
+  // The bases are picked in the bank: no second gallery in the editor.
+  await expect(page.getByRole('button', { name: 'Templates', exact: true })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Full screen' }).click();
+  await expect(frame).toHaveClass(/is-expanded/);
+  const full = await window.boundingBox();
+  expect(full.width).toBeGreaterThan(1400);
+  expect(full.height).toBeGreaterThan(800);
+  await page.getByRole('button', { name: 'Exit full screen' }).click();
+  await expect(frame).not.toHaveClass(/is-expanded/);
+  expect(await window.boundingBox()).toEqual(bank);
+});

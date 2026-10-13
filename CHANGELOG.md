@@ -17,6 +17,9 @@ All notable changes are documented here. The format follows
   Follows its own width down to phones. French included.
 - **`EmailStudio`** — `TemplateLibrary` and `EmailBuilder` wired together.
   Each screen still works alone.
+  The editor opened from the bank has no *Templates* button: the bases are
+  picked in the bank, and the gallery would replace the email being edited
+  (`builderProps.templates` brings it back).
 - Storage contract: optional `list()` and `remove(id)`, implemented by
   `createHttpStorage()` (the server already had the routes) and
   `createMemoryStorage()`.
@@ -27,8 +30,13 @@ All notable changes are documented here. The format follows
 - Demo, three pages: a landing page (a background that follows the pointer,
   a marquee of the editors it can replace, a new mark), the template bank,
   and the editor full screen — each page has its own address (`#/templates`,
-  `#/editor/…`), so a reload keeps it.
-- The preview frame gets thin scrollbars (preview only, never the saved HTML).
+  `#/editor/…`), so a reload keeps it. The bank and the editor share one
+  window of the same size, under a bar with the steps and a *Full screen* /
+  *Exit full screen* button. Type: Geist, Bricolage Grotesque for the title.
+- Scrollbars as in the Fimainfo extranet, everywhere in the builder and the
+  bank, inside the canvas and the preview frames (preview only, never the
+  saved HTML): a 5.6 px gutter, a thin thumb, no arrows, shown only while the
+  pointer is over the block. They also replace GrapesJS's own dark ones.
 
 ## [0.2.0] — 2026-10-12
 

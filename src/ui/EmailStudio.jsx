@@ -54,6 +54,9 @@ export default function EmailStudio({
       <EmailBuilder
         key={session.key}
         {...shared}
+        // The bases are picked in the bank: no second gallery in the editor,
+        // where picking one would replace the email being edited.
+        templates={[]}
         {...builderProps}
         templateId={session.templateId}
         initialMjml={session.start?.mjml}

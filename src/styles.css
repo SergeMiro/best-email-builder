@@ -157,6 +157,89 @@
   }
 }
 
+/*
+ * Scrollbars, as in the Fimainfo extranet: thin, translucent, no arrows,
+ * revealed while the pointer is over the scrolling block. The gutter stays
+ * reserved, only the thumb fades, so nothing moves on hover. Outside the
+ * base layer and with a class in each selector, so they also win over
+ * GrapesJS's own (`.gjs-editor-cont ::-webkit-scrollbar-*`). Frames get
+ * the same rules from `core/scrollbars.js`.
+ * Chromium ≥ 121 ignores `::-webkit-scrollbar` once `scrollbar-width` or
+ * `scrollbar-color` is set: those two are for Firefox only.
+ */
+:is(.eb-root, .eb-scope) {
+  --eb-scrollbar-thumb: rgb(156 163 175 / 0.45);
+  --eb-scrollbar-thumb-hover: rgb(107 114 128 / 0.7);
+}
+:is(.eb-root, .eb-scope):where(.dark, .dark *) {
+  --eb-scrollbar-thumb: rgb(212 212 216 / 0.35);
+  --eb-scrollbar-thumb-hover: rgb(228 228 231 / 0.6);
+}
+@supports not selector(::-webkit-scrollbar) {
+  :is(.eb-root, .eb-scope),
+  :is(.eb-root, .eb-scope) * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--eb-scrollbar-thumb) transparent;
+  }
+}
+:is(.eb-root, .eb-scope)::-webkit-scrollbar,
+:is(.eb-root, .eb-scope) ::-webkit-scrollbar {
+  width: 5.6px;
+  height: 5.6px;
+  background: transparent;
+}
+:is(.eb-root, .eb-scope)::-webkit-scrollbar-button,
+:is(.eb-root, .eb-scope) ::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+:is(.eb-root, .eb-scope)::-webkit-scrollbar-track,
+:is(.eb-root, .eb-scope) ::-webkit-scrollbar-track,
+:is(.eb-root, .eb-scope) ::-webkit-scrollbar-track-piece,
+:is(.eb-root, .eb-scope) ::-webkit-scrollbar-corner {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+:is(.eb-root, .eb-scope)::-webkit-scrollbar-thumb,
+:is(.eb-root, .eb-scope) ::-webkit-scrollbar-thumb {
+  background-color: var(--eb-scrollbar-thumb);
+  border: 1.4px solid transparent;
+  background-clip: content-box;
+  border-radius: 9999px;
+  min-height: 2rem;
+  min-width: 2rem;
+  transition: background-color 150ms ease;
+}
+:is(.eb-root, .eb-scope) ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--eb-scrollbar-thumb-hover);
+}
+/* Revealed on hover only where a real pointer exists; on touch they stay. */
+@media (hover: hover) and (pointer: fine) {
+  @supports not selector(::-webkit-scrollbar) {
+    :is(.eb-root, .eb-scope),
+    :is(.eb-root, .eb-scope) * {
+      scrollbar-color: transparent transparent;
+    }
+    :is(.eb-root, .eb-scope):is(:hover, :focus-visible),
+    :is(.eb-root, .eb-scope) :is(:hover, :focus-visible) {
+      scrollbar-color: var(--eb-scrollbar-thumb) transparent;
+    }
+  }
+  :is(.eb-root, .eb-scope)::-webkit-scrollbar-thumb,
+  :is(.eb-root, .eb-scope) ::-webkit-scrollbar-thumb {
+    background-color: transparent;
+  }
+  :is(.eb-root, .eb-scope):is(:hover, :focus-visible)::-webkit-scrollbar-thumb,
+  :is(.eb-root, .eb-scope) :is(:hover, :focus-visible)::-webkit-scrollbar-thumb {
+    background-color: var(--eb-scrollbar-thumb);
+  }
+  :is(.eb-root, .eb-scope) :is(:hover, :focus-visible)::-webkit-scrollbar-thumb:hover {
+    background-color: var(--eb-scrollbar-thumb-hover);
+  }
+}
+
 /* Colour picker: checkerboard behind translucent swatches, picker sizing. */
 .eb-checker {
   background-image: conic-gradient(#d4d4d8 25%, #fff 0 50%, #d4d4d8 0 75%, #fff 0);

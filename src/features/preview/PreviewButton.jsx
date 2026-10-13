@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Eye, Info, Loader2, Monitor, RefreshCw, Smartphone } from 'lucide-react';
 import { EMAIL_MOBILE_WIDTH } from '../../core/constants.js';
+import { FRAME_SCROLLBAR_CSS } from '../../core/scrollbars.js';
 import { useUi } from '../../ui/context.jsx';
 import { Button } from '../../ui/primitives/button.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
@@ -59,19 +60,8 @@ export function QualityList({ quality = [], warnings = [] }) {
   );
 }
 
-/**
- * Thin scrollbars inside the frame: it is a document of its own, so the
- * page's scrollbar styles do not reach it. Added to the PREVIEW only, never
- * to the HTML that is saved or sent.
- */
-const PREVIEW_SCROLLBAR_CSS = `<style data-preview-scrollbar>
-::-webkit-scrollbar{width:5.6px;height:5.6px;background:transparent}
-::-webkit-scrollbar-button{display:none;width:0;height:0}
-::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
-::-webkit-scrollbar-thumb{background-color:rgba(156,163,175,.45);border-radius:9999px}
-::-webkit-scrollbar-thumb:hover{background-color:rgba(107,114,128,.7)}
-@supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:rgba(156,163,175,.45) transparent}}
-</style>`;
+/** The extranet's scrollbars inside the frame (see `core/scrollbars.js`). */
+const PREVIEW_SCROLLBAR_CSS = `<style data-preview-scrollbar>${FRAME_SCROLLBAR_CSS}</style>`;
 
 const withPreviewScrollbars = (html) =>
   !html ? '' : /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${PREVIEW_SCROLLBAR_CSS}</head>`) : PREVIEW_SCROLLBAR_CSS + html;

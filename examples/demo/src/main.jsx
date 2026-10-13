@@ -1,21 +1,7 @@
-import {
-  StrictMode,
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { createRoot } from "react-dom/client";
-import {
-  EmailBuilder,
-  TemplateLibrary,
-  TEMPLATE_GALLERY,
-  buildGallery,
-  translatorFor,
-} from "best-email-builder";
-import "best-email-builder/styles.css";
+import { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { EmailBuilder, TemplateLibrary, TEMPLATE_GALLERY, buildGallery, translatorFor } from 'best-email-builder';
+import 'best-email-builder/styles.css';
 import {
   ArrowRight,
   BookOpen,
@@ -27,95 +13,71 @@ import {
   LayoutTemplate,
   Layers,
   Mail,
+  Maximize2,
+  Minimize2,
   ServerCog,
   ShieldCheck,
   Smartphone,
-} from "lucide-react";
-import { createDemoStorage } from "./browserStorage.js";
-import { COMPETITORS } from "./competitors.js";
+} from 'lucide-react';
+import { createDemoStorage } from './browserStorage.js';
+import { COMPETITORS } from './competitors.js';
 
-const REPOSITORY_URL =
-  import.meta.env.VITE_REPOSITORY_URL ||
-  "https://github.com/SergeMiro/best-email-builder";
+const REPOSITORY_URL = import.meta.env.VITE_REPOSITORY_URL || 'https://github.com/SergeMiro/best-email-builder';
 
-const INSTALL = "npm install best-email-builder";
-const AUTHOR_URL = "https://smiro.dev";
-const SENDER = { name: "Example Inc.", address: "1 Main Street, Springfield" };
+const INSTALL = 'npm install best-email-builder';
+const AUTHOR_URL = 'https://smiro.dev';
+const SENDER = { name: 'Example Inc.', address: '1 Main Street, Springfield' };
 
 const TEXT = {
   en: {
-    eyebrow: "Open source · MIT",
-    tagline:
-      "Drag-and-drop email builder for React — MJML output that renders in Outlook, Gmail and Apple Mail.",
-    chips: [
-      "Outlook, Gmail, Apple Mail",
-      "Ready-made templates",
-      "Phone and tablet",
-      "English and French",
-    ],
-    open: "Open the live demo",
-    docs: "Documentation",
-    alternative: "An open-source alternative to the editors of",
-    alternativeNote:
-      "The same drag-and-drop, inside your own app: no per-seat price, and your templates stay on your server.",
+    eyebrow: 'Open source · MIT',
+    tagline: 'Drag-and-drop email builder for React — MJML output that renders in Outlook, Gmail and Apple Mail.',
+    chips: ['Outlook, Gmail, Apple Mail', 'Ready-made templates', 'Phone and tablet', 'English and French'],
+    open: 'Open the live demo',
+    docs: 'Documentation',
+    alternative: 'An open-source alternative to the editors of',
+    alternativeNote: 'The same drag-and-drop, inside your own app: no per-seat price, and your templates stay on your server.',
     features: [
-      [
-        "Two screens, take one or both",
-        "A template bank, then the editor — or only the editor. Each one installs on its own.",
-      ],
-      [
-        "Renders everywhere",
-        "MJML compiled on your server: tables Outlook understands, layouts that hold in Gmail and Apple Mail.",
-      ],
-      [
-        "Yours, end to end",
-        "Templates, versions and images in your database. A strict allow-list checks every template before saving.",
-      ],
+      ['Two screens, take one or both', 'A template bank, then the editor — or only the editor. Each one installs on its own.'],
+      ['Renders everywhere', 'MJML compiled on your server: tables Outlook understands, layouts that hold in Gmail and Apple Mail.'],
+      ['Yours, end to end', 'Templates, versions and images in your database. A strict allow-list checks every template before saving.'],
     ],
-    demo: "Demo",
-    home: "Home",
-    note: "Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.",
-    copy: "Copy the install command",
-    copied: "Copied",
-    source: "Source code",
-    madeBy: "Made by",
+    demo: 'Demo',
+    home: 'Home',
+    stepBank: 'Template bank',
+    stepEditor: 'Editor',
+    expand: 'Full screen',
+    shrink: 'Exit full screen',
+    note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
+    copy: 'Copy the install command',
+    copied: 'Copied',
+    source: 'Source code',
+    madeBy: 'Made by',
   },
   fr: {
-    eyebrow: "Open source · MIT",
-    tagline:
-      "Constructeur de courriels par glisser-déposer pour React — un rendu MJML fidèle dans Outlook, Gmail et Apple Mail.",
-    chips: [
-      "Outlook, Gmail, Apple Mail",
-      "Modèles prêts à l’emploi",
-      "Téléphone et tablette",
-      "Anglais et français",
-    ],
-    open: "Ouvrir la démo",
-    docs: "Documentation",
-    alternative: "Une alternative open source aux éditeurs de",
-    alternativeNote:
-      "Le même glisser-déposer, dans votre propre application : aucun prix par siège, et vos modèles restent sur votre serveur.",
+    eyebrow: 'Open source · MIT',
+    tagline: 'Constructeur de courriels par glisser-déposer pour React — un rendu MJML fidèle dans Outlook, Gmail et Apple Mail.',
+    chips: ['Outlook, Gmail, Apple Mail', 'Modèles prêts à l’emploi', 'Téléphone et tablette', 'Anglais et français'],
+    open: 'Ouvrir la démo',
+    docs: 'Documentation',
+    alternative: 'Une alternative open source aux éditeurs de',
+    alternativeNote: 'Le même glisser-déposer, dans votre propre application : aucun prix par siège, et vos modèles restent sur votre serveur.',
     features: [
-      [
-        "Deux écrans, l’un ou les deux",
-        "Une banque de modèles, puis l’éditeur — ou l’éditeur seul. Chacun s’installe séparément.",
-      ],
-      [
-        "Un rendu partout",
-        "Du MJML compilé sur votre serveur : des tableaux qu’Outlook comprend, des mises en page qui tiennent dans Gmail et Apple Mail.",
-      ],
-      [
-        "À vous, de bout en bout",
-        "Modèles, versions et images dans votre base. Une liste blanche stricte vérifie chaque modèle avant l’enregistrement.",
-      ],
+      ['Deux écrans, l’un ou les deux', 'Une banque de modèles, puis l’éditeur — ou l’éditeur seul. Chacun s’installe séparément.'],
+      ['Un rendu partout', 'Du MJML compilé sur votre serveur : des tableaux qu’Outlook comprend, des mises en page qui tiennent dans Gmail et Apple Mail.'],
+      ['À vous, de bout en bout', 'Modèles, versions et images dans votre base. Une liste blanche stricte vérifie chaque modèle avant l’enregistrement.'],
     ],
-    demo: "Démo",
-    home: "Accueil",
-    note: "Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.",
-    copy: "Copier la commande d’installation",
-    copied: "Copié",
-    source: "Code source",
-    madeBy: "Réalisé par",
+    demo: 'Démo',
+    home: 'Accueil',
+    stepBank: 'Banque de modèles',
+    stepEditor: 'Éditeur',
+    expand: 'Plein écran',
+    shrink: 'Réduire',
+    note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
+    copy: 'Copier la commande d’installation',
+    copied: 'Copié',
+    source: 'Code source',
+    madeBy: 'Réalisé par',
   },
 };
 
@@ -124,14 +86,14 @@ const FEATURE_ICONS = [Layers, ShieldCheck, ServerCog];
 const CHIP_ICONS = [Mail, LayoutTemplate, Smartphone, Languages];
 
 const initialLocale = () => {
-  const fromUrl = new URLSearchParams(window.location.search).get("lang");
-  if (fromUrl === "en" || fromUrl === "fr") return fromUrl;
-  return navigator.language?.startsWith("fr") ? "fr" : "en";
+  const fromUrl = new URLSearchParams(window.location.search).get('lang');
+  if (fromUrl === 'en' || fromUrl === 'fr') return fromUrl;
+  return navigator.language?.startsWith('fr') ? 'fr' : 'en';
 };
 
 /** The product mark: an envelope whose flap opens on the letters "beb". */
 function BrandMark() {
-  const id = `beb${useId().replace(/[^\w-]/g, "")}`;
+  const id = `beb${useId().replace(/[^\w-]/g, '')}`;
   return (
     <svg viewBox="0 0 40 30" aria-hidden="true">
       <defs>
@@ -145,14 +107,7 @@ function BrandMark() {
         </linearGradient>
       </defs>
       {/* the envelope: its body and a soft flap, kept quiet behind the letters */}
-      <rect
-        x="1"
-        y="1"
-        width="38"
-        height="28"
-        rx="7"
-        fill={`url(#${id}body)`}
-      />
+      <rect x="1" y="1" width="38" height="28" rx="7" fill={`url(#${id}body)`} />
       <path d="M3.2 2.6h33.6L20 13.4Z" fill={`url(#${id}flap)`} />
       <path
         d="M3.4 3.4 20 13.4 36.6 3.4"
@@ -163,16 +118,7 @@ function BrandMark() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <rect
-        x="1.5"
-        y="1.5"
-        width="37"
-        height="27"
-        rx="6.5"
-        fill="none"
-        stroke="#fff"
-        strokeOpacity="0.18"
-      />
+      <rect x="1.5" y="1.5" width="37" height="27" rx="6.5" fill="none" stroke="#fff" strokeOpacity="0.18" />
       {/* "beb", drawn rather than typed so it looks the same in every font */}
       <g fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
         <path d="M6.3 12.6v11.8" />
@@ -225,12 +171,7 @@ function InstallCommand({ text }) {
       <code>
         <b>$</b> {INSTALL}
       </code>
-      <button
-        type="button"
-        onClick={copy}
-        aria-label={copied ? text.copied : text.copy}
-        title={copied ? text.copied : text.copy}
-      >
+      <button type="button" onClick={copy} aria-label={copied ? text.copied : text.copy} title={copied ? text.copied : text.copy}>
         {copied ? <Check /> : <Copy />}
       </button>
     </div>
@@ -249,15 +190,11 @@ function CodeSample() {
       </figcaption>
       <pre>
         <code>
-          <span className="k">import</span> {"{ "}
+          <span className="k">import</span> {'{ '}
           <span className="f">EmailStudio</span>
-          {" }"} <span className="k">from</span>{" "}
-          <span className="s">&apos;best-email-builder&apos;</span>;{"\n\n"}
-          <span className="t">&lt;EmailStudio</span>{" "}
-          <span className="a">storage</span>={"{"}
-          <span className="f">createHttpStorage</span>(){"}"}{" "}
-          <span className="a">locale</span>=
-          <span className="s">&quot;fr&quot;</span>{" "}
+          {' }'} <span className="k">from</span> <span className="s">&apos;best-email-builder&apos;</span>;{'\n\n'}
+          <span className="t">&lt;EmailStudio</span> <span className="a">storage</span>={'{'}
+          <span className="f">createHttpStorage</span>(){'}'} <span className="a">locale</span>=<span className="s">&quot;fr&quot;</span>{' '}
           <span className="t">/&gt;</span>
         </code>
       </pre>
@@ -273,29 +210,25 @@ function CodeSample() {
 function usePointerGlow(ref) {
   useEffect(() => {
     const el = ref.current;
-    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-      return undefined;
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
     const target = { x: 0.5, y: 0.15 };
     const current = { ...target };
     let frame = 0;
     const tick = () => {
       current.x += (target.x - current.x) * 0.06;
       current.y += (target.y - current.y) * 0.06;
-      el.style.setProperty("--mx", `${(current.x * 100).toFixed(2)}%`);
-      el.style.setProperty("--my", `${(current.y * 100).toFixed(2)}%`);
-      frame =
-        Math.abs(target.x - current.x) + Math.abs(target.y - current.y) > 0.0005
-          ? requestAnimationFrame(tick)
-          : 0;
+      el.style.setProperty('--mx', `${(current.x * 100).toFixed(2)}%`);
+      el.style.setProperty('--my', `${(current.y * 100).toFixed(2)}%`);
+      frame = Math.abs(target.x - current.x) + Math.abs(target.y - current.y) > 0.0005 ? requestAnimationFrame(tick) : 0;
     };
     const onMove = (event) => {
       target.x = event.clientX / window.innerWidth;
       target.y = event.clientY / window.innerHeight;
       if (!frame) frame = requestAnimationFrame(tick);
     };
-    window.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener('pointermove', onMove, { passive: true });
     return () => {
-      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener('pointermove', onMove);
       cancelAnimationFrame(frame);
     };
   }, [ref]);
@@ -311,28 +244,22 @@ function usePointerGlow(ref) {
  *   #/editor/<id>         level 2, a saved template
  */
 function parseRoute(hash) {
-  const parts = hash
-    .replace(/^#\/?/, "")
-    .split("/")
-    .filter(Boolean)
-    .map(decodeURIComponent);
-  if (parts[0] === "templates") return { page: "templates" };
-  if (parts[0] === "editor") {
-    if (parts[1] === "base" && parts[2])
-      return { page: "editor", baseId: parts[2] };
-    if (parts[1] && parts[1] !== "new")
-      return { page: "editor", templateId: parts[1] };
-    return { page: "editor" };
+  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  if (parts[0] === 'templates') return { page: 'templates' };
+  if (parts[0] === 'editor') {
+    if (parts[1] === 'base' && parts[2]) return { page: 'editor', baseId: parts[2] };
+    if (parts[1] && parts[1] !== 'new') return { page: 'editor', templateId: parts[1] };
+    return { page: 'editor' };
   }
-  return { page: "home" };
+  return { page: 'home' };
 }
 
 function useHashRoute() {
   const [hash, setHash] = useState(() => window.location.hash);
   useEffect(() => {
     const onChange = () => setHash(window.location.hash);
-    window.addEventListener("hashchange", onChange);
-    return () => window.removeEventListener("hashchange", onChange);
+    window.addEventListener('hashchange', onChange);
+    return () => window.removeEventListener('hashchange', onChange);
   }, []);
   const navigate = useCallback((to) => {
     window.location.hash = to;
@@ -343,13 +270,9 @@ function useHashRoute() {
 function TopBar({ text, locale, setLocale, crumb }) {
   // On the bank page the bar lines up with the wide window under it.
   return (
-    <header className={crumb ? "wrap wrap-wide topbar" : "wrap topbar"}>
+    <header className={crumb ? 'wrap wrap-wide topbar' : 'wrap topbar'}>
       <span className="brand-row">
-        <a
-          className="brand"
-          href="#/"
-          aria-label={`Best Email Builder — ${text.home}`}
-        >
+        <a className="brand" href="#/" aria-label={`Best Email Builder — ${text.home}`}>
           <span className="brand-mark">
             <BrandMark />
           </span>
@@ -364,13 +287,8 @@ function TopBar({ text, locale, setLocale, crumb }) {
       </span>
       <div className="topbar-actions">
         <div className="segmented" role="group" aria-label="Language">
-          {["en", "fr"].map((code) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => setLocale(code)}
-              aria-pressed={code === locale}
-            >
+          {['en', 'fr'].map((code) => (
+            <button key={code} type="button" onClick={() => setLocale(code)} aria-pressed={code === locale}>
               {code.toUpperCase()}
             </button>
           ))}
@@ -427,11 +345,7 @@ function Alternatives({ text }) {
         {/* Two copies: the track slides by exactly one, so the loop has no seam. */}
         <div className="marquee-track">
           {[0, 1].map((copy) => (
-            <ul
-              key={copy}
-              className="marquee-list"
-              aria-hidden={copy === 1 ? "true" : undefined}
-            >
+            <ul key={copy} className="marquee-list" aria-hidden={copy === 1 ? 'true' : undefined}>
               {COMPETITORS.map((c) => (
                 <li key={c.name}>
                   <Competitor {...c} />
@@ -505,12 +419,63 @@ function Landing({ text }) {
   );
 }
 
+/**
+ * Pages 2 and 3 in the same window, under a small control bar: where you are
+ * (bank → editor) and a button that spreads the window over the whole screen,
+ * then puts it back.
+ */
+function DemoWindow({ text, step, expanded, setExpanded, children }) {
+  useEffect(() => {
+    if (!expanded) return undefined;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    // Esc leaves full screen, unless something inside (a dialog, the search) used it.
+    const onKey = (event) => {
+      if (event.key === 'Escape' && !event.defaultPrevented && event.target === document.body) setExpanded(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [expanded, setExpanded]);
+
+  const label = expanded ? text.shrink : text.expand;
+  const Icon = expanded ? Minimize2 : Maximize2;
+  return (
+    <div className={expanded ? 'demo-frame is-expanded' : 'demo-frame'} data-testid="demo-window">
+      <div className="demo-frame-bar">
+        <ol className="demo-frame-steps">
+          <li aria-current={step === 1 ? 'step' : undefined}>
+            <span>1</span>
+            {text.stepBank}
+          </li>
+          <li aria-current={step === 2 ? 'step' : undefined}>
+            <ChevronRight aria-hidden="true" />
+            <span>2</span>
+            {text.stepEditor}
+          </li>
+        </ol>
+        <button type="button" className="demo-frame-toggle" onClick={() => setExpanded(!expanded)} title={label} aria-label={label}>
+          <Icon aria-hidden="true" />
+          <span>{label}</span>
+        </button>
+      </div>
+      <section className="window" aria-label={text.demo}>
+        {children}
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const storage = useMemo(() => createDemoStorage(), []);
   const [locale, setLocale] = useState(initialLocale);
   const [route, navigate] = useHashRoute();
   /** The template to select when coming back to the bank. */
   const [lastId, setLastId] = useState(null);
+  /** Pages 2 and 3 spread over the whole screen (kept from one to the other). */
+  const [expanded, setExpanded] = useState(false);
   const pageRef = useRef(null);
   usePointerGlow(pageRef);
   const text = TEXT[locale];
@@ -520,77 +485,61 @@ function App() {
   }, [locale]);
   useEffect(() => {
     window.scrollTo(0, 0);
+    if (route.page === 'home') setExpanded(false);
   }, [route.page]);
 
-  // Level 2: the editor alone, full screen. The bank only hands it a template.
-  if (route.page === "editor") {
-    const base = route.baseId
-      ? buildGallery({
-          templates: TEMPLATE_GALLERY,
-          sender: SENDER,
-          t: translatorFor(locale),
-        }).find((b) => b.id === route.baseId)
+  const base =
+    route.page === 'editor' && route.baseId
+      ? buildGallery({ templates: TEMPLATE_GALLERY, sender: SENDER, t: translatorFor(locale) }).find((b) => b.id === route.baseId)
       : null;
-    return (
-      <EmailBuilder
-        key={`${route.templateId ?? route.baseId ?? "new"}-${locale}`}
-        storage={storage}
-        templateId={route.templateId ?? null}
-        initialMjml={base?.mjml}
-        initialMeta={
-          base
-            ? { subject: base.subject, preheader: base.preheader }
-            : undefined
-        }
-        locale={locale}
-        sender={SENDER}
-        onSaved={(template) => {
-          if (template?.id == null) return;
-          setLastId(template.id);
-          // The address follows the saved template (a reload reopens it) without
-          // a hashchange, which would remount the editor.
-          window.history.replaceState(
-            null,
-            "",
-            `#/editor/${encodeURIComponent(template.id)}`,
-          );
-        }}
-        onClose={() => navigate("/templates")}
-      />
-    );
-  }
+  const inWindow = route.page === 'templates' || route.page === 'editor';
 
   return (
     <div className={`landing page-${route.page}`} ref={pageRef}>
       <div className="backdrop" aria-hidden="true" />
-      <TopBar
-        text={text}
-        locale={locale}
-        setLocale={setLocale}
-        crumb={route.page === "templates" ? text.demo : null}
-      />
-      {route.page === "templates" ? (
+      <TopBar text={text} locale={locale} setLocale={setLocale} crumb={inWindow ? text.demo : null} />
+      {inWindow ? (
         <main className="wrap wrap-wide bank">
-          <section className="window" aria-label={text.demo}>
-            <TemplateLibrary
-              storage={storage}
-              locale={locale}
-              sender={SENDER}
-              selectedId={lastId}
-              onClose={() => navigate("/")}
-              onEdit={(template) => {
-                setLastId(template.id);
-                navigate(`/editor/${encodeURIComponent(template.id)}`);
-              }}
-              onCreate={(start) =>
-                navigate(
-                  start?.baseId
-                    ? `/editor/base/${encodeURIComponent(start.baseId)}`
-                    : "/editor/new",
-                )
-              }
-            />
-          </section>
+          <DemoWindow text={text} step={route.page === 'editor' ? 2 : 1} expanded={expanded} setExpanded={setExpanded}>
+            {route.page === 'editor' ? (
+              // Level 2: the editor. The bank only hands it a template.
+              <EmailBuilder
+                key={`${route.templateId ?? route.baseId ?? 'new'}-${locale}`}
+                storage={storage}
+                templateId={route.templateId ?? null}
+                initialMjml={base?.mjml}
+                initialMeta={base ? { subject: base.subject, preheader: base.preheader } : undefined}
+                locale={locale}
+                sender={SENDER}
+                // The bases are picked in the bank (step 1), not again in the editor.
+                templates={[]}
+                onSaved={(template) => {
+                  if (template?.id == null) return;
+                  setLastId(template.id);
+                  // The address follows the saved template (a reload reopens it) without
+                  // a hashchange, which would remount the editor.
+                  window.history.replaceState(null, '', `#/editor/${encodeURIComponent(template.id)}`);
+                }}
+                onClose={() => navigate('/templates')}
+              />
+            ) : (
+              // Level 1: the template bank.
+              <TemplateLibrary
+                storage={storage}
+                locale={locale}
+                sender={SENDER}
+                selectedId={lastId}
+                onClose={() => navigate('/')}
+                onEdit={(template) => {
+                  setLastId(template.id);
+                  navigate(`/editor/${encodeURIComponent(template.id)}`);
+                }}
+                onCreate={(start) =>
+                  navigate(start?.baseId ? `/editor/base/${encodeURIComponent(start.baseId)}` : '/editor/new')
+                }
+              />
+            )}
+          </DemoWindow>
           <p className="note">
             <Info aria-hidden="true" />
             <span>{text.note}</span>
@@ -604,8 +553,8 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")).render(
+createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
 );
