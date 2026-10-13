@@ -62,6 +62,7 @@ export const MJML_DEFAULTS = {
     'font-weight': 'normal',
     'line-height': '22px',
     padding: '15px 10px',
+    'text-transform': 'uppercase',
   },
   'mj-hero': { 'background-color': '#ffffff', padding: '0px' },
 };

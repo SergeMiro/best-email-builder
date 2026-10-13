@@ -13,7 +13,26 @@
  *   validationLevel soft: MJML deviations come back as warnings. Blocking them
  *                   would lose work for a mistyped attribute value; safety is
  *                   enforced upstream by `validation/`.
+ *
+ * Two lines are added to MJML's <head>, as email best practice asks:
+ *   x-apple-disable-message-reformatting  Apple Mail (macOS, iOS) does not
+ *                   rescale the email it judges too wide;
+ *   format-detection  iOS does not turn dates, addresses and phone numbers
+ *                   into blue links over the design (a real link is written
+ *                   as one: `tel:`, `mailto:`).
  */
+
+const CLIENT_METAS =
+  '<meta name="x-apple-disable-message-reformatting">' +
+  '<meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no">';
+
+/** @param {string} html */
+export function withClientMetas(html) {
+  if (!html || html.includes('x-apple-disable-message-reformatting')) return html;
+  const viewport = /<meta name="viewport"[^>]*>/i.exec(html);
+  if (viewport) return html.slice(0, viewport.index + viewport[0].length) + CLIENT_METAS + html.slice(viewport.index + viewport[0].length);
+  return html.replace(/<head>/i, (head) => head + CLIENT_METAS);
+}
 
 import mjml2html from 'mjml';
 
@@ -35,7 +54,7 @@ export async function compileMjml(mjml) {
     fonts: {},
   });
   return {
-    html: String(result?.html || ''),
+    html: withClientMetas(String(result?.html || '')),
     warnings: (result?.errors || []).map((/** @type {any} */ e) => ({
       line: e.line,
       message: String(e.formattedMessage || e.message || e),

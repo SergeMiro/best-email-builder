@@ -38,6 +38,21 @@ All notable changes are documented here. The format follows
   Ctrl+A keeps selecting the text. `editor.selectAll()` does the same.
 - The toolbar's first button names where it goes ("⤴ Column", "⤴ 2 columns"):
   it selects the parent element; a bare up arrow read as "move up".
+- Panel features for well-made emails: **column widths** (1/4 to 3/4; the
+  other columns of the section share the rest, "Equal" resets), a section
+  **background across the whole screen**, an image **full width on mobile**,
+  menu links **as typed or in capitals** (MJML capitalised them; new menus
+  are written as typed).
+- The server's HTML gets `x-apple-disable-message-reformatting` and
+  `format-detection` (Apple Mail does not rescale the email, iOS does not turn
+  dates, addresses and phone numbers into blue links).
+- Email-client checks on the compiled HTML of every template and of an email
+  holding every block (tests/unit/email-clients.test.mjs): Outlook's MSO
+  tables and VML backgrounds, Gmail's 102 KB clipping and dropped CSS, images
+  (alt, width, no border), mobile media queries and the fallback without
+  `<style>`, links, and the same body from the canvas compiler and the
+  server's. And rendered in a browser at 640 px, 375 px and without `<style>`
+  (e2e/rendering.stories.spec.js).
 - The template library is called a library everywhere ("Bibliothèque de
   modèles e-mail" in French, instead of "Banque").
 - Text edited in place (double-click, or a click on a selected text) with a

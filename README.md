@@ -31,10 +31,15 @@ Best Email Builder is the second option done once, properly, and given away:
   oddly are all welcome — see [Contributing](#contributing).
 
 - **MJML under the hood** — every block compiles to battle-tested, table-based
-  email HTML. You never write a `<table>` by hand.
+  email HTML. You never write a `<table>` by hand. Every template is checked
+  against what Outlook (MSO tables, VML backgrounds), Gmail (102 KB clipping,
+  dropped CSS) and Apple Mail need, and rendered at desktop and phone widths
+  in the test suite.
 - **The blocks emails are made of**: heading, text, image, button, divider,
   spacer, social links, menu, 1 to 4 columns, image + text, and a hero banner
   with a background image — sections take a background image too.
+  Columns take a share of the row (1/4 to 3/4), a section's background can
+  span the whole screen, an image can take the full width on phones.
 - **Its own editor, end to end.** The interface, the canvas and the drag and
   drop are the builder's own; the email is a tree of MJML elements, and MJML
   alone turns it into HTML. The canvas shows the real compiled email — what you

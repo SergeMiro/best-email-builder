@@ -69,6 +69,18 @@ export const sectionBlock = {
         { value: 'center bottom', label: 'Bottom' },
       ],
     },
+    {
+      // A colored band from edge to edge of the screen (headers, footers);
+      // the content keeps the email's width.
+      key: 'full-width',
+      label: 'Background width',
+      type: 'select',
+      group: GROUPS.colors,
+      options: [
+        { value: '', label: 'Content width' },
+        { value: 'full-width', label: 'Whole screen' },
+      ],
+    },
     prop.padding('padding', 'Padding'),
     prop.radius(24),
   ],
@@ -83,6 +95,22 @@ export const columnBlock = {
   tagName: 'mj-column',
   order: 902,
   properties: [
+    {
+      // Share of the section's width. The other columns of the section share
+      // the rest (the engine balances them: MJML would leave a gap).
+      key: 'width',
+      label: 'Width',
+      type: 'select',
+      group: GROUPS.layout,
+      options: [
+        { value: '', label: 'Equal' },
+        { value: '25%', label: '1/4' },
+        { value: '33%', label: '1/3' },
+        { value: '50%', label: '1/2' },
+        { value: '67%', label: '2/3' },
+        { value: '75%', label: '3/4' },
+      ],
+    },
     prop.background('background-color', 'Background'),
     prop.padding('padding', 'Padding'),
     {

@@ -41,6 +41,17 @@ export const imageBlock = {
     },
     prop.href('Link on click'),
     { key: 'width', label: 'Width', type: 'size', group: GROUPS.layout, min: 20, max: 600, unit: 'px' },
+    {
+      // A photo given a width keeps it on a phone unless told otherwise.
+      key: 'fluid-on-mobile',
+      label: 'On mobile',
+      type: 'select',
+      group: GROUPS.layout,
+      options: [
+        { value: '', label: 'Keep its width' },
+        { value: 'true', label: 'Full width' },
+      ],
+    },
     prop.align(),
     prop.radius(40),
     prop.padding(),

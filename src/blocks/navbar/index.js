@@ -12,7 +12,7 @@
  */
 
 import { identity } from '../../i18n/index.js';
-import { FONT_STACK, PALETTE, escapeXml, inWhiteSection, prop } from '../shared.js';
+import { FONT_STACK, GROUPS, PALETTE, escapeXml, inWhiteSection, prop } from '../shared.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
@@ -20,7 +20,7 @@ import { FONT_STACK, PALETTE, escapeXml, inWhiteSection, prop } from '../shared.
 function link(label, href) {
   return (
     `<mj-navbar-link href="${href}" font-family="${FONT_STACK}" font-size="14px" color="${PALETTE.navy}" ` +
-    `padding-top="8px" padding-right="12px" padding-bottom="8px" padding-left="12px">${escapeXml(label)}</mj-navbar-link>`
+    `text-transform="none" padding-top="8px" padding-right="12px" padding-bottom="8px" padding-left="12px">${escapeXml(label)}</mj-navbar-link>`
   );
 }
 
@@ -61,6 +61,18 @@ export const navbarLinkBlock = {
     prop.color('Text'),
     prop.fontFamily(),
     prop.fontSize(10, 24),
+    {
+      // MJML writes menu links in capitals unless told otherwise.
+      key: 'text-transform',
+      label: 'Capitals',
+      type: 'select',
+      group: GROUPS.typography,
+      options: [
+        { value: 'none', label: 'As typed' },
+        { value: 'uppercase', label: 'All capitals' },
+        { value: 'capitalize', label: 'First letters' },
+      ],
+    },
     prop.padding(),
   ],
 };

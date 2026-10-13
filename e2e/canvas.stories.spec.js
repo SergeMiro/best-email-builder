@@ -426,3 +426,86 @@ test.describe('Names and defaults', () => {
     expect(await mjml(page)).toContain('src="https://example.com/photo.png"');
   });
 });
+
+test.describe('Panel features for well-made emails', () => {
+  test('column widths: 1/3 makes the other 2/3 (in the email and on the canvas); "Equal" undoes it', async ({ page }) => {
+    await openBuilder(page);
+    await loadSample(page);
+    await canvas(page).getByText('Drop a block here').click();
+    await expect(panel(page).getByRole('heading', { name: 'Column' })).toBeVisible();
+    await panel(page).getByLabel('Width', { exact: true }).click();
+    await page.getByRole('option', { name: '1/3', exact: true }).click();
+    await expect.poll(async () => (await nodes(page, 'mj-column')).slice(1).map((c) => c.attributes.width)).toEqual(['33%', '67%']);
+    // On the canvas, the right column is twice as wide as the left one.
+    await expect
+      .poll(async () => {
+        const [, left, right] = await nodes(page, 'mj-column');
+        const width = (id) => canvas(page).locator(`.eb-id-${id}`).evaluate((el) => el.getBoundingClientRect().width);
+        return Math.round((await width(right.id)) / (await width(left.id)));
+      })
+      .toBe(2);
+    // Three columns: the others share the rest.
+    await page.evaluate(() =>
+      window.__emailEditor.loadMjml(
+        '<mjml><mj-body><mj-section><mj-column></mj-column><mj-column></mj-column><mj-column></mj-column></mj-section></mj-body></mjml>'
+      )
+    );
+    await canvas(page).getByText('Drop a block here').nth(1).click();
+    await panel(page).getByLabel('Width', { exact: true }).click();
+    await page.getByRole('option', { name: '1/2', exact: true }).click();
+    await expect.poll(async () => (await nodes(page, 'mj-column')).map((c) => c.attributes.width)).toEqual(['25%', '50%', '25%']);
+    // (Two choices of one field within a second make one undo step — like a
+    // color being dragged. A person takes longer than that.)
+    await page.waitForTimeout(1100);
+    await panel(page).getByLabel('Width', { exact: true }).click();
+    await page.getByRole('option', { name: 'Equal', exact: true }).click();
+    await expect.poll(async () => (await nodes(page, 'mj-column')).map((c) => c.attributes.width ?? null)).toEqual([null, null, null]);
+    // One undo step per choice (once the list has closed: keys inside an open list are its own).
+    await expect(page.getByRole('listbox')).toHaveCount(0);
+    await page.keyboard.press('Control+z');
+    await expect.poll(async () => (await nodes(page, 'mj-column')).map((c) => c.attributes.width)).toEqual(['25%', '50%', '25%']);
+  });
+
+  test('a section background across the whole screen', async ({ page }) => {
+    await openBuilder(page);
+    await page.locator('[data-block-id="columns-1"]').click();
+    await panel(page).getByLabel('Background width').click();
+    await page.getByRole('option', { name: 'Whole screen' }).click();
+    await expect.poll(() => mjml(page)).toMatch(/<mj-section[^>]*full-width="full-width"/);
+    // On the canvas the band reaches both edges of the frame.
+    const [, , , added] = await nodes(page, 'mj-section');
+    const frame = await frameBox(page);
+    await expect
+      .poll(() => canvas(page).locator(`.eb-id-${added.id}`).evaluate((el) => Math.round(el.getBoundingClientRect().width)))
+      .toBe(Math.round(frame.width));
+  });
+
+  test('an image can take the full width on mobile', async ({ page }) => {
+    await openBuilder(page);
+    await page.locator('[data-block-id="image"]').click();
+    await panel(page).getByLabel('Image', { exact: true }).fill('https://example.com/photo.png');
+    await panel(page).getByLabel('Image', { exact: true }).press('Enter');
+    await panel(page).getByLabel('Width', { exact: true }).fill('120');
+    await panel(page).getByLabel('Width', { exact: true }).press('Enter');
+    await panel(page).getByLabel('On mobile').click();
+    await page.getByRole('option', { name: 'Full width' }).click();
+    await expect.poll(() => mjml(page)).toMatch(/<mj-image[^>]*width="120px"[^>]*fluid-on-mobile="true"/);
+    await page.getByRole('tab', { name: 'Mobile' }).click();
+    await expect
+      .poll(() => canvas(page).locator('img[src="https://example.com/photo.png"]').evaluate((img) => Math.round(img.getBoundingClientRect().width)))
+      .toBeGreaterThan(250);
+  });
+
+  test('menu links: as typed by default, capitals on demand', async ({ page }) => {
+    await openBuilder(page, { lang: 'fr' });
+    await page.locator('[data-block-id="navbar"]').click();
+    const link = canvas(page).locator('.eb-tag-mj-navbar-link').first();
+    await expect(link).toHaveText('Boutique');
+    await link.click();
+    await expect(panel(page).getByRole('heading', { name: 'Lien du menu' })).toBeVisible();
+    await panel(page).getByLabel('Majuscules').click();
+    await page.getByRole('option', { name: 'Tout en majuscules', exact: true }).click();
+    await expect.poll(() => link.innerText()).toBe('BOUTIQUE');
+    expect(await mjml(page)).toMatch(/text-transform="uppercase"[^>]*>Boutique</);
+  });
+});

@@ -332,6 +332,28 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
     commit(insertNodes(removeNode(current, id), target.parentId, target.index, [section]), { select: id });
   }
 
+  /**
+   * A column given a share of its section: the other columns share the rest
+   * equally (MJML would give each of them its equal share of the WHOLE
+   * section, leaving a gap or overflowing). Back to "equal": all equal again.
+   * @param {EmailNode} tree @param {string} id @param {string|null|undefined} width
+   */
+  function balanceColumns(tree, id, width) {
+    const parent = parentOf(tree, id);
+    if (!parent) return tree;
+    const others = parent.children.filter((c) => c.tag === 'mj-column' && c.id !== id);
+    const share = Number.parseFloat(String(width || ''));
+    let next = tree;
+    for (const other of others) {
+      const value =
+        Number.isFinite(share) && share > 0 && share < 100 && String(width).trim().endsWith('%')
+          ? `${Math.round(((100 - share) / others.length) * 100) / 100}%`
+          : null;
+      next = setAttributes(next, other.id, { width: value });
+    }
+    return next;
+  }
+
   /** @param {string} id */
   function duplicateNode(id) {
     const current = requireRoot();
@@ -626,10 +648,13 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
 
     updateProperties(id, attributes) {
       const current = requireRoot();
-      if (!findNode(current, id)) return;
+      const node = findNode(current, id);
+      if (!node) return;
       if (view?.editingId() === id) view.finishEditing();
       const keys = Object.keys(attributes).sort().join(',');
-      commit(setAttributes(requireRoot(), id, attributes), { merge: `attributes:${id}:${keys}` });
+      let next = setAttributes(current, id, attributes);
+      if (node.tag === 'mj-column' && 'width' in attributes) next = balanceColumns(next, id, attributes.width);
+      commit(next, { merge: `attributes:${id}:${keys}` });
     },
 
     setContent(id, content) {
