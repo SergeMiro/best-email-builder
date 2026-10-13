@@ -184,7 +184,6 @@ function InstallCommand({ text }) {
   );
 }
 
-/** Two lines of JSX: what a developer actually writes. */
 /** The three ways to install it: both blocks, the editor alone, the bank alone. */
 const CODE_SAMPLES = [
   {
@@ -218,7 +217,7 @@ const CODE_SAMPLES = [
 
 /** Just enough colouring for the samples above (our own text, never user input). */
 const TOKENS =
-  /(\/\/[^\n]*)|('[^']*'|"[^"]*")|\b(import|from)\b|(<\/?[A-Z]\w*|\/?>)|(\b\w+(?==))|(\b\w+(?=\())/g;
+  /(\/\/[^\n]*)|('[^']*'|"[^"]*")|\b(import|from)\b|(<\/?[A-Z]\w*|\/?(?<!=)>)|(\b\w+(?==))|(\b\w+(?=\())/g;
 const TOKEN_CLASSES = ['c', 's', 'k', 't', 'a', 'f'];
 
 function highlight(code) {
@@ -241,19 +240,32 @@ function highlight(code) {
 function CodeSample({ text }) {
   const [current, setCurrent] = useState('both');
   const sample = CODE_SAMPLES.find((s) => s.id === current);
+  // Arrow keys move between the tabs, as in any tab list.
+  const onKeyDown = (event) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const index = CODE_SAMPLES.findIndex((s) => s.id === current);
+    const next = CODE_SAMPLES[(index + step + CODE_SAMPLES.length) % CODE_SAMPLES.length].id;
+    setCurrent(next);
+    document.getElementById(`code-tab-${next}`)?.focus();
+  };
   return (
     <figure className="code">
       <figcaption className="code-bar">
         <i aria-hidden="true" />
         <i aria-hidden="true" />
         <i aria-hidden="true" />
-        <span className="code-tabs" role="tablist" aria-label={text.codeTitle}>
+        <span className="code-tabs" role="tablist" aria-label={text.codeTitle} onKeyDown={onKeyDown}>
           {CODE_SAMPLES.map((s) => (
             <button
               key={s.id}
+              id={`code-tab-${s.id}`}
               type="button"
               role="tab"
               aria-selected={s.id === current}
+              aria-controls="code-panel"
+              tabIndex={s.id === current ? 0 : -1}
               onClick={() => setCurrent(s.id)}
             >
               {text.codeTabs[s.id]}
@@ -261,7 +273,7 @@ function CodeSample({ text }) {
           ))}
         </span>
       </figcaption>
-      <pre role="tabpanel">
+      <pre id="code-panel" role="tabpanel" aria-labelledby={`code-tab-${current}`} tabIndex={0}>
         <code>{highlight(sample.code)}</code>
       </pre>
     </figure>
@@ -495,9 +507,14 @@ function DemoWindow({ text, step, expanded, setExpanded, children }) {
     if (!expanded) return undefined;
     const { overflow } = document.body.style;
     document.body.style.overflow = 'hidden';
-    // Esc leaves full screen, unless something inside (a dialog, the search) used it.
+    // Esc leaves full screen, unless it is meant for something inside: a field
+    // (the search clears with it) or a dialog (it closes with it).
     const onKey = (event) => {
-      if (event.key === 'Escape' && !event.defaultPrevented && event.target === document.body) setExpanded(false);
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('input, textarea, select, [contenteditable], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')) return;
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
+      setExpanded(false);
     };
     window.addEventListener('keydown', onKey);
     return () => {
@@ -542,6 +559,8 @@ function App() {
   const [lastId, setLastId] = useState(null);
   /** Pages 2 and 3 spread over the whole screen (kept from one to the other). */
   const [expanded, setExpanded] = useState(false);
+  /** The template an editor session was saved as: {key: what the route opened, id}. */
+  const [savedAs, setSavedAs] = useState(null);
   const pageRef = useRef(null);
   usePointerGlow(pageRef);
   const text = TEXT[locale];
@@ -554,8 +573,14 @@ function App() {
     if (route.page === 'home') setExpanded(false);
   }, [route.page]);
 
+  // Which template the editor opens. After a first save the address already
+  // names the new template (replaceState, so no remount): a later remount —
+  // switching the language — must reopen that template, not the blank or the
+  // base it started from (that would save a duplicate).
+  const editorKey = route.templateId ?? route.baseId ?? 'new';
+  const savedId = savedAs?.key === editorKey ? savedAs.id : null;
   const base =
-    route.page === 'editor' && route.baseId
+    route.page === 'editor' && route.baseId && savedId == null
       ? buildGallery({ templates: TEMPLATE_GALLERY, sender: SENDER, t: translatorFor(locale) }).find((b) => b.id === route.baseId)
       : null;
   const inWindow = route.page === 'templates' || route.page === 'editor';
@@ -570,9 +595,9 @@ function App() {
             {route.page === 'editor' ? (
               // Level 2: the editor. The bank only hands it a template.
               <EmailBuilder
-                key={`${route.templateId ?? route.baseId ?? 'new'}-${locale}`}
+                key={`${editorKey}-${locale}`}
                 storage={storage}
-                templateId={route.templateId ?? null}
+                templateId={savedId ?? route.templateId ?? null}
                 initialMjml={base?.mjml}
                 initialMeta={base ? { subject: base.subject, preheader: base.preheader } : undefined}
                 locale={locale}
@@ -582,6 +607,7 @@ function App() {
                 onSaved={(template) => {
                   if (template?.id == null) return;
                   setLastId(template.id);
+                  setSavedAs({ key: editorKey, id: template.id });
                   // The address follows the saved template (a reload reopens it) without
                   // a hashchange, which would remount the editor.
                   window.history.replaceState(null, '', `#/editor/${encodeURIComponent(template.id)}`);

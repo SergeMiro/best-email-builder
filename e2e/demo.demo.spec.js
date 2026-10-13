@@ -81,6 +81,9 @@ test('landing: the marquee lists the editors this one can replace', async ({ pag
   await expect(page.locator('.code pre')).toContainText("from 'best-email-builder/builder'");
   await page.getByRole('tab', { name: 'Bank only' }).click();
   await expect(page.locator('.code pre')).toContainText("from 'best-email-builder/library'");
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('tab', { name: 'Editor only' })).toBeFocused();
+  await expect(page.locator('.code pre')).toContainText("from 'best-email-builder/builder'");
   const marquee = page.locator('.marquee-list').first();
   await expect(marquee).toContainText('Brevo');
   await expect(marquee).toContainText('Mailchimp');
@@ -111,4 +114,28 @@ test('bank and editor share one window; it spreads over the screen and back', as
   await page.getByRole('button', { name: 'Exit full screen' }).click();
   await expect(frame).not.toHaveClass(/is-expanded/);
   expect(await window.boundingBox()).toEqual(bank);
+
+  // Esc leaves full screen too (focus still on the toggle) — but not from a field.
+  await page.getByRole('button', { name: 'Full screen' }).click();
+  await page.getByTestId('eb-properties').getByLabel(/^Name/).press('Escape');
+  await expect(frame).toHaveClass(/is-expanded/);
+  await page.getByRole('button', { name: 'Exit full screen' }).focus();
+  await page.keyboard.press('Escape');
+  await expect(frame).not.toHaveClass(/is-expanded/);
+});
+
+test('after a first save, switching the language reopens the saved template (no duplicate)', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en#/editor/base/promotion`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByTestId('eb-properties').getByLabel(/^Name/).fill('Saved once');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText(/^Saved at/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await expect(page.getByTestId('eb-properties').getByLabel(/^Libellé/)).toHaveValue('Saved once');
+  await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+  await expect(page.getByText(/^Enregistré à/)).toBeVisible();
+  await page.getByRole('button', { name: 'Retour' }).click();
+  await expect(page.getByTestId('eb-library-templates')).toContainText('Modèles (1)');
 });

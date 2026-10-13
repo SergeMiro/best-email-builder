@@ -26,7 +26,6 @@ import { useLayoutWidth } from '../useLayoutWidth.js';
 
 /**
  * TEMPLATE LIBRARY — the first screen: pick a template, see it, open it.
- * Same screen as the template bank of the Fimainfo extranet.
  *
  *   ┌──────────────────────────────────────────────────────────────────┐
  *   │ ▣ Email template library                                      ×  │
@@ -261,7 +260,7 @@ function Library({
     else if (base) setSelection(`base:${base.id}`);
   }, [items, selection, bases]);
 
-  // Ctrl/Cmd+K focuses the search, as in the extranet.
+  // Ctrl/Cmd+K focuses the search.
   useEffect(() => {
     const onKey = (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && rootRef.current?.isConnected) {

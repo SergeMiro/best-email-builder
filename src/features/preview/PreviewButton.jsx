@@ -60,7 +60,7 @@ export function QualityList({ quality = [], warnings = [] }) {
   );
 }
 
-/** The extranet's scrollbars inside the frame (see `core/scrollbars.js`). */
+/** The builder's thin scrollbars inside the frame (see `core/scrollbars.js`). */
 const PREVIEW_SCROLLBAR_CSS = `<style data-preview-scrollbar>${FRAME_SCROLLBAR_CSS}</style>`;
 
 const withPreviewScrollbars = (html) =>

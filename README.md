@@ -144,6 +144,7 @@ Give the editor a `key` that changes with what it opens, so switching from one
 template to another starts a fresh editor.
 
 ```jsx
+import { useState } from 'react';
 import { EmailBuilder, createHttpStorage } from 'best-email-builder/builder';
 
 const storage = createHttpStorage();

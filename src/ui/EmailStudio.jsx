@@ -14,8 +14,10 @@ import TemplateLibrary from './library/TemplateLibrary.jsx';
  * on their own, and an application that only wants the editor mounts
  * `EmailBuilder` alone (or the library alone, opening its own editor).
  *
- * Shared props go to both screens; `libraryProps` / `builderProps` reach only
- * one. Coming back from the editor, the library selects the template that was
+ * Shared props go to both screens — except `templates` (the bases), which
+ * only the library shows: the editor gets `[]`, so no second gallery replaces
+ * the email being edited (`builderProps.templates` brings it back).
+ * `libraryProps` / `builderProps` reach only one. Coming back from the editor, the library selects the template that was
  * just edited or created.
  *
  * @param {{

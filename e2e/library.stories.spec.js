@@ -36,7 +36,7 @@ test('standalone: lists templates and bases, previews, searches, hands Edit and 
   await expect(page.getByTestId('eb-library-bases')).toHaveCount(0);
   await page.keyboard.type('zzz');
   await expect(page.getByText('Nothing matches “octoberzzz”.')).toBeVisible();
-  await page.keyboard.press('Escape'); // clears the search, as in the extranet
+  await page.keyboard.press('Escape'); // clears the search
   await expect(page.getByRole('searchbox', { name: 'Search templates' })).toHaveValue('');
   await expect(page.getByTestId('eb-library-base')).toHaveCount(6);
 

@@ -35,11 +35,11 @@ All notable changes are documented here. The format follows
 ### Changed
 - Demo, three pages: a landing page (a background that follows the pointer,
   a marquee of the editors it can replace, a new mark), the template bank,
-  and the editor full screen — each page has its own address (`#/templates`,
+  and the editor — each page has its own address (`#/templates`,
   `#/editor/…`), so a reload keeps it. The bank and the editor share one
   window of the same size, under a bar with the steps and a *Full screen* /
   *Exit full screen* button. Type: Geist, Bricolage Grotesque for the title.
-- Scrollbars as in the Fimainfo extranet, everywhere in the builder and the
+- Thin scrollbars everywhere in the builder and the
   bank, inside the canvas and the preview frames (preview only, never the
   saved HTML): a 5.6 px gutter, a thin thumb, no arrows, shown only while the
   pointer is over the block. They also replace GrapesJS's own dark ones.
@@ -48,6 +48,11 @@ All notable changes are documented here. The format follows
   (350 ms).
 - `EmailBuilder` no longer imports the package entry
   (`createDefaultEmailEditor` lives in its own module).
+
+### Fixed
+- Demo: after a first save, switching the language reopened a blank editor
+  (or the base), and saving again created a duplicate; it now reopens the
+  saved template.
 
 ## [0.2.0] — 2026-10-12
 

@@ -158,8 +158,8 @@
 }
 
 /*
- * Scrollbars, as in the Fimainfo extranet: thin, translucent, no arrows,
- * revealed while the pointer is over the scrolling block. The gutter stays
+ * Scrollbars: thin, translucent, no arrows, revealed while the pointer is
+ * over the scrolling block. The gutter stays
  * reserved, only the thumb fades, so nothing moves on hover. Outside the
  * base layer and with a class in each selector, so they also win over
  * GrapesJS's own (`.gjs-editor-cont ::-webkit-scrollbar-*`). Frames get
