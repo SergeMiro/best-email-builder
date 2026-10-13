@@ -8,7 +8,7 @@
  * a newer version knows whether it must be migrated (see `core/document.js`).
  */
 
-export const EMAIL_BUILDER_VERSION = '0.2.0';
+export const EMAIL_BUILDER_VERSION = '0.3.0';
 
 export const EMAIL_DOCUMENT_SCHEMA_VERSION = 1;
 

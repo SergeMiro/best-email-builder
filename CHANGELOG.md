@@ -4,7 +4,7 @@ All notable changes are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] — 2026-10-13
 
 ### Added
 - **`TemplateLibrary`** — the first screen: a template bank in three columns
@@ -46,6 +46,9 @@ All notable changes are documented here. The format follows
 - The preview (in the bank and in the editor's *Preview*) switches device
   with the editor toolbar's switch, and narrows and widens like the canvas
   (350 ms).
+- `types` and `typesVersions` in `package.json`: TypeScript projects still on
+  `moduleResolution: "node"` find the types of every entry (`.`, `/builder`,
+  `/library`, `/server`).
 - `EmailBuilder` no longer imports the package entry
   (`createDefaultEmailEditor` lives in its own module).
 
