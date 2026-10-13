@@ -2,10 +2,10 @@
 /**
  * BLOCK A alone — the template bank (`best-email-builder/library`).
  *
- * Imports nothing of the editor (no GrapesJS, no canvas): *Edit*, *New
- * template* and *Start from this base* only call `onEdit(template)` /
- * `onCreate(start)`, and the host opens whatever editor it wants — this
- * package's `EmailBuilder` or its own. See the README, "Block A with your own
+ * Imports nothing of the editor (no engine, no canvas, no MJML compiler):
+ * *Edit*, *New template* and *Start from this base* only call
+ * `onEdit(template)` / `onCreate(start)`, and the host opens whatever editor
+ * it wants — this package's `EmailBuilder` or its own. See the README, "Block A with your own
  * editor".
  */
 

@@ -11,7 +11,8 @@
  * color. Duplicate a link to add one.
  */
 
-import { FONT_STACK, PALETTE, inWhiteSection, prop } from '../shared.js';
+import { identity } from '../../i18n/index.js';
+import { FONT_STACK, PALETTE, escapeXml, inWhiteSection, prop } from '../shared.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
@@ -19,15 +20,16 @@ import { FONT_STACK, PALETTE, inWhiteSection, prop } from '../shared.js';
 function link(label, href) {
   return (
     `<mj-navbar-link href="${href}" font-family="${FONT_STACK}" font-size="14px" color="${PALETTE.navy}" ` +
-    `padding-top="8px" padding-right="12px" padding-bottom="8px" padding-left="12px">${label}</mj-navbar-link>`
+    `padding-top="8px" padding-right="12px" padding-bottom="8px" padding-left="12px">${escapeXml(label)}</mj-navbar-link>`
   );
 }
 
-const MJML =
+/** @param {import('../../i18n/index.js').Translate} [t] */
+const mjml = (t = identity) =>
   '<mj-navbar align="center">' +
-  link('Shop', 'https://example.com/shop') +
-  link('Blog', 'https://example.com/blog') +
-  link('Contact', 'https://example.com/contact') +
+  link(t('Shop'), 'https://example.com/shop') +
+  link(t('Blog'), 'https://example.com/blog') +
+  link(t('Contact'), 'https://example.com/contact') +
   '</mj-navbar>';
 
 /** @type {EmailBlock} */
@@ -39,8 +41,8 @@ export const navbarBlock = {
   kind: 'content',
   tagName: 'mj-navbar',
   order: 70,
-  mjml: MJML,
-  sectionMjml: inWhiteSection(MJML),
+  mjml,
+  sectionMjml: (t) => inWhiteSection(mjml(t)),
   properties: [prop.align()],
 };
 

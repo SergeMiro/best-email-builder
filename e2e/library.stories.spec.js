@@ -111,7 +111,7 @@ test('studio: base → builder → save → back to the library → edit again',
 
   const builder = page.getByTestId('email-builder');
   await expect(builder).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
-  await expect(page.frameLocator('.gjs-frame').getByText('30% off everything')).toBeVisible();
+  await expect(page.frameLocator('.eb-canvas-frame').getByText('30% off everything')).toBeVisible();
   await expect(page.getByTestId('eb-properties').getByRole('textbox', { name: 'Subject' })).toHaveValue('30% off this weekend only');
   await page.getByTestId('eb-properties').getByLabel(/^Name/).fill('Spring sale');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -123,7 +123,7 @@ test('studio: base → builder → save → back to the library → edit again',
   await details(page).getByRole('button', { name: 'Edit' }).click();
   await expect(builder).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   await expect(page.getByTestId('eb-properties').getByLabel(/^Name/)).toHaveValue('Spring sale');
-  await expect(page.frameLocator('.gjs-frame').getByText('30% off everything')).toBeVisible();
+  await expect(page.frameLocator('.eb-canvas-frame').getByText('30% off everything')).toBeVisible();
 });
 
 test('French', async ({ page }) => {

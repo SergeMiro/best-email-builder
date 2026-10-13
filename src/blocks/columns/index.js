@@ -1,26 +1,26 @@
 // @ts-check
 /**
- * LAYOUTS - 1, 2 or 3 column sections (`mj-section` + `mj-column`).
+ * LAYOUTS - 1 to 4 column sections (`mj-section` + `mj-column`).
  *
- * Each column is pre-filled with text: an empty column only offers a strip a
- * few pixels high to drop a block into. On mobile (under 480 px), MJML stacks
- * the columns on top of each other - nothing to configure.
+ * The columns start EMPTY: the canvas shows "Drop a block here" in each one
+ * (canvas only, never in the email), so a new layout says what it is for
+ * instead of filling the email with placeholder text to delete. On mobile
+ * (under 480 px), MJML stacks the columns on top of each other.
  *
  * Once added, the section is described by the "section" structure
- * (`blocks/structure`): background, padding, corner radius.
+ * (`blocks/structure`): background, padding, corner radius; its name in the
+ * canvas and the panel is the layout's ("2 columns").
  */
 
-import { DEFAULT_BUTTON_URL, FONT_STACK, PALETTE } from '../shared.js';
+import { identity } from '../../i18n/index.js';
+import { DEFAULT_BUTTON_URL, FONT_STACK, PALETTE, escapeXml } from '../shared.js';
 import { textMjml } from '../text/index.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
 /** @param {number} count */
 function sectionWith(count) {
-  const columns = Array.from({ length: count }, (_, i) =>
-    `<mj-column>${textMjml(count === 1 ? 'Your text.' : `Column ${i + 1}`)}</mj-column>`
-  ).join('');
-  return `<mj-section background-color="${PALETTE.surface}">${columns}</mj-section>`;
+  return `<mj-section background-color="${PALETTE.surface}">${'<mj-column></mj-column>'.repeat(count)}</mj-section>`;
 }
 
 /**
@@ -50,17 +50,18 @@ export const fourColumnsBlock = layout(4, 'Columns4');
 /**
  * Image on one side, title, text and button on the other - the usual
  * "product" or "article" row. Stacked on mobile, image first.
+ * @param {import('../../i18n/index.js').Translate} [t]
  */
-const IMAGE_TEXT_MJML =
+const imageTextMjml = (t = identity) =>
   `<mj-section background-color="${PALETTE.surface}">` +
   '<mj-column vertical-align="middle"><mj-image align="center"></mj-image></mj-column>' +
   '<mj-column vertical-align="middle">' +
   `<mj-text font-family="${FONT_STACK}" font-size="20px" line-height="28px" font-weight="bold" ` +
-  `color="${PALETTE.navy}" align="left">Title</mj-text>` +
-  textMjml('A few words about it.') +
+  `color="${PALETTE.navy}" align="left">${escapeXml(t('Title'))}</mj-text>` +
+  textMjml(escapeXml(t('A few words about it.'))) +
   `<mj-button href="${DEFAULT_BUTTON_URL}" background-color="${PALETTE.navy}" color="${PALETTE.white}" ` +
   `font-family="${FONT_STACK}" font-size="14px" font-weight="bold" border-radius="6px" ` +
-  'inner-padding="10px 22px" align="left">Learn more</mj-button>' +
+  `inner-padding="10px 22px" align="left">${escapeXml(t('Learn more'))}</mj-button>` +
   '</mj-column>' +
   '</mj-section>';
 
@@ -73,6 +74,6 @@ export const imageTextBlock = {
   kind: 'layout',
   tagName: 'mj-section',
   order: 105,
-  mjml: IMAGE_TEXT_MJML,
+  mjml: imageTextMjml,
   properties: [],
 };

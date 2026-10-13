@@ -194,6 +194,32 @@ test('project validation', async () => {
   assert.equal(validateProject('{').ok, false);
 });
 
+test("project validation, the builder's own format: the same rejections", async () => {
+  const { parseMjml } = await import('../../src/engine/mjml.js');
+  const { toProject } = await import('../../src/engine/model.js');
+  const native = (root) => createDocument({ engine: 'beb-mjml', engineVersion: '0.4.0', project: toProject(root) });
+  const clean = parseMjml(
+    '<mjml><mj-body><mj-section><mj-column><mj-text>Hi <a href="{{ unsubscribe }}">stop</a></mj-text></mj-column></mj-section></mj-body></mjml>'
+  );
+  assert.ok(validateProject(native(clean)).ok);
+  const column = (root) => root.children[0].children[0].children[0];
+  const tampered = [
+    [{ id: 'x1', tag: 'mj-raw', content: '<b>raw</b>' }, 'FORBIDDEN_TAG'],
+    [{ id: 'x2', tag: 'script', content: 'alert(1)' }, 'FORBIDDEN_TAG'],
+    [{ id: 'x3', tag: 'mj-text', attributes: { onclick: 'alert(1)' }, content: 'x' }, 'EVENT_ATTRIBUTE'],
+    [{ id: 'x4', tag: 'mj-button', attributes: { href: 'javascript:alert(1)' }, content: 'x' }, 'UNSAFE_URL'],
+    [{ id: 'x5', tag: 'mj-image', attributes: { src: 'data:image/png;base64,AA' } }, 'UNSAFE_IMAGE'],
+    [{ id: 'x6', tag: 'mj-text', content: '<script>alert(1)</script>' }, 'UNSAFE_CONTENT'],
+  ];
+  for (const [node, code] of tampered) {
+    const project = JSON.parse(JSON.stringify(toProject(clean)));
+    column(project.root).children = [node];
+    const bad = createDocument({ engine: 'beb-mjml', engineVersion: '0.4.0', project });
+    const { ok, issues } = validateProject(bad);
+    assert.ok(!ok && issues.some((i) => i.code === code), code);
+  }
+});
+
 test('preparation and server compilation', async () => {
   const prepared = prepareMjml(MJML, { title: 'Subject <test>', preheader: 'Preview & more' });
   assert.ok(

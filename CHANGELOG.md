@@ -4,6 +4,55 @@ All notable changes are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed — the builder's own engine (breaking)
+- **GrapesJS is gone.** The interface, the canvas, the drag and drop and the
+  text editing are the builder's own (`src/engine/`); the email is a tree of
+  MJML elements, and MJML alone turns it into HTML. The canvas shows the email
+  compiled by `mjml-browser` 5.4.1 (the same MJML version as the server): what
+  is seen is what is sent. The package lost GrapesJS and grapesjs-mjml from its
+  dependencies, and its stylesheet their CSS.
+- Stored documents are written by the engine `beb-mjml` (project: the MJML
+  tree). **Templates saved before** (engine `grapesjs-mjml`) open from their
+  stored MJML, versions included, and are saved in the new format next time;
+  a local draft of the old format is dropped.
+- `editor.exportHtml()` returns a Promise (MJML 5 compiles asynchronously).
+- `createGrapesJsAdapter` is replaced by `createNativeAdapter`; `parseMjml`,
+  `parseMjmlFragment` and `serializeMjml` are exported.
+- `createEmailEditor({ …, t })` takes the interface's translator: the texts a
+  block brings and the names in the canvas follow the language. A block's
+  `mjml` / `sectionMjml` may be a function of `t`.
+
+### Added
+- Drag and drop with pointer events: a line shows where the block lands
+  (between two elements of a column, or between two sections — a content block
+  then gets a section of its own), the canvas scrolls near its edges, Esc
+  cancels. Sections and elements move by the ✥ handle of their toolbar.
+- On the selection: its name, and a toolbar — select the parent, move,
+  duplicate, delete. Keyboard: Delete, Ctrl+Z / Ctrl+Y, Ctrl+C / Ctrl+V,
+  Ctrl+D, Escape (parent), Enter (edit the text).
+- Text edited in place (double-click, or a click on a selected text) with a
+  formatting bar: bold, italic, underline, strike, link, unlink, clear. Pasted
+  content arrives as plain text, Enter is a line break, the HTML is reduced to
+  what an email accepts.
+- The panel shows MJML's own default in an empty field (a section's padding:
+  20 px above and below) and keeps it for the sides not edited.
+- New layouts start with empty columns showing "Drop a block here" (canvas
+  only); an image without file shows a frame sized to its column.
+
+### Fixed
+- Dropping an image opened an empty "Select an image" dialog of the old engine.
+- A 2-column layout was named "Section" in the canvas and the panel; it is now
+  "2 columns", and every element carries its block's name, in both languages.
+- Blocks inserted English texts ("Your text.", "Column 1", "Learn more"…) in a
+  French interface; their texts now follow the interface's language.
+- An empty padding showed 0 while MJML renders 20 px (sections) or 10 px
+  (texts, top and bottom); editing one side set the others to 0.
+- The button's "Label" field was not translated.
+- The server-side project check now also reads the new project's `tag` field
+  (an `mj-raw` or `script` element in a tampered project is refused).
+
 ## [0.3.0] — 2026-10-13
 
 ### Added

@@ -105,7 +105,7 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
             {loading ? t('Rendering…') : t('Nothing to show yet.')}
           </div>
         ) : (
-          // Narrows and widens like the editor's canvas (GrapesJS: width .35s ease).
+          // Narrows and widens like the editor's canvas (width .35s ease).
           <div
             className={cn(
               'eb:mx-auto eb:max-w-full eb:bg-white eb:transition-[width,box-shadow] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none',

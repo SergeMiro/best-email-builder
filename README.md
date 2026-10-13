@@ -35,10 +35,17 @@ Best Email Builder is the second option done once, properly, and given away:
 - **The blocks emails are made of**: heading, text, image, button, divider,
   spacer, social links, menu, 1 to 4 columns, image + text, and a hero banner
   with a background image — sections take a background image too.
-- **Your UI, your storage, your rendering.** The builder is a React component
-  with its own interface; GrapesJS is only the internal canvas engine, hidden
-  behind an adapter. Templates are stored by *your* backend, as a versioned JSON
-  project (the source of truth) plus server-compiled HTML.
+- **Its own editor, end to end.** The interface, the canvas and the drag and
+  drop are the builder's own; the email is a tree of MJML elements, and MJML
+  alone turns it into HTML. The canvas shows the real compiled email — what you
+  see is what Outlook, Gmail and Apple Mail receive. Templates are stored by
+  *your* backend, as a versioned JSON project (the source of truth) plus
+  server-compiled HTML.
+- **Editing that behaves**: drag a block, a line shows exactly where it will
+  land; double-click a text to type in place, with bold, italic, underline,
+  links; every element has its name, its toolbar (parent, move, duplicate,
+  delete) and its keyboard shortcuts; an empty field of the panel shows the
+  value MJML will really use.
 - **Server-side rendering only.** The browser never sends HTML: the server
   validates the project and the MJML, compiles, and stores its own HTML.
 - **A gallery of ready-made emails** — newsletter, welcome, promotion, event
@@ -56,9 +63,10 @@ Best Email Builder is the second option done once, properly, and given away:
 - **English and French** built in, any other language through a dictionary.
 
 ```
-React UI ─► EmailEditor ─► GrapesJsAdapter ─► GrapesJS + grapesjs-mjml
- (ui/)        (core/)        (adapters/)          internal engine
-                                                         │ project JSON + MJML
+React UI ─► EmailEditor ─► NativeAdapter ─► the email: an MJML tree
+ (ui/)        (core/)        (engine/)        │  canvas = the email compiled
+                                              │  by mjml-browser
+                                              │ project JSON + MJML
 Server: validation ─► MJML compilation ─► variables ─► links ─► final HTML
 ```
 
@@ -110,7 +118,7 @@ and each has its own entry point, so one never brings the other's code:
 
 | Block | Import | What it is |
 |---|---|---|
-| A — the bank | `import { TemplateLibrary } from 'best-email-builder/library'` | Your templates and the ready-made bases in a searchable list, the selected one's details, its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts an editor, and does not load GrapesJS. |
+| A — the bank | `import { TemplateLibrary } from 'best-email-builder/library'` | Your templates and the ready-made bases in a searchable list, the selected one's details, its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts an editor, and loads neither the editor's engine nor its MJML compiler. |
 | B — the editor | `import { EmailBuilder } from 'best-email-builder/builder'` | The editor (above). Opens whatever the host hands it; knows nothing of the bank. |
 | A + B | `import { EmailStudio } from 'best-email-builder'` | The two wired together: the bank, then the editor, then back to the bank with the template just saved selected. The editor has no *Templates* button there — the bases are in the bank. |
 
@@ -434,7 +442,7 @@ channel described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE). GrapesJS and grapesjs-mjml are BSD-3-Clause, MJML is MIT.
+[MIT](LICENSE). MJML and mjml-browser are MIT.
 
 ## Author
 

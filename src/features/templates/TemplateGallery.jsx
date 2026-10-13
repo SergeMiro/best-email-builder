@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LayoutTemplate } from 'lucide-react';
 import { useUi } from '../../ui/context.jsx';
 import { Button } from '../../ui/primitives/button.jsx';
@@ -49,16 +49,30 @@ export default function TemplateGalleryButton({ context }) {
   const { t, confirm, notify } = useUi();
   const [open, setOpen] = useState(false);
 
-  const cards = useMemo(() => {
-    if (!open || !ready) return [];
-    return templates.map((entry) => {
-      try {
-        return { ...entry, html: editor.exportHtml(withThumbnailImages(entry.mjml)).html };
-      } catch {
-        return { ...entry, html: '' };
-      }
+  // Thumbnails compiled when the dialog opens (MJML compiles asynchronously).
+  const [rendered, setRendered] = useState({});
+  useEffect(() => {
+    if (!open || !ready) return undefined;
+    let alive = true;
+    Promise.all(
+      templates.map(async (entry) => {
+        try {
+          return [entry.id, (await editor.exportHtml(withThumbnailImages(entry.mjml))).html];
+        } catch {
+          return [entry.id, ''];
+        }
+      })
+    ).then((pairs) => {
+      if (alive) setRendered(Object.fromEntries(pairs));
     });
+    return () => {
+      alive = false;
+    };
   }, [open, ready, templates, editor]);
+  const cards = useMemo(
+    () => (open ? templates.map((entry) => ({ ...entry, html: rendered[entry.id] ?? '' })) : []),
+    [open, templates, rendered]
+  );
 
   const apply = async (entry) => {
     if (isDirty()) {

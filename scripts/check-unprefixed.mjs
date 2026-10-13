@@ -1,6 +1,6 @@
 /**
  * Every class in a `className` string must be a prefixed utility (`eb:…`) or
- * one of the package's own class names (`eb-…`, `gjs-…`): an unprefixed
+ * one of the package's own class names (`eb-…`): an unprefixed
  * Tailwind class would silently produce no CSS.
  *
  *   node scripts/check-unprefixed.mjs
@@ -11,7 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ALLOWED = /^(eb:|eb-|gjs-)/;
+const ALLOWED = /^(eb:|eb-)/;
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

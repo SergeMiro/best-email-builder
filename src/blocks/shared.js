@@ -19,6 +19,15 @@
 
 /** @typedef {import('../core/EmailEditor.js').BlockProperty} BlockProperty */
 
+/** Text for an MJML attribute or element. @param {string} text */
+export function escapeXml(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 /** The default palette. */
 export const PALETTE = {
   ink: '#2b3038',

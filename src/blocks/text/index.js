@@ -8,7 +8,8 @@
  * screens).
  */
 
-import { FONT_STACK, GROUPS, PALETTE, inWhiteSection, prop } from '../shared.js';
+import { identity } from '../../i18n/index.js';
+import { FONT_STACK, GROUPS, PALETTE, escapeXml, inWhiteSection, prop } from '../shared.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
@@ -25,7 +26,8 @@ export function textMjml(content) {
   );
 }
 
-const MJML = textMjml('Your text.');
+/** @param {import('../../i18n/index.js').Translate} [t] */
+const mjml = (t = identity) => textMjml(escapeXml(t('Your text.')));
 
 /** @type {EmailBlock} */
 export const textBlock = {
@@ -36,8 +38,8 @@ export const textBlock = {
   kind: 'content',
   tagName: 'mj-text',
   order: 10,
-  mjml: MJML,
-  sectionMjml: inWhiteSection(MJML),
+  mjml,
+  sectionMjml: (t) => inWhiteSection(mjml(t)),
   editableContent: true,
   properties: [
     prop.fontFamily(),

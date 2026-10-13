@@ -26,6 +26,8 @@ function walk(dir, out = []) {
 }
 
 const CALL = /\bt\(\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/g;
+/** Interface objects whose `label` the fields translate (`label: 'Label'`). */
+const UI_LABEL = /\blabel:\s*'([^'\\]+)'/g;
 
 export async function collectKeys() {
   const keys = new Set();
@@ -34,6 +36,9 @@ export async function collectKeys() {
     for (const match of source.matchAll(CALL)) {
       if (match[1] === '`' && match[2].includes('${')) continue;
       keys.add(match[2].replace(/\\(['"`\\])/g, '$1'));
+    }
+    if (file.includes(`${path.sep}ui${path.sep}`)) {
+      for (const match of source.matchAll(UI_LABEL)) if (/[a-z]/i.test(match[1])) keys.add(match[1]);
     }
   }
   // Registry data rendered through t().

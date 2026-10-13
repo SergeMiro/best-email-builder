@@ -8,6 +8,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emailBlocks } from '../../src/blocks/index.js';
 import { validateMjml } from '../../src/validation/mjmlValidator.js';
+import { resolveBlock } from '../../src/core/EmailEditor.js';
+import { translatorFor } from '../../src/i18n/index.js';
 import { compileMjml } from '../../src/server/compileMjml.js';
 import { parseSpacing, formatSpacing, toAttributes, toValues, cleanAttributeValue } from '../../src/core/mjmlAttributes.js';
 import { STARTER_MJML, createStarterMjml } from '../../src/features/templates/starter.js';
@@ -68,20 +70,26 @@ for (const block of emailBlocks.list()) {
       assert.ok(!block.mjml, 'a structure cannot be inserted');
       return;
     }
-    assert.ok(typeof block.mjml === 'string' && block.mjml.length > 0);
-    assert.ok(block.mjml.startsWith(`<${block.tagName}`));
+    const { mjml, sectionMjml } = resolveBlock(block);
+    assert.ok(typeof mjml === 'string' && mjml.length > 0);
+    assert.ok(mjml.startsWith(`<${block.tagName}`));
     if (block.kind === 'layout') assert.equal(block.tagName, 'mj-section', 'a layout is a section of the body');
     if (block.kind === 'content') {
-      assert.ok(block.sectionMjml?.startsWith('<mj-section') && block.sectionMjml.includes(block.mjml), 'section wrapper');
+      assert.ok(sectionMjml?.startsWith('<mj-section') && sectionMjml.includes(mjml), 'section wrapper');
     }
-    const wrapped = block.kind === 'layout' ? block.mjml : block.sectionMjml;
+    // The texts a block brings come in the interface's language.
+    const french = resolveBlock(block, translatorFor('fr'));
+    for (const english of ['Your text.', 'Your headline', 'Learn more', 'Title', 'Shop', 'Your big announcement']) {
+      assert.ok(!french.mjml.includes(`>${english}<`), `"${english}" translated in French`);
+    }
+    const wrapped = block.kind === 'layout' ? mjml : sectionMjml;
     const { ok, issues } = validateMjml(doc(wrapped));
     assert.ok(ok, issues.map((i) => i.message).join('; '));
     const { html, warnings } = await compileMjml(doc(wrapped));
     assert.ok(html.includes('<!doctype html>'));
     assert.deepEqual(warnings, []);
     if (['mj-text', 'mj-button'].includes(block.tagName)) {
-      for (const attr of ['font-family=', 'font-size=', 'color=']) assert.ok(block.mjml.includes(attr), `explicit ${attr}`);
+      for (const attr of ['font-family=', 'font-size=', 'color=']) assert.ok(mjml.includes(attr), `explicit ${attr}`);
       assert.ok(!html.includes('Ubuntu'), "MJML's default font does not appear");
     }
   });

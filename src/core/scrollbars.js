@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Scrollbars inside the builder's frames (the GrapesJS canvas, the preview),
+ * Scrollbars inside the builder's frames (the canvas, the preview),
  * the same as in the rest of the builder: a 5.6 px gutter, a 2.8 px thumb,
  * no arrows, shown only while the pointer is over the scrolling block. A frame is a
  * document of its own, so `styles.css` does not reach it — the same rules

@@ -1,5 +1,14 @@
 import { useMemo, useState } from 'react';
-import { EmailStudio, TemplateLibrary, createMemoryStorage, createStarterMjml, createDocument } from '../src/index.js';
+import {
+  EmailStudio,
+  TemplateLibrary,
+  createMemoryStorage,
+  createStarterMjml,
+  createDocument,
+  ENGINE_NAME,
+  parseMjml,
+} from '../src/index.js';
+import { toProject } from '../src/engine/model.js';
 
 /**
  * The template library, alone and wired to the builder (`EmailStudio`).
@@ -24,13 +33,11 @@ function fakeRender({ mjml, subject }) {
   });
 }
 
-const EMPTY_PROJECT = { pages: [{ frames: [{ component: { type: 'wrapper', components: [] } }] }] };
-
-/** Memory storage with two saved templates (their project is empty: listing and preview only). */
+/** Memory storage with two saved templates. */
 function seededStorage() {
   const storage = createMemoryStorage({ render: fakeRender });
-  const document = createDocument({ engine: 'grapesjs-mjml', engineVersion: '0.23.6', project: EMPTY_PROJECT });
   const mjml = createStarterMjml({ sender: { name: 'Example Inc.', address: '1 Main Street, Springfield' } });
+  const document = createDocument({ engine: ENGINE_NAME, engineVersion: '', project: toProject(parseMjml(mjml)) });
   storage.create({ name: 'October newsletter', subject: 'The news of the month', document, mjml });
   storage.create({ name: 'Welcome series — day 1', subject: 'Welcome aboard!', preheader: 'Three steps to get started.', document, mjml });
   return storage;

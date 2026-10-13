@@ -34,6 +34,12 @@ import { useT } from './context.jsx';
  * flagged under the field and not passed on; a color with transparency loses
  * its alpha channel, which no version of Outlook reads.
  *
+ * -- AN EMPTY FIELD IS NOT ZERO ----------------------------------------------
+ * A property left empty is rendered by MJML with its default (a section's
+ * padding is 20 px above and below). `fallback` carries that default: it is
+ * shown greyed in the empty field, and a padding edited on one side keeps
+ * the defaults of the others instead of turning them into 0.
+ *
  * -- IMAGES -----------------------------------------------------------------
  * An image is UPLOADED (application storage, `uploadImage`) or given as an
  * https address. Never `data:`: it would bloat the email.
@@ -82,7 +88,7 @@ function FieldError({ children }) {
 }
 
 /** Text, address, long text: draft committed on blur or Enter. */
-function TextField({ id, property, value, onCommit, addon = null, error = null }) {
+function TextField({ id, property, value, fallback = '', onCommit, addon = null, error = null }) {
   const t = useT();
   const [draft, setDraft, ref] = useDraft(value, asText);
   const isUrl = property.type === 'url' || property.type === 'image';
@@ -107,7 +113,7 @@ function TextField({ id, property, value, onCommit, addon = null, error = null }
   const shared = {
     id,
     value: draft,
-    placeholder: property.placeholder ? t(property.placeholder) : property.placeholder,
+    placeholder: property.placeholder ? t(property.placeholder) : fallback || property.placeholder,
     onChange: (e) => setDraft(e.target.value),
     onBlur: commit,
     onKeyDown: keyDown,
@@ -191,7 +197,7 @@ const asNumber = (v) => {
   return Number.isFinite(n) ? String(n) : '';
 };
 
-function SizeField({ id, property, value, onCommit }) {
+function SizeField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
   const [draft, setDraft, ref] = useDraft(value, asNumber);
 
@@ -220,6 +226,7 @@ function SizeField({ id, property, value, onCommit }) {
           min={property.min}
           max={property.max}
           value={draft}
+          placeholder={asNumber(fallback)}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => commit()}
           onKeyDown={(e) => {
@@ -237,7 +244,7 @@ function SizeField({ id, property, value, onCommit }) {
 }
 
 /** Color: swatch + hex code, committed after a short pause. */
-function ColorField({ id, property, value, onCommit }) {
+function ColorField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
   const [draft, setDraft, ref] = useDraft(value, asText);
   const timer = useRef(null);
@@ -262,7 +269,7 @@ function ColorField({ id, property, value, onCommit }) {
   return (
     <div ref={ref} className="eb:space-y-1.5">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
-      <ColorPicker id={id} value={draft} onChange={change} />
+      <ColorPicker id={id} value={draft} placeholder={emailColor(fallback) || ''} onChange={change} />
     </div>
   );
 }
@@ -270,9 +277,14 @@ function ColorField({ id, property, value, onCommit }) {
 /** Radix does not accept an empty option ("default value"): use a sentinel. */
 const DEFAULT_OPTION = '__default__';
 
-function SelectField({ id, property, value, onCommit }) {
+function SelectField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
   const current = value || DEFAULT_OPTION;
+  // "Default (Top)": what MJML renders when nothing is chosen.
+  // (MJML writes some defaults in another word order: "top center" = "center top".)
+  const words = (v) => String(v || '').trim().split(/\s+/).sort().join(' ');
+  const fallbackOption = (property.options || []).find((o) => o.value && words(o.value) === words(fallback));
+  const defaultLabel = fallbackOption ? t('Default ({value})', { value: t(fallbackOption.label) }) : t('Default');
   return (
     <div className="eb:space-y-1.5">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
@@ -284,11 +296,11 @@ function SelectField({ id, property, value, onCommit }) {
         }}
       >
         <SelectTrigger id={id} className="eb:w-full">
-          <SelectValue placeholder={t('Default')} />
+          <SelectValue placeholder={defaultLabel} />
         </SelectTrigger>
         <SelectContent>
           {!(property.options || []).some((o) => !o.value) && (
-            <SelectItem value={DEFAULT_OPTION}>{t('Default')}</SelectItem>
+            <SelectItem value={DEFAULT_OPTION}>{defaultLabel}</SelectItem>
           )}
           {(property.options || []).map((o) => (
             <SelectItem key={o.value || DEFAULT_OPTION} value={o.value || DEFAULT_OPTION}>
@@ -304,7 +316,7 @@ function SelectField({ id, property, value, onCommit }) {
 const ALIGN_ICONS = { left: AlignLeft, center: AlignCenter, right: AlignRight, justify: AlignJustify };
 
 /** Alignment: toggle group (solid `bg-primary` on the active one). */
-function AlignField({ id, property, value, onCommit }) {
+function AlignField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
   return (
     <div className="eb:space-y-1.5">
@@ -317,7 +329,8 @@ function AlignField({ id, property, value, onCommit }) {
       >
         {(property.options || []).map((option) => {
           const Icon = ALIGN_ICONS[option.value] || AlignLeft;
-          const active = value === option.value;
+          // Nothing chosen: MJML's default is what renders, so it shows as current.
+          const active = (value || fallback) === option.value;
           return (
             <TooltipWrap key={option.value} label={t(option.label)}>
               <button
@@ -325,7 +338,7 @@ function AlignField({ id, property, value, onCommit }) {
                 role="radio"
                 aria-checked={active}
                 aria-label={t(option.label)}
-                onClick={() => !active && onCommit(option.value)}
+                onClick={() => option.value !== value && onCommit(option.value)}
                 className={cn(
                   'eb:inline-flex eb:h-7 eb:w-7 eb:items-center eb:justify-center eb:rounded-lg2 eb:transition-colors',
                   active
@@ -350,15 +363,26 @@ const SIDE_LABELS = [
   ['left', 'Left'],
 ];
 
-/** Spacing: four sides in pixels, rewritten in their shortest form. */
-const asSides = (v) => parseSpacing(v || '').map((s) => String(Number.parseFloat(s) || 0));
+/**
+ * Spacing: four sides in pixels, rewritten in their shortest form. Empty
+ * (nothing set): the four inputs are empty, MJML's default greyed in each.
+ */
+const asSides = (v) => (v ? parseSpacing(v).map((s) => String(Number.parseFloat(s) || 0)) : ['', '', '', '']);
 
-function SpacingField({ id, property, value, onCommit }) {
+function SpacingField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
   const [draft, setDraft, ref] = useDraft(value, asSides);
+  const defaults = parseSpacing(fallback || '0px').map((s) => String(Number.parseFloat(s) || 0));
 
   const commit = (sides = draft) => {
-    const next = formatSpacing(sides.map((s) => `${Math.max(0, Math.min(200, Number.parseFloat(s) || 0))}px`));
+    // Untouched sides keep what MJML renders (its default), never 0.
+    if (!value && sides.every((s) => String(s).trim() === '')) return;
+    const next = formatSpacing(
+      sides.map((s, i) => {
+        const raw = String(s).trim() === '' ? defaults[i] : s;
+        return `${Math.max(0, Math.min(200, Number.parseFloat(raw) || 0))}px`;
+      })
+    );
     if (next !== (value || '')) onCommit(next);
   };
 
@@ -376,6 +400,7 @@ function SpacingField({ id, property, value, onCommit }) {
               aria-label={t('{label} — {side}', { label: t(property.label), side: t(label) })}
               title={t(label)}
               value={draft[i]}
+              placeholder={defaults[i]}
               onChange={(e) => setDraft((d) => d.map((v, j) => (j === i ? e.target.value : v)))}
               onBlur={() => commit()}
               onKeyDown={(e) => {
@@ -407,8 +432,8 @@ const FIELDS = {
  * Field of a property. The caller's `key` (element + property) remounts it on
  * every selection change: a draft never carries over from one element to another.
  */
-export function PropertyField({ property, value, onCommit, idPrefix = 'eb', services = null }) {
+export function PropertyField({ property, value, fallback = '', onCommit, idPrefix = 'eb', services = null }) {
   const Field = FIELDS[property.type] || TextField;
   const id = `${idPrefix}-${property.key}`;
-  return <Field id={id} property={property} value={value} onCommit={onCommit} services={services} />;
+  return <Field id={id} property={property} value={value} fallback={fallback} onCommit={onCommit} services={services} />;
 }

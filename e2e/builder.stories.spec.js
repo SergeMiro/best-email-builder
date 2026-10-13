@@ -20,18 +20,32 @@ async function openBuilder(page, { lang } = {}) {
 
 const mjml = (page) => page.evaluate(() => window.__emailEditor.exportMjml());
 const panel = (page) => page.getByTestId('eb-properties');
-const canvas = (page) => page.frameLocator('.gjs-frame');
+const canvas = (page) => page.frameLocator('.eb-canvas-frame');
 const notice = (page, text) => page.getByTestId('email-builder').getByText(text);
+
+/** Ids of the email's elements of a tag, in email order (from the engine's tree). */
+const idsOf = (page, tag) =>
+  page.evaluate((wanted) => {
+    const out = [];
+    const walk = (node) => {
+      if (node.tag === wanted) out.push(node.id);
+      node.children.forEach(walk);
+    };
+    walk(window.__emailAdapter.root);
+    return out;
+  }, tag);
 
 /** Texts of the `mj-text` elements, in email order. */
 const texts = (page) =>
-  page.evaluate(() =>
-    window
-      .__emailEngine()
-      .getWrapper()
-      .findType('mj-text')
-      .map((t) => t.getInnerHTML().replace(/<[^>]+>/g, '').trim())
-  );
+  page.evaluate(() => {
+    const out = [];
+    const walk = (node) => {
+      if (node.tag === 'mj-text') out.push(node.content.replace(/<[^>]+>/g, '').trim());
+      node.children.forEach(walk);
+    };
+    walk(window.__emailAdapter.root);
+    return out;
+  });
 
 test.describe('Interface', () => {
   test('starter template: sender, headline, text, button, footer with unsubscribe', async ({ page }) => {
@@ -71,7 +85,7 @@ test.describe('Interface', () => {
     await props.getByLabel('Size', { exact: true }).press('Enter');
     await props.locator('#eb-prop-background-color').fill('#c2603e');
     await props.getByLabel('Weight').click();
-    await page.getByRole('option', { name: 'Normal' }).click();
+    await page.getByRole('option', { name: 'Normal', exact: true }).click();
     await props.getByRole('radio', { name: 'Right' }).click();
     await props.getByLabel('Padding — Top', { exact: true }).fill('30');
     await props.getByLabel('Padding — Top', { exact: true }).press('Enter');
@@ -104,9 +118,9 @@ test.describe('Interface', () => {
   test('desktop / mobile: the canvas takes the device width', async ({ page }) => {
     await openBuilder(page);
     await page.getByRole('tab', { name: 'Mobile' }).click();
-    await expect.poll(async () => Math.round((await page.locator('.gjs-frame').boundingBox()).width)).toBe(375);
+    await expect.poll(async () => Math.round((await page.locator('.eb-canvas-frame').boundingBox()).width)).toBe(375);
     await page.getByRole('tab', { name: 'Desktop' }).click();
-    await expect.poll(async () => Math.round((await page.locator('.gjs-frame').boundingBox()).width)).toBeGreaterThan(600);
+    await expect.poll(async () => Math.round((await page.locator('.eb-canvas-frame').boundingBox()).width)).toBeGreaterThan(600);
   });
 
   test('nothing selected: template and page settings', async ({ page }) => {
@@ -152,37 +166,26 @@ test.describe('Interface', () => {
 });
 
 /**
- * Drags a block from the sidebar onto an element of the canvas.
- *
- * Playwright's simulated mouse does NOT produce HTML5 drag and drop from a
- * document into an iframe (known limitation): the real `DragEvent`s are
- * dispatched on the real elements — the tile (React handler →
- * `editor.startBlockDrag`), then the target in the canvas (engine sorter).
- * Only the hand gesture is simulated, not the code under test.
+ * Drags with the real mouse: press, travel in steps (the builder's drag is
+ * made of pointer events, and the pointer stays captured over the canvas
+ * frame), release.
+ * @param {import('@playwright/test').Page} page
+ * @param {{x: number, y: number, width: number, height: number}} from
+ * @param {{x: number, y: number}} to  page coordinates
  */
-async function dragBlock(page, blockId, targetIndex) {
-  await page.evaluate(
-    async ({ id, index }) => {
-      const tile = document.querySelector(`[data-block-id="${id}"]`);
-      const target = [
-        ...document.querySelector('.gjs-frame').contentDocument.querySelectorAll('[data-gjs-type="mj-text"]'),
-      ][index];
-      const dataTransfer = new DataTransfer();
-      const wait = () => new Promise((r) => setTimeout(r, 20));
-      tile.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer }));
-      await wait();
-      const box = target.getBoundingClientRect();
-      const at = { bubbles: true, cancelable: true, dataTransfer, clientX: box.left + box.width / 2, clientY: box.bottom - 3 };
-      target.dispatchEvent(new DragEvent('dragenter', at));
-      for (let i = 0; i < 4; i += 1) {
-        target.dispatchEvent(new DragEvent('dragover', at));
-        await wait();
-      }
-      target.dispatchEvent(new DragEvent('drop', at));
-      tile.dispatchEvent(new DragEvent('dragend', { bubbles: true, cancelable: true, dataTransfer }));
-    },
-    { id: blockId, index: targetIndex }
-  );
+async function drag(page, from, to) {
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2 + 12, from.y + from.height / 2 + 6, { steps: 3 });
+  await page.mouse.move(to.x, to.y, { steps: 20 });
+  await page.mouse.up();
+}
+
+/** Drags a block from the sidebar onto the lower edge of a text of the canvas (= after it). */
+async function dragBlock(page, blockId, textIndex) {
+  const tile = await page.locator(`[data-block-id="${blockId}"]`).boundingBox();
+  const target = await canvas(page).locator('.eb-tag-mj-text').nth(textIndex).boundingBox();
+  await drag(page, tile, { x: target.x + target.width / 2, y: target.y + target.height - 3 });
 }
 
 test.describe('Element actions', () => {
@@ -192,10 +195,9 @@ test.describe('Element actions', () => {
     // On the "Hello… Your text." text, lower half: after it.
     await dragBlock(page, 'divider', 2);
     await expect.poll(async () => (await mjml(page)).match(/<mj-divider/g)?.length || 0).toBe(before + 1);
-    expect(await mjml(page)).toMatch(/Your text\.<\/mj-text><mj-divider/);
+    expect(await mjml(page)).toMatch(/Your text\.<\/mj-text>\s*<mj-divider/);
     // Dropped INSIDE the column of the target text, not in a new section.
-    const sections = await page.evaluate(() => window.__emailEngine().getWrapper().findType('mj-section').length);
-    expect(sections).toBe(3);
+    expect(await idsOf(page, 'mj-section')).toHaveLength(3);
     await expect(panel(page).getByRole('heading', { name: 'Divider' })).toBeVisible();
   });
 
@@ -203,12 +205,10 @@ test.describe('Element actions', () => {
     await openBuilder(page);
     expect((await texts(page)).slice(1, 3)).toEqual(['Your headline', 'Hello {{contact.firstname}},Your text.']);
     await canvas(page).getByText('Your headline').click();
-    const handle = page.locator('.gjs-toolbar-item').nth(1);
+    // The ✥ handle of the selection's toolbar.
+    const handle = await canvas(page).locator('button[data-action="move"]').boundingBox();
     const box = await canvas(page).getByText('Learn more').boundingBox();
-    await handle.hover();
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height - 2, { steps: 12 });
-    await page.mouse.up();
+    await drag(page, handle, { x: box.x + box.width / 2, y: box.y + box.height - 2 });
     await expect.poll(async () => (await texts(page)).indexOf('Your headline')).toBe(2);
   });
 
@@ -238,17 +238,15 @@ test.describe('Element actions', () => {
   test('columns: sideways move', async ({ page }) => {
     await openBuilder(page);
     await page.locator('[data-block-id="columns-2"]').click();
-    await canvas(page).getByText('Column 1').click();
-    await page.evaluate(() => {
-      window.__emailEditor.select(window.__emailEngine().getSelected().parent().getId());
-    });
+    const before = await idsOf(page, 'mj-column');
+    // An empty column says "Drop a block here"; clicking it selects the column.
+    await canvas(page).getByText('Drop a block here').first().click();
     const props = panel(page);
     await expect(props.getByRole('heading', { name: 'Column' })).toBeVisible();
     await expect(props.getByRole('button', { name: 'Move left' })).toBeDisabled();
     await props.getByRole('button', { name: 'Move right' }).click();
-    await expect
-      .poll(async () => (await texts(page)).filter((t) => t.startsWith('Column')))
-      .toEqual(['Column 2', 'Column 1']);
+    const [first, second] = before.slice(-2);
+    await expect.poll(async () => (await idsOf(page, 'mj-column')).slice(-2)).toEqual([second, first]);
   });
 
   test('keyboard: Delete, Ctrl+Z, Ctrl+Y', async ({ page }) => {
@@ -320,6 +318,49 @@ test.describe('Save, reload, versions', () => {
     expect(await mjml(page)).toBe(saved);
     await expect(page.getByText('Saved', { exact: true })).toBeVisible();
     await expect(panel(page).getByLabel(/^Name/)).toHaveValue('Versioned');
+  });
+
+  test('a template saved by the earlier engine (GrapesJS) opens from its MJML, and is saved in the new format', async ({ page }) => {
+    await openBuilder(page);
+    const legacyMjml =
+      '<mjml><mj-body background-color="#eceff4"><mj-section background-color="#ffffff"><mj-column>' +
+      '<mj-text font-size="15px">Saved before the switch</mj-text>' +
+      '<mj-button href="https://example.com/old">Old button</mj-button>' +
+      '</mj-column></mj-section></mj-body></mjml>';
+    const id = await page.evaluate(async (mjmlSource) => {
+      const { template } = await window.__emailStorage.create({
+        name: 'Legacy',
+        document: {
+          schemaVersion: 1,
+          engine: 'grapesjs-mjml',
+          engineVersion: '0.23.6',
+          builderVersion: '0.3.0',
+          project: { pages: [{ frames: [{ component: { type: 'wrapper', components: [] } }] }] },
+        },
+        mjml: mjmlSource,
+      });
+      return template.id;
+    }, legacyMjml);
+    await page.evaluate((templateId) => window.__reopenBuilder(templateId), id);
+    await expect(builderOf(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+    await expect(canvas(page).getByText('Saved before the switch')).toBeVisible();
+    await expect(canvas(page).getByText('Old button')).toBeVisible();
+    // Opening is not a change.
+    await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+    await page.locator('[data-block-id="divider"]').click();
+    await page.keyboard.press('Control+s');
+    await expect(notice(page, 'Saved — version 2.')).toBeVisible();
+    const row = await page.evaluate(async (templateId) => window.__emailStorage.load(templateId), id);
+    expect(row.document.engine).toBe('beb-mjml');
+    expect(row.mjml).toContain('Saved before the switch');
+    expect(row.mjml).toContain('<mj-divider');
+
+    // Its first version (old format) can still be restored, from its MJML.
+    await page.getByRole('button', { name: 'Versions' }).click();
+    await page.getByRole('dialog').filter({ hasText: 'Version 1' }).getByRole('button', { name: 'Restore version 1' }).click();
+    await expect.poll(() => mjml(page)).not.toContain('<mj-divider');
+    expect(await mjml(page)).toContain('Old button');
   });
 
   test('versions: restore version 1, then save it as version 3', async ({ page }) => {

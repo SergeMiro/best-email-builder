@@ -1,13 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * The `EmailEditor` contract on the REAL engine (GrapesJS + MJML), in a real
- * browser, without network or session.
+ * The `EmailEditor` contract on the REAL engine (the builder's own: model,
+ * canvas, mjml-browser), in a real browser, without network or session.
  *
  * The `Engine / Canvas` story mounts the editor and exposes it on
- * `window.__emailEditor`; each test drives the contract like the interface
- * does. Unit tests (tests/unit/core.test.mjs) cover the core with a fake
- * engine; these prove the GrapesJS adapter keeps the same promises.
+ * `window.__emailEditor` (and its adapter on `window.__emailAdapter`, whose
+ * `root` is the email tree); each test drives the contract like the
+ * interface does. Unit tests (tests/unit/core.test.mjs) cover the core with a
+ * fake engine; these prove the native adapter keeps the same promises.
  *
  * Run: npm run test:stories
  */
@@ -21,10 +22,27 @@ async function openBench(page) {
   return bench;
 }
 
-/** Runs a function against the editor, inside the page. */
+/**
+ * Runs a function against the editor, inside the page. `window.__nodes(tag)`
+ * lists the email's elements of a tag (from the adapter's tree), and
+ * `window.__canvas` is the canvas frame's document.
+ */
 function withEditor(page, fn, arg) {
   return page.evaluate(
     ({ source, arg: value }) => {
+      window.__nodes = (tag) => {
+        const out = [];
+        const walk = (node) => {
+          if (node.tag === tag) out.push(node);
+          node.children.forEach(walk);
+        };
+        if (window.__emailAdapter.root) walk(window.__emailAdapter.root);
+        return out;
+      };
+      Object.defineProperty(window, '__canvas', {
+        configurable: true,
+        get: () => document.querySelector('.eb-canvas-frame')?.contentDocument || null,
+      });
       const run = new Function('editor', 'arg', `return (${source})(editor, arg);`);
       return run(window.__emailEditor, value);
     },
@@ -41,24 +59,20 @@ test.describe('Engine', () => {
       adapter: editor.adapterName,
       device: editor.getDevice(),
     }));
-    expect(state).toEqual({ status: 'ready', adapter: 'grapesjs-mjml', device: 'desktop' });
+    expect(state).toEqual({ status: 'ready', adapter: 'beb-mjml', device: 'desktop' });
 
-    // The canvas fills the area: no column kept for the engine's own panels
-    // (85 % by default without our settings).
+    // The canvas fills the area.
     const canvas = page.getByTestId('eb-canvas');
-    const frame = page.locator('.gjs-cv-canvas');
+    const frame = page.locator('.eb-canvas-frame');
     const [host, inner] = await Promise.all([canvas.boundingBox(), frame.boundingBox()]);
     expect(Math.abs(host.width - inner.width)).toBeLessThanOrEqual(1);
-
-    // No engine panel is visible.
-    await expect(page.locator('.gjs-pn-panel:visible')).toHaveCount(0);
   });
 
   test('an empty email exports to MJML then HTML without error', async ({ page }) => {
     await openBench(page);
-    const out = await withEditor(page, (editor) => ({
+    const out = await withEditor(page, async (editor) => ({
       mjml: editor.exportMjml(),
-      html: editor.exportHtml(),
+      html: await editor.exportHtml(),
     }));
     expect(out.mjml).toMatch(/^<mjml>\s*<mj-body[^>]*>/);
     expect(out.html.errors).toEqual([]);
@@ -79,8 +93,8 @@ test.describe('Engine', () => {
       return {
         status: editor.status,
         refused,
-        engineNodes: document.querySelectorAll('.gjs-editor').length,
-        frames: document.querySelectorAll('.gjs-frame').length,
+        engineNodes: document.querySelectorAll('.eb-native-canvas').length,
+        frames: document.querySelectorAll('.eb-canvas-frame').length,
       };
     });
     expect(afterDestroy.status).toBe('idle');
@@ -104,9 +118,9 @@ test.describe('Engine', () => {
       const pending = editor.initialize({ container });
       editor.destroy();
       await pending;
-      const ghost = document.querySelectorAll('.gjs-editor').length;
+      const ghost = document.querySelectorAll('.eb-native-canvas').length;
       await editor.initialize({ container });
-      return { ghost, status: editor.status, engines: document.querySelectorAll('.gjs-editor').length };
+      return { ghost, status: editor.status, engines: document.querySelectorAll('.eb-native-canvas').length };
     });
     expect(result.ghost).toBe(0);
     expect(result.status).toBe('ready');
@@ -139,7 +153,7 @@ test.describe('Save and reload', () => {
       async (editor, sample) => {
         const storage = window.__emailStorage;
         editor.loadMjml(sample);
-        const before = { mjml: editor.exportMjml(), html: editor.exportHtml().html };
+        const before = { mjml: editor.exportMjml(), html: (await editor.exportHtml()).html };
         const { template } = await storage.create({
           name: 'Banc phase 2',
           document: editor.getDocument(),
@@ -154,7 +168,7 @@ test.describe('Save and reload', () => {
 
         return {
           before,
-          after: { mjml: editor.exportMjml(), html: editor.exportHtml().html },
+          after: { mjml: editor.exportMjml(), html: (await editor.exportHtml()).html },
           storedMjml: loaded.mjml,
           canUndo: editor.canUndo(),
         };
@@ -296,7 +310,7 @@ test.describe('Blocks', () => {
       // 1. Added without selection: wrapped in a white section, selected.
       const added = await withEditor(
         page,
-        (editor, id) => {
+        async (editor, id) => {
           editor.loadMjml('<mjml><mj-body background-color="#eceff4"></mj-body></mjml>');
           const newId = editor.addBlock(id);
           const selection = editor.getSelection();
@@ -305,7 +319,7 @@ test.describe('Blocks', () => {
             selection,
             block: editor.getBlock(id),
             mjml: editor.exportMjml(),
-            errors: editor.exportHtml().errors,
+            errors: (await editor.exportHtml()).errors,
           };
         },
         blockId
@@ -324,17 +338,15 @@ test.describe('Blocks', () => {
           editor.loadMjml(
             '<mjml><mj-body><mj-section><mj-column><mj-spacer height="8px"></mj-spacer></mj-column><mj-column></mj-column></mj-section></mj-body></mjml>'
           );
-          const engine = window.__emailEngine();
-          const columns = engine.getWrapper().findType('mj-column');
-          editor.select(columns[1].getId());
+          editor.select(window.__nodes('mj-column')[1].id);
           editor.addBlock(id);
-          const first = engine.getWrapper().findType('mj-spacer')[0];
-          editor.select(first.getId());
+          editor.select(window.__nodes('mj-spacer')[0].id);
           editor.addBlock(id);
+          const columns = window.__nodes('mj-column');
           return {
-            sections: engine.getWrapper().findType('mj-section').length,
-            inColumn2: columns[1].components().length,
-            afterSpacer: columns[0].components().at(1)?.get('type'),
+            sections: window.__nodes('mj-section').length,
+            inColumn2: columns[1].children.length,
+            afterSpacer: columns[0].children[1]?.tag,
           };
         },
         blockId
@@ -349,14 +361,14 @@ test.describe('Blocks', () => {
         const value = sampleFor(property, added.selection.values[property.key]);
         const out = await withEditor(
           page,
-          (editor, { id, key, value: v }) => {
+          async (editor, { id, key, value: v }) => {
             editor.loadMjml('<mjml><mj-body></mj-body></mjml>');
             editor.addBlock(id);
             editor.updateProperties({ [key]: v });
             return {
               value: editor.getSelection().values[key],
               mjml: editor.exportMjml(),
-              errors: editor.exportHtml().errors,
+              errors: (await editor.exportHtml()).errors,
             };
           },
           { id: blockId, key: property.key, value }
@@ -372,8 +384,6 @@ test.describe('Blocks', () => {
       const undo = await withEditor(
         page,
         async (editor, id) => {
-          // Two gestures = two event-loop turns: the engine groups everything
-          // that happens in the same turn into ONE undo step.
           const tick = () => new Promise((r) => setTimeout(r, 30));
           editor.loadMjml('<mjml><mj-body></mj-body></mjml>');
           await tick();
@@ -382,8 +392,8 @@ test.describe('Blocks', () => {
           const before = editor.exportMjml();
           editor.updateProperties({ 'background-color': '#123456', 'container-background-color': '#123456' });
           await new Promise((r) => setTimeout(r, 150));
-          const frame = document.querySelector('.gjs-frame').contentDocument;
-          const painted = [...frame.querySelectorAll('[data-gjs-type] *')].some((el) =>
+          const frame = window.__canvas;
+          const painted = [...frame.querySelectorAll('.eb-node, .eb-node *')].some((el) =>
             /rgb\(18, 52, 86\)/.test(getComputedStyle(el).backgroundColor)
           );
           editor.undo();
@@ -405,15 +415,14 @@ test.describe('Image', () => {
       editor.loadMjml('<mjml><mj-body></mj-body></mjml>');
       editor.addBlock('image');
       await new Promise((r) => setTimeout(r, 150));
-      const frame = document.querySelector('.gjs-frame').contentDocument;
-      const img = frame.querySelector('[data-gjs-type="mj-image"] img');
+      const img = window.__canvas.querySelector('.eb-tag-mj-image img');
       return {
         mjml: editor.exportMjml(),
         project: JSON.stringify(editor.getDocument()),
         src: editor.getSelection().values.src,
         canvasSrc: img?.getAttribute('src') || '',
         canvasHeight: img ? img.getBoundingClientRect().height : 0,
-        html: editor.exportHtml(),
+        html: await editor.exportHtml(),
       };
     });
     expect(out.mjml).not.toContain('<svg');
@@ -424,7 +433,7 @@ test.describe('Image', () => {
     expect(out.src).toBe('');
     expect(out.html.errors).toEqual([]);
     // The canvas shows the "choose an image" placeholder, at the column width.
-    expect(out.canvasSrc).toMatch(/^data:image\/svg\+xml,/);
+    expect(out.canvasSrc).toMatch(/^data:image\/svg\+xml/);
     expect(out.canvasHeight).toBeGreaterThan(100);
   });
 
@@ -445,10 +454,9 @@ test.describe('Image', () => {
       editor.destroy();
       await editor.initialize({ container, document: document_ });
       await new Promise((r) => setTimeout(r, 150));
-      const frame = document.querySelector('.gjs-frame').contentDocument;
       return {
         mjml: editor.exportMjml(),
-        canvasSrc: frame.querySelector('[data-gjs-type="mj-image"] img')?.getAttribute('src'),
+        canvasSrc: window.__canvas.querySelector('.eb-tag-mj-image img')?.getAttribute('src'),
       };
     });
     expect(out.mjml).toContain('src="https://example.com/logo.png"');
@@ -468,13 +476,12 @@ test.describe('Button', () => {
       const initial = editor.getSelection().content;
       editor.setContent('Book <my> seat & come');
       await new Promise((r) => setTimeout(r, 100));
-      const frame = document.querySelector('.gjs-frame').contentDocument;
       return {
         initial,
         content: editor.getSelection().content,
         mjml: editor.exportMjml(),
-        html: editor.exportHtml(),
-        canvas: frame.querySelector('[data-gjs-type="mj-button"]')?.textContent.trim(),
+        html: await editor.exportHtml(),
+        canvas: window.__canvas.querySelector('.eb-tag-mj-button')?.textContent.trim(),
       };
     });
     expect(out.initial).toBe('Learn more');
@@ -504,35 +511,40 @@ test.describe('Columns and structure', () => {
             '<mjml><mj-body><mj-section><mj-column><mj-text>A</mj-text></mj-column></mj-section>' +
               '<mj-section><mj-column><mj-text>Z</mj-text></mj-column></mj-section></mj-body></mjml>'
           );
-          const engine = window.__emailEngine();
-          const firstText = engine.getWrapper().findType('mj-text')[0];
-          editor.select(firstText.getId());
+          editor.select(window.__nodes('mj-text')[0].id);
           editor.addBlock(id);
           const selection = editor.getSelection();
-          const sections = engine.getWrapper().findType('mj-section');
+          const sections = window.__nodes('mj-section');
           const added = sections[1];
           const boxes = async () => {
-            await new Promise((r) => setTimeout(r, 400));
-            const frame = document.querySelector('.gjs-frame').contentDocument;
-            const ids = added.components().map((c) => c.getId());
-            return ids.map((id) => {
-              const box = frame.getElementById(id)?.getBoundingClientRect();
+            await new Promise((r) => setTimeout(r, 500));
+            return added.children.map((column) => {
+              const box = window.__canvas.querySelector(`.eb-id-${column.id}`)?.getBoundingClientRect();
               return { top: Math.round(box?.top ?? -1), left: Math.round(box?.left ?? -1) };
             });
           };
           const desktop = await boxes();
           editor.setDevice('mobile');
           const mobile = await boxes();
-          const frameWidth = document.querySelector('.gjs-frame').getBoundingClientRect().width;
+          const frameWidth = document.querySelector('.eb-canvas-frame').getBoundingClientRect().width;
           editor.setDevice('desktop');
+          const texts = (section) => {
+            const out = [];
+            const walk = (node) => {
+              if (node.tag === 'mj-text') out.push(node.content);
+              node.children.forEach(walk);
+            };
+            walk(section);
+            return out.join('|');
+          };
           return {
             selection,
-            order: sections.map((s) => s.findType('mj-text').map((t) => t.getInnerHTML()).join('|')),
-            columns: added.components().length,
+            order: sections.map(texts),
+            columns: added.children.length,
             desktop,
             mobile,
             frameWidth,
-            errors: editor.exportHtml().errors,
+            errors: (await editor.exportHtml()).errors,
           };
         },
         layoutId
@@ -585,16 +597,15 @@ test.describe('Columns and structure', () => {
         const value = sampleFor(property, '');
         const out = await withEditor(
           page,
-          (editor, { type, key, value: v, mjml }) => {
+          async (editor, { type, key, value: v, mjml }) => {
             editor.loadMjml(mjml);
-            const target = window.__emailEngine().getWrapper().findType(type)[0];
-            editor.select(target.getId());
+            editor.select(window.__nodes(type)[0].id);
             editor.updateProperties({ [key]: v });
             return {
               blockId: editor.getSelection().blockId,
               value: editor.getSelection().values[key],
               mjml: editor.exportMjml(),
-              errors: editor.exportHtml().errors,
+              errors: (await editor.exportHtml()).errors,
             };
           },
           { type: structure.type, key: property.key, value, mjml: structure.mjml }
@@ -613,12 +624,12 @@ test.describe('Columns and structure', () => {
 test.describe('Heading, menu, hero', () => {
   test('heading: inserted as a large bold text, then edited as a Text', async ({ page }) => {
     await openBench(page);
-    const out = await withEditor(page, (editor) => {
+    const out = await withEditor(page, async (editor) => {
       editor.loadMjml('<mjml><mj-body></mj-body></mjml>');
       editor.addBlock('heading');
       const selection = editor.getSelection();
       editor.updateProperties({ 'font-weight': 'normal' });
-      return { selection, after: editor.getSelection().values, mjml: editor.exportMjml(), errors: editor.exportHtml().errors };
+      return { selection, after: editor.getSelection().values, mjml: editor.exportMjml(), errors: (await editor.exportHtml()).errors };
     });
     expect(out.selection.tagName).toBe('mj-text');
     expect(out.selection.blockId).toBe('text');
@@ -634,22 +645,19 @@ test.describe('Heading, menu, hero', () => {
     const out = await withEditor(page, async (editor) => {
       editor.loadMjml('<mjml><mj-body></mj-body></mjml>');
       editor.addBlock('navbar');
-      const engine = window.__emailEngine();
-      const links = engine.getWrapper().findType('mj-navbar-link');
-      editor.select(links[0].getId());
+      editor.select(window.__nodes('mj-navbar-link')[0].id);
       const before = editor.getSelection();
       editor.setContent('Prices & <deals>');
       editor.updateProperties({ href: 'https://example.com/prices' });
       editor.duplicate();
       await new Promise((r) => setTimeout(r, 300));
-      const frame = document.querySelector('.gjs-frame').contentDocument;
       return {
         before,
         after: editor.getSelection(),
-        count: engine.getWrapper().findType('mj-navbar-link').length,
-        canvas: frame.body.textContent,
+        count: window.__nodes('mj-navbar-link').length,
+        canvas: window.__canvas.body.textContent,
         mjml: editor.exportMjml(),
-        html: editor.exportHtml(),
+        html: await editor.exportHtml(),
       };
     });
     expect(out.before.blockId).toBe('navbar-link');
@@ -665,22 +673,30 @@ test.describe('Heading, menu, hero', () => {
 
   test('hero: a section with a background image, placed after the current section', async ({ page }) => {
     await openBench(page);
-    const out = await withEditor(page, (editor) => {
+    const out = await withEditor(page, async (editor) => {
       editor.loadMjml(
         '<mjml><mj-body><mj-section><mj-column><mj-text>A</mj-text></mj-column></mj-section>' +
           '<mj-section><mj-column><mj-text>Z</mj-text></mj-column></mj-section></mj-body></mjml>'
       );
-      const engine = window.__emailEngine();
-      editor.select(engine.getWrapper().findType('mj-text')[0].getId());
+      editor.select(window.__nodes('mj-text')[0].id);
       editor.addBlock('hero');
-      const sections = engine.getWrapper().findType('mj-section');
-      editor.select(sections[1].getId());
+      const sections = window.__nodes('mj-section');
+      editor.select(sections[1].id);
       editor.updateProperties({ 'background-url': 'https://example.com/banner.jpg' });
+      const textsIn = (section) => {
+        let n = 0;
+        const walk = (node) => {
+          if (node.tag === 'mj-text') n += 1;
+          node.children.forEach(walk);
+        };
+        walk(section);
+        return n;
+      };
       return {
         selection: editor.getSelection(),
-        order: sections.map((s) => s.findType('mj-text').length),
+        order: window.__nodes('mj-section').map(textsIn),
         mjml: editor.exportMjml(),
-        html: editor.exportHtml(),
+        html: await editor.exportHtml(),
       };
     });
     expect(out.selection.blockId).toBe('section');

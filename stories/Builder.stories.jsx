@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { createEmailEditor, emailBlocks, emailBuilderFeatures, EmailBuilder, createMemoryStorage } from '../src/index.js';
-import { createGrapesJsAdapter } from '../src/adapters/grapesjs/GrapesJsAdapter.js';
+import { createNativeAdapter } from '../src/engine/NativeAdapter.js';
+import { translatorFor } from '../src/i18n/index.js';
 
 /**
  * The complete builder screen, without network or session (memory storage).
@@ -43,14 +44,14 @@ function fakeSendTest({ emails, subject }) {
 }
 
 function Session({ storage, templateId, initial, onClose, locale }) {
-  const adapter = useMemo(() => createGrapesJsAdapter({ locale }), [locale]);
+  const adapter = useMemo(() => createNativeAdapter(), []);
   const editor = useMemo(
-    () => createEmailEditor({ adapter, blocks: emailBlocks, features: emailBuilderFeatures }),
-    [adapter]
+    () => createEmailEditor({ adapter, blocks: emailBlocks, features: emailBuilderFeatures, t: translatorFor(locale) }),
+    [adapter, locale]
   );
   if (typeof window !== 'undefined') {
     window.__emailEditor = editor;
-    window.__emailEngine = () => adapter.engine;
+    window.__emailAdapter = adapter;
   }
   return (
     <EmailBuilder

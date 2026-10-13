@@ -14,21 +14,23 @@
  * position are set there.
  */
 
-import { DEFAULT_BUTTON_URL, FONT_STACK, PALETTE } from '../shared.js';
+import { identity } from '../../i18n/index.js';
+import { DEFAULT_BUTTON_URL, FONT_STACK, PALETTE, escapeXml } from '../shared.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
-const MJML =
+/** @param {import('../../i18n/index.js').Translate} [t] */
+const mjml = (t = identity) =>
   `<mj-section background-color="${PALETTE.navy}" background-size="cover" background-position="center center" ` +
   'background-repeat="no-repeat" padding-top="56px" padding-bottom="56px">' +
   '<mj-column>' +
   `<mj-text font-family="${FONT_STACK}" font-size="30px" line-height="38px" font-weight="bold" ` +
-  `color="${PALETTE.white}" align="center" padding-left="32px" padding-right="32px">Your big announcement</mj-text>` +
+  `color="${PALETTE.white}" align="center" padding-left="32px" padding-right="32px">${escapeXml(t('Your big announcement'))}</mj-text>` +
   `<mj-text font-family="${FONT_STACK}" font-size="16px" line-height="24px" color="${PALETTE.border}" ` +
-  'align="center" padding-left="32px" padding-right="32px">One sentence that makes people want to read on.</mj-text>' +
+  `align="center" padding-left="32px" padding-right="32px">${escapeXml(t('One sentence that makes people want to read on.'))}</mj-text>` +
   `<mj-button href="${DEFAULT_BUTTON_URL}" background-color="${PALETTE.white}" color="${PALETTE.navy}" ` +
   `font-family="${FONT_STACK}" font-size="15px" font-weight="bold" border-radius="6px" ` +
-  'inner-padding="12px 28px" align="center">Learn more</mj-button>' +
+  `inner-padding="12px 28px" align="center">${escapeXml(t('Learn more'))}</mj-button>` +
   '</mj-column>' +
   '</mj-section>';
 
@@ -41,6 +43,6 @@ export const heroBlock = {
   kind: 'layout',
   tagName: 'mj-section',
   order: 110,
-  mjml: MJML,
+  mjml,
   properties: [],
 };

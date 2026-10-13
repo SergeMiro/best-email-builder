@@ -9,14 +9,16 @@
  * (12 x 28 px) - a button that is too small is easy to miss with a finger.
  */
 
-import { DEFAULT_BUTTON_URL, FONT_STACK, GROUPS, PALETTE, inWhiteSection, prop } from '../shared.js';
+import { identity } from '../../i18n/index.js';
+import { DEFAULT_BUTTON_URL, FONT_STACK, GROUPS, PALETTE, escapeXml, inWhiteSection, prop } from '../shared.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
-const MJML =
+/** @param {import('../../i18n/index.js').Translate} [t] */
+const mjml = (t = identity) =>
   `<mj-button href="${DEFAULT_BUTTON_URL}" background-color="${PALETTE.navy}" color="${PALETTE.white}" ` +
   `font-family="${FONT_STACK}" font-size="15px" font-weight="bold" border-radius="6px" ` +
-  'inner-padding="12px 28px" align="center">Learn more</mj-button>';
+  `inner-padding="12px 28px" align="center">${escapeXml(t('Learn more'))}</mj-button>`;
 
 /** @type {EmailBlock} */
 export const buttonBlock = {
@@ -27,8 +29,8 @@ export const buttonBlock = {
   kind: 'content',
   tagName: 'mj-button',
   order: 30,
-  mjml: MJML,
-  sectionMjml: inWhiteSection(MJML),
+  mjml,
+  sectionMjml: (t) => inWhiteSection(mjml(t)),
   editableContent: true,
   properties: [
     prop.href('Link URL'),

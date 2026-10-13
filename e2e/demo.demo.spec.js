@@ -49,7 +49,7 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await page.getByTestId('eb-library-template').filter({ hasText: 'Demo letter' }).click();
   await page.getByTestId('eb-library-details').getByRole('button', { name: 'Edit' }).click();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
-  await expect(page.frameLocator('.gjs-frame').locator('[data-gjs-type="mj-divider"]')).toHaveCount(1);
+  await expect(page.frameLocator('.eb-canvas-frame').locator('.eb-tag-mj-divider')).toHaveCount(1);
   await page.getByRole('button', { name: 'Variables' }).click();
   await expect(page.getByTestId('variable-picker').getByRole('option', { name: /Coupon code/ })).toBeVisible();
 });
@@ -68,10 +68,10 @@ test('a base opens the editor on its content, and the address survives a reload'
   await page.getByRole('button', { name: 'Start from this base' }).click();
   await expect(page).toHaveURL(/#\/editor\/base\/promotion$/);
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
-  await expect(page.frameLocator('.gjs-frame').getByText('30% off everything')).toBeVisible();
+  await expect(page.frameLocator('.eb-canvas-frame').getByText('30% off everything')).toBeVisible();
   await page.reload();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
-  await expect(page.frameLocator('.gjs-frame').getByText('30% off everything')).toBeVisible();
+  await expect(page.frameLocator('.eb-canvas-frame').getByText('30% off everything')).toBeVisible();
 });
 
 test('landing: the marquee lists the editors this one can replace', async ({ page }) => {

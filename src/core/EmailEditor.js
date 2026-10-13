@@ -4,17 +4,19 @@
  *
  * ── THE ARCHITECTURE RULE ──────────────────────────────────────────────────
  *
- *     React UI ─► EmailEditor ─► adapter ─► engine (GrapesJS) ─► MJML
+ *     React UI ─► EmailEditor ─► adapter ─► engine (engine/) ─► MJML
  *
  * The UI (`ui/`), features (`features/`) and blocks (`blocks/`) talk ONLY to
- * this object. None of them imports GrapesJS: everything engine-related lives
- * in `adapters/grapesjs/`. Swapping the engine therefore means writing another
- * adapter that fulfils `EmailEditorAdapter`, rewriting nothing above it.
+ * this object. None of them knows the canvas or the model: everything
+ * engine-related lives in `engine/`. Swapping the engine therefore means
+ * writing another adapter that fulfils `EmailEditorAdapter`, rewriting
+ * nothing above it.
  *
  * ── WHAT THIS LAYER ADDS TO THE ADAPTER ────────────────────────────────────
  *   - the lifecycle (idle → initializing → ready → idle), and a hard refusal
  *     of any call made before `initialize` or after `destroy`;
- *   - resolving blocks by id in the registry;
+ *   - resolving blocks by id in the registry, with their texts translated;
+ *   - naming elements (a section is named after its layout: "2 columns");
  *   - the versioned document envelope (`core/document.js`);
  *   - starting and stopping registered features.
  *
@@ -24,7 +26,9 @@
 import { createEmitter } from './events.js';
 import { EMAIL_DEVICES } from './constants.js';
 import { createDocument, readDocument } from './document.js';
-import { toAttributes, toValues } from './mjmlAttributes.js';
+import { LONGHAND_SPACING, toAttributes, toValues } from './mjmlAttributes.js';
+import { MJML_DEFAULTS } from './mjmlDefaults.js';
+import { identity } from '../i18n/index.js';
 
 /**
  * @typedef {import('./constants.js').EmailDevice} EmailDevice
@@ -57,7 +61,9 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *   `structure` : body, section, column — selectable, not addable.
  *
  * `mjml` is the inserted fragment; `sectionMjml` the same wrapped in a
- * section, for when it must go outside any column; `tagName` identifies the
+ * section, for when it must go outside any column. Either may be a function
+ * of the translator, so the texts a block brings arrive in the interface's
+ * language; `tagName` identifies the
  * block of a selected element (`mj-text` → text).
  * `editableContent`: the content is editable (canvas for text, panel for a
  * button label).
@@ -73,8 +79,8 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *   kind: 'content'|'layout'|'structure',
  *   tagName: string,
  *   order?: number,
- *   mjml?: string,
- *   sectionMjml?: string,
+ *   mjml?: string | ((t: import('../i18n/index.js').Translate) => string),
+ *   sectionMjml?: string | ((t: import('../i18n/index.js').Translate) => string),
  *   properties: BlockProperty[],
  *   editableContent?: boolean,
  *   insertOnly?: boolean,
@@ -94,17 +100,21 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *   canDuplicate: boolean,
  *   canMoveUp: boolean,
  *   canMoveDown: boolean,
+ *   columnCount?: number,
  * }} EngineSelection
+ *   `columnCount`: for a section, how many columns it holds (its name).
  */
 
 /**
- * Selected element, in the builder's vocabulary: its block and its property
- * values (padding recombined, see mjmlAttributes).
+ * Selected element, in the builder's vocabulary: its block, its property
+ * values (padding recombined, see mjmlAttributes) and, for the properties left
+ * empty, what MJML renders instead (`defaults`, see mjmlDefaults).
  *
  * @typedef {EngineSelection & {
  *   blockId: string|null,
  *   label: string,
  *   values: Record<string, string>,
+ *   defaults: Record<string, string>,
  * }} EmailSelection
  */
 
@@ -132,6 +142,8 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *     blocks: EmailBlock[],
  *     document: EmailDocument|null,
  *     onEvent: (type: string, payload?: any) => void,
+ *     t?: import('../i18n/index.js').Translate,
+ *     labelOf?: (selection: EngineSelection) => string,
  *   }) => Promise<void>,
  *   destroy: () => void,
  *   addBlock: (block: EmailBlock, options?: {targetId?: string|null}) => string|null,
@@ -155,7 +167,7 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *   loadProject: (project: object) => void,
  *   loadMjml: (mjml: string) => void,
  *   exportMjml: () => string,
- *   exportHtml: (mjml?: string|null) => HtmlExport,
+ *   exportHtml: (mjml?: string|null) => Promise<HtmlExport>,
  *   setDevice: (device: EmailDevice) => void,
  *   getDevice: () => EmailDevice,
  *   startBlockDrag: (block: EmailBlock, event: Event) => void,
@@ -212,10 +224,10 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  *   canUndo: () => boolean,
  *   canRedo: () => boolean,
  *   getDocument: () => EmailDocument,
- *   loadDocument: (document: unknown) => void,
+ *   loadDocument: (document: unknown, options?: {mjml?: string|null}) => void,
  *   loadMjml: (mjml: string) => void,
  *   exportMjml: () => string,
- *   exportHtml: (mjml?: string|null) => HtmlExport,
+ *   exportHtml: (mjml?: string|null) => Promise<HtmlExport>,
  *   setDevice: (device: EmailDevice) => void,
  *   getDevice: () => EmailDevice,
  *   startBlockDrag: (blockId: string, event: Event) => void,
@@ -226,14 +238,29 @@ import { toAttributes, toValues } from './mjmlAttributes.js';
  */
 
 /**
+ * A block with its MJML (and section MJML) as strings, its texts in the
+ * translator's language.
+ * @param {EmailBlock} block
+ * @param {import('../i18n/index.js').Translate} [t]
+ * @returns {EmailBlock & {mjml?: string, sectionMjml?: string}}
+ */
+export function resolveBlock(block, t = identity) {
+  const text = (/** @type {any} */ value) => (typeof value === 'function' ? String(value(t)) : value);
+  return { ...block, mjml: text(block.mjml), sectionMjml: text(block.sectionMjml) };
+}
+
+/**
  * @param {{
  *   adapter: EmailEditorAdapter,
  *   blocks: import('./registry.js').Registry<EmailBlock>,
  *   features?: import('./registry.js').Registry<EmailBuilderFeature> | null,
+ *   t?: import('../i18n/index.js').Translate,
  * }} options
+ *   `t`: the interface's translator — texts of inserted blocks, names shown
+ *   in the canvas.
  * @returns {EmailEditor}
  */
-export function createEmailEditor({ adapter, blocks, features = null }) {
+export function createEmailEditor({ adapter, blocks, features = null, t = identity }) {
   if (!adapter) throw new Error('EmailEditor: missing adapter');
   if (!blocks) throw new Error('EmailEditor: missing block registry');
 
@@ -271,6 +298,38 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
     );
   }
 
+  /**
+   * Name of an element: its block's, and for a section the layout it was
+   * made from ("2 columns"), counted from its columns.
+   * @param {EngineSelection} selection @param {EmailBlock|null} block
+   */
+  function labelFor(selection, block) {
+    if (selection.tagName === 'mj-section' && typeof selection.columnCount === 'number') {
+      const layout = blocks.get(`columns-${selection.columnCount}`);
+      if (layout) return layout.label;
+    }
+    return block?.label || selection.tagName;
+  }
+
+  /**
+   * Property values, and MJML's defaults for the empty ones. A padding set
+   * on some sides only is completed with MJML's default for the others (a
+   * text with only left and right paddings still gets 10 px above and below).
+   * @param {EngineSelection} selection @param {EmailBlock|null} block
+   */
+  function valuesOf(selection, block) {
+    const properties = block?.properties || [];
+    const attributes = selection.attributes || {};
+    const fallback = MJML_DEFAULTS[selection.tagName] || {};
+    const values = toValues(attributes, properties);
+    for (const property of properties) {
+      if (LONGHAND_SPACING.has(property.key) && values[property.key]) {
+        values[property.key] = toValues({ ...fallback, ...attributes }, [property])[property.key];
+      }
+    }
+    return { values, defaults: toValues(fallback, properties) };
+  }
+
   /** @param {EngineSelection|null} selection @returns {EmailSelection|null} */
   function toEmailSelection(selection) {
     if (!selection) return null;
@@ -278,10 +337,13 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
     return {
       ...selection,
       blockId: block?.id || null,
-      label: block?.label || selection.tagName,
-      values: toValues(selection.attributes || {}, block?.properties || []),
+      label: labelFor(selection, block),
+      ...valuesOf(selection, block),
     };
   }
+
+  /** @param {EmailBlock} block */
+  const resolved = (block) => resolveBlock(block, t);
 
   function startFeatures() {
     if (!features) return;
@@ -328,6 +390,8 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
           container,
           blocks: blocks.list(),
           document: document ? readDocument(document) : null,
+          t,
+          labelOf: (selection) => t(labelFor(selection, blockForTag(selection.tagName))),
           onEvent: (type, payload) => {
             if (ticket !== generation) return;
             emitter.emit(type, type === 'selection' ? toEmailSelection(payload) : payload);
@@ -361,7 +425,7 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
       requireReady('addBlock');
       const block = blocks.get(blockId);
       if (!block || !block.mjml) throw new Error(`EmailEditor: unknown block "${blockId}"`);
-      return adapter.addBlock(block, options);
+      return adapter.addBlock(resolved(block), options);
     },
 
     remove(id = null) {
@@ -440,10 +504,20 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
       });
     },
 
-    loadDocument(raw) {
+    /**
+     * A stored document. One written by another engine (a template saved
+     * before the builder had its own) cannot be read as a project: it is
+     * opened from its MJML when `options.mjml` gives it, refused otherwise.
+     */
+    loadDocument(raw, { mjml = null } = {}) {
       requireReady('loadDocument');
       const document = readDocument(raw);
       if (document.engine !== adapter.name) {
+        if (mjml) {
+          adapter.loadMjml(String(mjml));
+          adapter.clearHistory();
+          return;
+        }
         throw new Error(
           `EmailEditor: document written for engine "${document.engine}", ` +
             `editor runs on "${adapter.name}"`
@@ -469,7 +543,8 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
     /**
      * The email (or the given MJML) compiled by the CANVAS compiler — for
      * display only (thumbnails, inspection). The HTML that is stored and sent
-     * is always compiled by the server.
+     * is always compiled by the server. Asynchronous: MJML 5 compiles
+     * asynchronously.
      */
     exportHtml(mjml = null) {
       requireReady('exportHtml');
@@ -488,7 +563,7 @@ export function createEmailEditor({ adapter, blocks, features = null }) {
       requireReady('startBlockDrag');
       const block = blocks.get(blockId);
       if (!block || !block.mjml) throw new Error(`EmailEditor: unknown block "${blockId}"`);
-      adapter.startBlockDrag(block, event);
+      adapter.startBlockDrag(resolved(block), event);
     },
 
     endBlockDrag(cancel = false) {

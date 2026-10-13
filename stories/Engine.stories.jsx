@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createEmailEditor, emailBlocks, emailBuilderFeatures, EmailCanvas, createMemoryStorage } from '../src/index.js';
-import { createGrapesJsAdapter } from '../src/adapters/grapesjs/GrapesJsAdapter.js';
+import { createNativeAdapter } from '../src/engine/NativeAdapter.js';
 
 /**
  * The ENGINE alone, without network or session.
@@ -16,7 +16,7 @@ export default {
 };
 
 function Bench() {
-  const adapter = useMemo(() => createGrapesJsAdapter(), []);
+  const adapter = useMemo(() => createNativeAdapter(), []);
   const editor = useMemo(
     () => createEmailEditor({ adapter, blocks: emailBlocks, features: emailBuilderFeatures }),
     [adapter]
@@ -27,7 +27,7 @@ function Bench() {
 
   window.__emailEditor = editor;
   window.__emailStorage = storage;
-  window.__emailEngine = () => adapter.engine;
+  window.__emailAdapter = adapter;
 
   return (
     <div data-testid="bench" data-status={status}>

@@ -7,7 +7,7 @@
     "email-builder",
     "mjml",
     "react",
-    "grapesjs",
+    "email-template",
     "newsletter",
     "drag-and-drop",
     "email-editor"
@@ -28,9 +28,15 @@
   "types": "./dist/types/index.d.ts",
   "typesVersions": {
     "*": {
-      "builder": ["./dist/types/builder.d.ts"],
-      "library": ["./dist/types/library.d.ts"],
-      "server": ["./dist/types/server/index.d.ts"]
+      "builder": [
+        "./dist/types/builder.d.ts"
+      ],
+      "library": [
+        "./dist/types/library.d.ts"
+      ],
+      "server": [
+        "./dist/types/server/index.d.ts"
+      ]
     }
   },
   "exports": {
@@ -92,10 +98,9 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "grapesjs": "^0.23.6",
-    "grapesjs-mjml": "1.0.8",
     "lucide-react": "^1.55.0",
     "mjml": "^5.4.1",
+    "mjml-browser": "^5.4.1",
     "radix-ui": "^1.8.0",
     "react-colorful": "^5.8.1",
     "tailwind-merge": "^3.4.1"

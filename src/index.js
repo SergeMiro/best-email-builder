@@ -4,7 +4,7 @@
  *
  *   src/
  *     core/        EmailEditor contract, versioned document, registries
- *     adapters/    the engine (GrapesJS + MJML) — the only place that knows it
+ *     engine/      the builder's own engine: email model, MJML ⇄ model, canvas
  *     blocks/      one folder per block + the `emailBlocks` registry
  *     features/    one folder per feature + `emailBuilderFeatures`
  *     ui/          the React UI, which only talks to EmailEditor
@@ -32,7 +32,8 @@ export { UiProvider, useUi, useT } from './ui/context.jsx';
 export { createHttpStorage, createMemoryStorage, StorageError } from './storage/client.js';
 
 /* ── Engine, document, registries ────────────────────────────────────────── */
-export { createGrapesJsAdapter } from './adapters/grapesjs/GrapesJsAdapter.js';
+export { createNativeAdapter, ENGINE_NAME, EMPTY_MJML } from './engine/NativeAdapter.js';
+export { parseMjml, parseMjmlFragment, serializeMjml } from './engine/mjml.js';
 export { createRegistry } from './core/registry.js';
 export { readDocument, createDocument, serializeDocument, EmailDocumentError } from './core/document.js';
 export { EMAIL_BUILDER_VERSION, EMAIL_DOCUMENT_SCHEMA_VERSION, EMAIL_DEVICES } from './core/constants.js';

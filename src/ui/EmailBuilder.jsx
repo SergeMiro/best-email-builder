@@ -84,7 +84,14 @@ function Builder({
   className,
 }) {
   const { t, locale, notify, confirm } = useUi();
-  const editor = useMemo(() => injected || createDefaultEmailEditor({ locale }), [injected, locale]);
+  // The editor reads the translator through a ref: a new `messages` object
+  // from the host must not rebuild the editor (and lose the email).
+  const tRef = useRef(t);
+  tRef.current = t;
+  const editor = useMemo(
+    () => injected || createDefaultEmailEditor({ locale, t: (key, values) => tRef.current(key, values) }),
+    [injected, locale]
+  );
   const storage = useMemo(() => injectedStorage || createHttpStorage(), [injectedStorage]);
   const systemVariables = useMemo(() => defineVariables(variablesProp || DEFAULT_VARIABLES), [variablesProp]);
   const [customVariables, setCustomVariables] = useState([]);
@@ -112,8 +119,12 @@ function Builder({
   const autosaveOptions = emailBuilderFeatures.get('autosave')?.options || {};
 
   const [template, setTemplate] = useState({ id: initialTemplateId, revision: null, savedAt: null, auto: false });
-  /** loading → (error) → ready ; `document`: project to mount (null = starter template). */
-  const [boot, setBoot] = useState({ status: 'loading', document: null, draft: false, message: null });
+  /**
+   * loading → (error) → ready ; `document`: project to mount (null = starter
+   * template, or `mjml`: a template saved by an earlier engine, reopened from
+   * its MJML).
+   */
+  const [boot, setBoot] = useState({ status: 'loading', document: null, mjml: null, draft: false, message: null });
   const [meta, setMeta] = useState(EMPTY_META);
   const [savedMeta, setSavedMeta] = useState(EMPTY_META);
   const [saving, setSaving] = useState(null);
@@ -155,18 +166,30 @@ function Builder({
           setMeta(metaOf(loaded));
           setSavedMeta(metaOf(loaded));
           setTemplate({ id: loaded.id, revision: loaded.revision, savedAt: null, auto: false });
-          setBoot({ status: 'ready', document: loaded.document, draft: false, message: null });
+          // Saved by an earlier engine: its project cannot be read, its MJML can.
+          const own = loaded.document?.engine === editor.adapterName;
+          if (!own && !loaded.mjml) throw new Error(t('This template was saved in a format this builder cannot open.'));
+          setBoot({
+            status: 'ready',
+            document: own ? loaded.document : null,
+            mjml: own ? null : loaded.mjml,
+            draft: false,
+            message: null,
+          });
         } catch (error) {
-          setBoot({ status: 'error', document: null, draft: false, message: error.message });
+          setBoot({ status: 'error', document: null, mjml: null, draft: false, message: error.message });
         }
         return;
       }
       if (initialMjml) {
         setMeta({ ...EMPTY_META, ...initialMeta });
-        setBoot({ status: 'ready', document: null, draft: true, message: null });
+        setBoot({ status: 'ready', document: null, mjml: null, draft: true, message: null });
         return;
       }
-      const draft = autosaveOn ? readLocalDraft() : null;
+      const stored = autosaveOn ? readLocalDraft() : null;
+      // A draft from an earlier engine cannot be reopened: it is let go.
+      const draft = stored && stored.document?.engine === editor.adapterName ? stored : null;
+      if (stored && !draft) clearLocalDraft();
       if (draft) {
         const when = new Date(draft.savedAt).toLocaleString(locale, {
           day: '2-digit',
@@ -182,20 +205,20 @@ function Builder({
         });
         if (restore) {
           setMeta({ ...EMPTY_META, ...draft.meta });
-          setBoot({ status: 'ready', document: draft.document, draft: true, message: null });
+          setBoot({ status: 'ready', document: draft.document, mjml: null, draft: true, message: null });
           return;
         }
         clearLocalDraft();
       }
-      setBoot({ status: 'ready', document: null, draft: false, message: null });
+      setBoot({ status: 'ready', document: null, mjml: null, draft: false, message: null });
     })();
     // Initial content is read once, at start-up, like `templateId`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialTemplateId, storage, autosaveOn, confirm, t, locale]);
 
   const onReady = useCallback(() => {
-    if (!boot.document) editor.loadMjml(initialMjml || starter);
-  }, [editor, boot.document, starter, initialMjml]);
+    if (!boot.document) editor.loadMjml(boot.mjml || initialMjml || starter);
+  }, [editor, boot.document, boot.mjml, starter, initialMjml]);
 
   // A resumed draft was never saved: it is "modified".
   const { markDirty, markClean, checkDirty } = state;

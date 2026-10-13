@@ -24,9 +24,9 @@ All must pass. Add or update tests with every behaviour change.
 
 ## Architecture rules
 
-- **React never calls GrapesJS.** UI components talk to the `EmailEditor`
-  contract (`src/core/EmailEditor.js`); all engine code lives in
-  `src/adapters/grapesjs/`.
+- **React never touches the engine.** UI components talk to the `EmailEditor`
+  contract (`src/core/EmailEditor.js`); the model, the canvas and the gestures
+  live in `src/engine/`. MJML alone turns the email into HTML.
 - **Blocks and features are registry entries** (`src/blocks/index.js`,
   `src/features/index.js`). Adding or removing one must not require touching
   the core.

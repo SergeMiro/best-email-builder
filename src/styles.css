@@ -17,8 +17,6 @@
 @import 'tailwindcss/theme.css' layer(theme) prefix(eb);
 @import 'tailwindcss/utilities.css' layer(utilities) prefix(eb);
 @import 'tw-animate-css';
-@import 'grapesjs/dist/css/grapes.min.css';
-@import './adapters/grapesjs/engine-overrides.css';
 
 @source './';
 
@@ -159,11 +157,10 @@
 
 /*
  * Scrollbars: thin, translucent, no arrows, revealed while the pointer is
- * over the scrolling block. The gutter stays
- * reserved, only the thumb fades, so nothing moves on hover. Outside the
- * base layer and with a class in each selector, so they also win over
- * GrapesJS's own (`.gjs-editor-cont ::-webkit-scrollbar-*`). Frames get
- * the same rules from `core/scrollbars.js`.
+ * over the scrolling block. The gutter stays reserved, only the thumb
+ * fades, so nothing moves on hover. Outside the base layer, so a host
+ * page's own scrollbar rules do not win over them. Frames (the canvas, the
+ * preview) get the same rules from `core/scrollbars.js`.
  * Chromium ≥ 121 ignores `::-webkit-scrollbar` once `scrollbar-width` or
  * `scrollbar-color` is set: those two are for Firefox only.
  */

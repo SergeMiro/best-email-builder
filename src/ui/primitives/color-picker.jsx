@@ -28,7 +28,7 @@ function normalizeHex(v) {
  * Colour field: a swatch opening a full-spectrum picker (with alpha), a hex
  * input and presets. `value` is `#RRGGBB` or `#RRGGBBAA`; `onChange(hex)`.
  */
-export function ColorPicker({ value, onChange, id, className }) {
+export function ColorPicker({ value, onChange, id, className, placeholder = '' }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const valid = isValidHex(value);
@@ -45,7 +45,12 @@ export function ColorPicker({ value, onChange, id, className }) {
             title={t('Pick a colour')}
             className="eb-checker eb:relative eb:h-8 eb:w-[44px] eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:shadow-sm eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-[1.04]"
           >
-            <span className="eb:absolute eb:inset-0" style={{ backgroundColor: valid ? value : 'transparent' }} aria-hidden />
+            {/* Empty: the colour MJML renders by default, faded. */}
+            <span
+              className="eb:absolute eb:inset-0"
+              style={{ backgroundColor: valid ? value : placeholder || 'transparent', opacity: valid ? 1 : 0.45 }}
+              aria-hidden
+            />
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="eb:w-64 eb:space-y-3 eb:p-3">
@@ -92,7 +97,7 @@ export function ColorPicker({ value, onChange, id, className }) {
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         maxLength={9}
-        placeholder="#RRGGBB"
+        placeholder={placeholder || '#RRGGBB'}
         className="eb:h-8 eb:flex-1 eb:font-mono eb:text-[13px]"
       />
     </div>

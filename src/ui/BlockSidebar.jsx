@@ -16,17 +16,24 @@ import {
   Square,
   Type,
 } from 'lucide-react';
+import { useRef } from 'react';
 import { cn } from './primitives/cn.js';
 import { useT } from './context.jsx';
+
+/** Pixels the pointer travels before a press becomes a drag. */
+const DRAG_THRESHOLD = 5;
 
 /**
  * Block sidebar, left of the canvas.
  *
  * Two gestures for the same block:
- *   - CLICK: the editor inserts it at the logical place (inside the selected
- *     column, after the selected element, otherwise at the end of the email);
- *   - DRAG onto the canvas: the engine follows the pointer and rejects the
- *     drop targets MJML does not allow.
+ *   - CLICK (or Enter): the editor inserts it at the logical place (inside
+ *     the selected column, after the selected element, otherwise at the end
+ *     of the email);
+ *   - DRAG onto the canvas (mouse or pen): past a few pixels the editor takes
+ *     the pointer over — a line in the canvas shows where the block will land,
+ *     Esc cancels. On touch screens a tap adds the block (a drag there scrolls
+ *     the list).
  *
  * Blocks come from the registry (`editor.listBlocks()`): a block removed from
  * the registry disappears from here without touching this file. Only the icon
@@ -55,25 +62,49 @@ const GROUPS = [
   { kind: 'layout', title: 'Layout' },
 ];
 
-function BlockTile({ block, disabled, onAdd, onDragStart, onDragEnd }) {
+function BlockTile({ block, disabled, onAdd, onDragStart }) {
   const t = useT();
   const Icon = ICONS[block.icon] || Square;
+  /** Press in progress: where it started; `dragged` once it became a drag. */
+  const press = useRef(null);
   return (
     <TooltipWrap label={block.description ? t(block.description) : block.description}>
       <button
         type="button"
-        draggable={!disabled}
         disabled={disabled}
-        onClick={() => onAdd(block.id)}
-        onDragStart={(e) => {
-          e.dataTransfer.effectAllowed = 'copy';
-          e.dataTransfer.setData('text/plain', block.id);
-          onDragStart(block.id, e.nativeEvent);
+        onClick={() => {
+          // The click that ends a drag is not an "add".
+          if (press.current?.dragged) {
+            press.current = null;
+            return;
+          }
+          press.current = null;
+          onAdd(block.id);
         }}
-        onDragEnd={(e) => onDragEnd(e.dataTransfer?.dropEffect === 'none')}
+        onPointerDown={(e) => {
+          if (disabled || e.button !== 0 || e.pointerType === 'touch') return;
+          press.current = { x: e.clientX, y: e.clientY, dragged: false };
+        }}
+        onPointerMove={(e) => {
+          const start = press.current;
+          if (!start || start.dragged) return;
+          if (Math.hypot(e.clientX - start.x, e.clientY - start.y) < DRAG_THRESHOLD) return;
+          start.dragged = true;
+          // The tile itself keeps the pointer (React's native event points at its root).
+          onDragStart(block.id, {
+            pointerId: e.pointerId,
+            clientX: e.clientX,
+            clientY: e.clientY,
+            currentTarget: e.currentTarget,
+            target: e.currentTarget,
+          });
+        }}
+        onPointerUp={() => {
+          if (press.current && !press.current.dragged) press.current = null;
+        }}
         data-block-id={block.id}
         className={cn(
-          'eb:flex eb:h-20 eb:cursor-grab eb:select-none eb:flex-col eb:items-center eb:justify-center eb:gap-1.5 eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:px-2 eb:text-center eb:transition-colors eb:active:cursor-grabbing',
+          'eb:flex eb:h-20 eb:cursor-grab eb:touch-pan-y eb:select-none eb:flex-col eb:items-center eb:justify-center eb:gap-1.5 eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:px-2 eb:text-center eb:transition-colors eb:active:cursor-grabbing',
           'eb:hover:border-primary/50 eb:hover:bg-primary/5 eb:focus-visible:outline-none eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50',
           disabled && 'eb:cursor-not-allowed eb:opacity-50'
         )}
@@ -107,7 +138,6 @@ export default function BlockSidebar({ editor, disabled = false, onAdded }) {
                     if (editor.addBlock(id)) onAdded?.(id);
                   }}
                   onDragStart={(id, event) => editor.startBlockDrag(id, event)}
-                  onDragEnd={(cancel) => editor.endBlockDrag(cancel)}
                 />
               ))}
             </div>

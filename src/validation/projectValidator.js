@@ -77,7 +77,8 @@ export function validateProject(raw, { t = identity } = {}) {
     }
     if (!node || typeof node !== 'object') return;
 
-    for (const [key, pattern] of /** @type {[string, RegExp][]} */ ([['type', DANGEROUS_TYPES], ['tagName', DANGEROUS_TAGS]])) {
+    // `tag`: the builder's own project; `type` / `tagName`: projects of other engines.
+    for (const [key, pattern] of /** @type {[string, RegExp][]} */ ([['type', DANGEROUS_TYPES], ['tagName', DANGEROUS_TAGS], ['tag', DANGEROUS_TAGS]])) {
       const value = node[key];
       if (typeof value === 'string' && pattern.test(value)) {
         issues.push({ code: 'FORBIDDEN_TAG', message: t('forbidden element in project: {tag}', { tag: value }), tag: value });

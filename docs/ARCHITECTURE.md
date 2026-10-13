@@ -1,24 +1,25 @@
 # Architecture
 
 ```
-React UI ─► EmailEditor ─► GrapesJsAdapter ─► GrapesJS + grapesjs-mjml
- (ui/)        (core/)        (adapters/)          internal engine
-                                                         │ project JSON + MJML
+React UI ─► EmailEditor ─► NativeAdapter ─► the email: an MJML tree with ids
+ (ui/)        (core/)        (engine/)        │  canvas = that tree compiled by
+                                              │  mjml-browser, in a frame
+                                              │ project JSON + MJML
 Server: validation ─► MJML compilation ─► variables ─► links ─► final HTML
 ```
 
-**Rule.** The interface, storage, business logic and rendering belong to
-Best Email Builder; GrapesJS is only an internal engine. No React component calls
-GrapesJS: everything goes through the `EmailEditor` contract
-(`core/EmailEditor.js`), and all GrapesJS code lives in `adapters/grapesjs/`.
-Replacing the engine means writing another adapter.
+**Rule.** The interface, the engine, storage, business logic and rendering all
+belong to Best Email Builder; MJML alone turns the email into HTML. No React
+component knows the model or the canvas: everything goes through the
+`EmailEditor` contract (`core/EmailEditor.js`), and the engine lives in
+`engine/`. Replacing the engine means writing another adapter.
 
 ## Source tree (`src/`)
 
 | Folder | Role |
 |---|---|
 | `core/` | `EmailEditor` contract, versioned document envelope (`document.js`), registries, events |
-| `adapters/grapesjs/` | the engine — the only place that knows it |
+| `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
 | `features/` | one folder per feature + the `emailBuilderFeatures` registry (variables, autosave, versions, preview, test send) and the starter template |
 | `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template bank (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
@@ -37,7 +38,8 @@ nothing of a library. Only `EmailStudio` (a few lines of state) knows both, so
 an application can install either screen alone. Each has its own entry —
 `src/library.js` (`best-email-builder/library`) and `src/builder.js`
 (`best-email-builder/builder`) — and `tests/unit/entries.test.mjs` bundles
-both and fails if one reaches the other (or if the library reaches GrapesJS).
+both and fails if one reaches the other (or if the library reaches the engine
+or the MJML compiler).
 Hence no module under `ui/` imports `src/index.js`: the default editor is
 built in `src/defaultEditor.js`.
 
@@ -46,16 +48,53 @@ built in `src/defaultEditor.js`.
 What gets stored is the engine **project**, wrapped in a versioned envelope:
 
 ```json
-{ "schemaVersion": 1, "engine": "grapesjs", "engineVersion": "0.23.6",
-  "builderVersion": "0.3.0", "project": { … } }
+{ "schemaVersion": 1, "engine": "beb-mjml", "engineVersion": "0.4.0",
+  "builderVersion": "0.4.0",
+  "project": { "format": 1, "root": { "id": "n…", "tag": "mjml", "children": [ … ] } } }
 ```
 
-A document from another engine, a future schema or malformed is **refused**
-on load rather than half-loaded: a template silently emptied and saved again
-would be lost. Schema migrations go into `MIGRATIONS` in `core/document.js`.
+The project is the email's MJML tree: one node per element (`tag`,
+`attributes`, `children`, or `content` for `mj-text`, `mj-button`…), each with
+an id. A document from another engine, a future schema or malformed is
+**refused** on load rather than half-loaded: a template silently emptied and
+saved again would be lost. The one exception is a template saved before 0.4.0
+by the GrapesJS engine: its project cannot be read, but its stored MJML can, so
+it opens from the MJML (`loadDocument(document, { mjml })`) and its next save
+writes the new format. Schema migrations go into `MIGRATIONS` in
+`core/document.js`.
 
 Next to the project, each template stores its MJML export (for inspection) and
 the HTML **compiled by the server**.
+
+## The engine
+
+- **Model** (`engine/model.js`): the email is an MJML tree; every change is a
+  pure function returning a new tree that shares the untouched branches. The
+  undo history is a list of trees; typing in a text, or nudging one field,
+  merges into one step while it goes on.
+- **MJML ⇄ model** (`engine/mjml.js`): a small scanner reads MJML (the inside
+  of `mj-text`, `mj-button`… is kept as HTML) and writes it back, attributes
+  encoded. Reading then writing any template gives the same MJML.
+- **Canvas** (`engine/canvas/`): a frame showing the email compiled by
+  `mjml-browser` — the real HTML, not an imitation. Each element is found in
+  it by a marker class MJML copies (`css-class="eb-node eb-id-<id>"`, canvas
+  only). Updates are morphed into the frame (images do not reload, the caret
+  stays). The canvas adds what only an editor needs, never exported: a frame
+  for an image without file, "Drop a block here" in an empty column, the
+  selection, labels, toolbars and the drop line.
+- **Gestures**: click selects; double-click (or a click on a selected text)
+  edits a text in place, with its own formatting bar (bold, italic,
+  underline, strike, link, clear) — pasted content arrives as plain text,
+  Enter is a line break, and the HTML is reduced to what an email accepts
+  (`engine/richText.js`). Blocks are dragged with pointer events (the pointer
+  stays captured over the frame): a line shows where the block lands, the
+  frame scrolls near its edges, Esc cancels. Keyboard: Delete, Ctrl+Z / Ctrl+Y,
+  Ctrl+C / Ctrl+V, Ctrl+D, Escape (parent), Enter (edit the text).
+- **Placement** (`engine/placement.js`): MJML's hierarchy decides. A content
+  block goes into a column (between two elements, by their middle); over a
+  section's top or bottom padding, or outside the sections, it gets a section
+  of its own. A layout goes between sections. Social icons, menu links and
+  columns only move among their siblings.
 
 ## Saving
 

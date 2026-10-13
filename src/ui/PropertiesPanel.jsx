@@ -50,6 +50,7 @@ function PropertyGroups({ editor, element, block, idPrefix, services = null }) {
           idPrefix={idPrefix}
           property={property}
           value={element.values[property.key]}
+          fallback={element.defaults?.[property.key]}
           services={services}
           onCommit={(value) => editor.updateProperties({ [property.key]: value }, element.id)}
         />

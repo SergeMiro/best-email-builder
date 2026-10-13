@@ -52,7 +52,8 @@ export default function VersionsMenu({ context }) {
     setRestoring(version.id);
     try {
       const full = await storage.getVersion(template.id, version.id);
-      editor.loadDocument(full.document);
+      // A version saved by an earlier engine reopens from its MJML.
+      editor.loadDocument(full.document, { mjml: full.mjml });
       markDirty();
       setOpen(false);
       notify('success', t('Version {n} restored — save to keep it.', { n: version.versionNumber }));

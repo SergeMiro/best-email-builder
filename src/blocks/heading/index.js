@@ -9,13 +9,15 @@
  * properties, weight included.
  */
 
-import { FONT_STACK, PALETTE, inWhiteSection } from '../shared.js';
+import { identity } from '../../i18n/index.js';
+import { FONT_STACK, PALETTE, escapeXml, inWhiteSection } from '../shared.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
-const MJML =
+/** @param {import('../../i18n/index.js').Translate} [t] */
+const mjml = (t = identity) =>
   `<mj-text font-family="${FONT_STACK}" font-size="26px" line-height="34px" font-weight="bold" ` +
-  `color="${PALETTE.navy}" align="left">Your headline</mj-text>`;
+  `color="${PALETTE.navy}" align="left">${escapeXml(t('Your headline'))}</mj-text>`;
 
 /** @type {EmailBlock} */
 export const headingBlock = {
@@ -27,8 +29,8 @@ export const headingBlock = {
   tagName: 'mj-text',
   insertOnly: true,
   order: 5,
-  mjml: MJML,
-  sectionMjml: inWhiteSection(MJML),
+  mjml,
+  sectionMjml: (t) => inWhiteSection(mjml(t)),
   editableContent: true,
   properties: [],
 };

@@ -48,7 +48,7 @@ test('create, save on the server, find in the list, reopen', async ({ page, requ
   await expect(builder(page)).toHaveAttribute('data-template-id', id, { timeout: 60_000 });
   await expect(builder(page)).toHaveAttribute('data-status', 'ready');
   await expect(panel(page).getByLabel(/^Name/)).toHaveValue(name);
-  await expect(page.frameLocator('.gjs-frame').locator('[data-gjs-type="mj-divider"]')).toHaveCount(1);
+  await expect(page.frameLocator('.eb-canvas-frame').locator('.eb-tag-mj-divider')).toHaveCount(1);
 });
 
 test('server preview: real MJML compilation, variables filled, custom variable included', async ({ page, request }) => {
@@ -98,7 +98,7 @@ test('image upload: stored by the server, served publicly with safe headers', as
   expect(image.headers()['content-type']).toBe('image/png');
   expect(image.headers()['x-content-type-options']).toBe('nosniff');
   await expect
-    .poll(() => page.frameLocator('.gjs-frame').locator(`img[src="${path}"]`).evaluate((img) => img.complete && img.naturalWidth))
+    .poll(() => page.frameLocator('.eb-canvas-frame').locator(`img[src="${path}"]`).evaluate((img) => img.complete && img.naturalWidth))
     .toBe(1);
 });
 

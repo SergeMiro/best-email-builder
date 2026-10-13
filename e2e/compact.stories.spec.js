@@ -24,7 +24,7 @@ test.describe('Phone', () => {
     const builder = page.getByTestId('email-builder');
     await expect(builder).toHaveAttribute('data-layout', 'narrow');
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
-    const frame = await page.locator('.gjs-frame').boundingBox();
+    const frame = await page.locator('.eb-canvas-frame').boundingBox();
     expect(frame.width).toBeGreaterThan(340);
 
     // Blocks: a drawer; a tap adds the block and opens its properties.
