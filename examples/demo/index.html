@@ -14,11 +14,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..600&family=Instrument+Serif:ital@1&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400..800&family=Geist+Mono:wght@400..600&family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap"
     />
     <style>
       html, body, #root { height: 100%; margin: 0; }
       body {
+        --display: 'Bricolage Grotesque', 'Geist', ui-sans-serif, system-ui, sans-serif;
         --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         /* the builder and the template bank use the same faces as the page */
         --eb-font-sans: var(--sans);
@@ -91,7 +92,7 @@
 
       /* top bar */
       .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; }
-      .brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 600; font-size: 15px; color: var(--ink); letter-spacing: -0.02em; }
+      .brand { display: inline-flex; align-items: center; gap: 11px; font-family: var(--display); font-weight: 700; font-size: 16px; color: var(--ink); letter-spacing: -0.02em; }
       .brand-mark { display: block; filter: drop-shadow(0 5px 10px oklch(0.5 0.2 277 / 0.35)); transition: transform 0.2s; }
       .brand-mark svg { width: 44px; height: 33px; display: block; }
       .brand:hover .brand-mark { transform: translateY(-1px) rotate(-3deg); }
@@ -127,12 +128,10 @@
       .eyebrow i { width: 6px; height: 6px; border-radius: 50%; background: #22a06b; box-shadow: 0 0 0 3px rgb(34 160 107 / 0.18); animation: pulse 2.4s ease-in-out infinite; }
       @keyframes pulse { 50% { box-shadow: 0 0 0 5px rgb(34 160 107 / 0.06); } }
       .hero h1 {
-        margin: 20px 0 0; font-size: clamp(38px, 6.8vw, 66px); line-height: 1.02; letter-spacing: -0.045em; font-weight: 700;
+        margin: 20px 0 0; font-family: var(--display); font-size: clamp(38px, 6.8vw, 68px); line-height: 1.02; letter-spacing: -0.022em; font-weight: 700;
         color: var(--ink);
       }
       .hero h1 span {
-        font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400;
-        font-size: 1.12em; letter-spacing: -0.02em; padding: 0 0.06em 0 0.02em;
         background: linear-gradient(110deg, oklch(0.55 0.21 280), oklch(0.6 0.17 240), oklch(0.58 0.2 300), oklch(0.55 0.21 280));
         background-size: 250% 100%;
         -webkit-background-clip: text; background-clip: text; color: transparent;
