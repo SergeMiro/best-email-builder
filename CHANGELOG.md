@@ -38,6 +38,17 @@ All notable changes are documented here. The format follows
   user per hour); client: `createHttpStorage({ generate: true })`. Any other
   provider plugs in as a function. The live demo generates with the visitor's
   own Anthropic key.
+- **Rewrite with AI.** Selecting a text or a button shows, in its properties,
+  *Shorter*, *Longer*, *Fix mistakes*, *Friendlier*, *More formal*,
+  *Translate* (13 languages) and a field to say what to change. The text is
+  replaced in place, in one step of the history (Ctrl+Z). Links and variables
+  must survive and the HTML must pass the validator, or the model gets one more
+  turn and then nothing changes; a button label stays plain text. Server:
+  `generator.rewrite` (`createEmailGenerator` returns it), `POST /rewrite`
+  (200 per user per hour, `rateLimits.rewritePerHour`), `claudeEmailModel`'s
+  `rewriteEffort` (`'low'`); client: `storage.rewrite`, given by
+  `createHttpStorage({ generate: true })`. `editor.getElement(id).html` returns
+  the stored HTML of a text block.
 - Drag and drop with pointer events: a line shows where the block lands
   (between two elements of a column, or between two sections — a content block
   then gets a section of its own), the canvas scrolls near its edges, Esc

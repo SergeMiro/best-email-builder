@@ -49,6 +49,9 @@ export const GENERATION_ERRORS = {
   TRUNCATED: { status: 502, message: 'The email was too long to finish. Ask for a shorter one.' },
   INVALID_ANSWER: { status: 502, message: 'The AI answer could not be read. Try again.' },
   INVALID_OUTPUT: { status: 502, message: 'The generated email could not be used. Try again.' },
+  NOTHING_TO_REWRITE: { status: 400, message: 'There is no text to rewrite.' },
+  REWRITE_REFUSED: { status: 422, message: 'The AI declined to rewrite this text.' },
+  REWRITE_UNUSABLE: { status: 502, message: 'The rewritten text lost a link or a variable, so nothing was changed. Try again.' },
 };
 
 export class EmailGenerationError extends Error {

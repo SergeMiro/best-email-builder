@@ -19,6 +19,7 @@
  *   saveVariable(variable)      → saved variable               variables, shared by
  *   deleteVariable(key)         → void                         every template)
  *   generate(input, {signal})   → { name, subject, preheader, mjml, warnings }
+ *   rewrite(input, {signal})    → { text }
  *                                 (optional: "Generate", an email written by AI)
  *
  * Two implementations: HTTP (talks to `createEmailBuilderHandler` from
@@ -77,6 +78,7 @@ import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables
  * @typedef {{html: string, warnings: {message: string}[], quality: {code: string, level: string, message: string}[]}} RenderResult
  * @typedef {import('../features/generate/generator.js').GenerateInput} GenerateInput
  * @typedef {import('../features/generate/generator.js').GeneratedEmail} GeneratedEmail
+ * @typedef {import('../features/generate/rewrite.js').RewriteInput} RewriteInput
  * @typedef {{email: string, ok: boolean, error: string|null}} TestResult
  * @typedef {{sent: number, failed: number, invalid: string[], results: TestResult[]}} SendTestResult
  *
@@ -96,6 +98,7 @@ import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables
  *   saveVariable?: (variable: Partial<EmailVariable>, options?: {create?: boolean}) => Promise<EmailVariable>,
  *   deleteVariable?: (key: string) => Promise<void>,
  *   generate?: (input: GenerateInput, options?: {signal?: AbortSignal}) => Promise<GeneratedEmail>,
+ *   rewrite?: (input: RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
  * }} TemplateStorage
  */
 
@@ -124,8 +127,9 @@ function withDocument(template) {
 /**
  * Client for the routes of `createEmailBuilderHandler` (`best-email-builder/server`).
  *
- * `generate: true` turns on "Generate": the server must have a `generator`
- * (otherwise it answers 501). Off by default, as the button would only fail.
+ * `generate: true` turns on "Generate" and the AI rewriting of a text: the
+ * server must have a `generator` (otherwise it answers 501). Off by default,
+ * as the buttons would only fail.
  *
  * @param {{
  *   baseUrl?: string,
@@ -189,6 +193,7 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
       ? {
           generate: async (input, { signal } = {}) =>
             call('/generate', { method: 'POST', body: JSON.stringify(input), signal }),
+          rewrite: async (input, { signal } = {}) => call('/rewrite', { method: 'POST', body: JSON.stringify(input), signal }),
         }
       : {}),
     async uploadImage(file) {
@@ -207,18 +212,19 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
  * In-memory storage, same contract. Documents are kept SERIALIZED.
  * `render` and `sendTest` cannot run in a browser (MJML compiles on the
  * server): pass implementations to enable the preview and test buttons;
- * `generate` likewise for "Generate".
+ * `generate` and `rewrite` likewise for the AI.
  *
  * @param {{
  *   render?: TemplateStorage['render'],
  *   sendTest?: TemplateStorage['sendTest'],
  *   generate?: TemplateStorage['generate'],
+ *   rewrite?: TemplateStorage['rewrite'],
  *   assetsPath?: string,
  *   systemVariables?: EmailVariable[],
  * }} [options]  `systemVariables`: keys a custom variable may not take
  * @returns {TemplateStorage & {dump: () => object}}
  */
-export function createMemoryStorage({ render, sendTest, generate, assetsPath = DEFAULT_ASSETS_PATH, systemVariables = DEFAULT_VARIABLES } = {}) {
+export function createMemoryStorage({ render, sendTest, generate, rewrite, assetsPath = DEFAULT_ASSETS_PATH, systemVariables = DEFAULT_VARIABLES } = {}) {
   /** @type {Map<string, any>} */
   const rows = new Map();
   /** @type {Map<string, any[]>} */
@@ -378,6 +384,7 @@ export function createMemoryStorage({ render, sendTest, generate, assetsPath = D
     ...(render ? { render } : {}),
     ...(sendTest ? { sendTest } : {}),
     ...(generate ? { generate } : {}),
+    ...(rewrite ? { rewrite } : {}),
     dump: () => ({
       rows: [...rows.values()],
       versions: Object.fromEntries(versions),

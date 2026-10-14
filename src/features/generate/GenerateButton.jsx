@@ -5,7 +5,7 @@ import { Button } from '../../ui/primitives/button.jsx';
 import { Input, Textarea } from '../../ui/primitives/fields.jsx';
 import { SectionLabel } from '../../ui/primitives/misc.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
-import { cn } from '../../ui/primitives/cn.js';
+import { chipClassName } from './chip.js';
 import { MAX_DETAILS_LENGTH } from './generator.js';
 import { purposesByCategory } from './purposes.js';
 
@@ -180,12 +180,7 @@ export default function GenerateButton({ context }) {
                             aria-pressed={selected}
                             data-purpose={entry.id}
                             onClick={() => setPurpose(selected ? null : entry.id)}
-                            className={cn(
-                              'eb:inline-flex eb:h-7 eb:items-center eb:gap-1 eb:rounded-full eb:border eb:px-3 eb:text-[12px] eb:font-medium eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:disabled:opacity-50',
-                              selected
-                                ? 'eb:border-primary eb:bg-primary eb:text-primary-foreground'
-                                : 'eb:border-border eb:bg-background eb:text-foreground eb:hover:border-primary/50 eb:hover:bg-primary/5'
-                            )}
+                            className={chipClassName(selected)}
                           >
                             {selected && <Check className="eb:size-3" aria-hidden="true" />}
                             {t(entry.label)}

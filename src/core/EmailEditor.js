@@ -96,6 +96,7 @@ import { identity } from '../i18n/index.js';
  *   tagName: string,
  *   attributes: Record<string, string>,
  *   content: string|null,
+ *   html?: string|null,
  *   canRemove: boolean,
  *   canDuplicate: boolean,
  *   canMoveUp: boolean,
@@ -103,6 +104,8 @@ import { identity } from '../i18n/index.js';
  *   columnCount?: number,
  *   multiple?: number,
  * }} EngineSelection
+ *   `content`: the label of a button or a menu link, as plain text.
+ *   `html`: the HTML of a text (`mj-text`), as stored.
  *   `columnCount`: for a section, how many columns it holds (its name).
  *   `multiple`: the whole email is selected (Ctrl+A) — how many sections;
  *   the selection is then described as the body, and only removal applies.

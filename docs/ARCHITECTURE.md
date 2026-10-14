@@ -115,13 +115,23 @@ the HTML **compiled by the server**.
 | `prompt.js` | the system prompt (the MJML the builder edits, email rules) and the JSON schema of a draft |
 | `draft.js` | reading the answer, cleaning the MJML for the builder (`normalizeGeneratedMjml`), the checks (`reviewDraft`: blocking = `validateMjml`, advice = footer, subject, MJML warnings) |
 | `generator.js` | the loop: ask, clean, check, at most one repair turn |
-| `claude.js` | the model for Claude (Anthropic SDK client passed in, never imported) |
+| `claude.js` | the model for Claude (Anthropic SDK client passed in, never imported); `task: 'rewrite'` asks for less effort |
 | `GenerateButton.jsx` | the toolbar button and the dialog |
+| `rewrite.js` | rewriting one text: the actions and languages, its prompt, `reviewRewrite` (same links, same variables, valid markup) and the loop with one repair turn |
+| `RewriteText.jsx` | the *Rewrite with AI* section of the properties of a text or a button |
+| `chip.js` | the badge button both use |
 
 The model is a plain function, so the browser (the demo), the server (the
-handler's `POST /generate`) and the tests (a fake model) run the same
-generator. The interface only calls `storage.generate`; the button is shown
-when the storage has it.
+handler's `POST /generate` and `POST /rewrite`) and the tests (a fake model)
+run the same generator. The interface only calls `storage.generate` and
+`storage.rewrite`; each control is shown when the storage has the function.
+
+A rewrite replaces the text through `editor.setContent` — one step of the
+history, so Ctrl+Z is the undo — and the section is keyed by the selected
+element: selecting another one aborts the request. The text sent is the
+stored one (`describe(id).html` for a text block, `content` for a button
+label), so links and variables are compared on the source, not on what the
+canvas shows.
 
 ## Variables
 

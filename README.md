@@ -60,6 +60,10 @@ Best Email Builder is the second option done once, properly, and given away:
   the editor, subject and preview text included, ready to edit and save. The
   model's MJML is cleaned and checked like any template before it gets there.
   Claude out of the box; any other model in a few lines.
+- **Any text rewritten in one click** — select a text or a button: *Shorter*,
+  *Longer*, *Fix mistakes*, *Friendlier*, *More formal*, *Translate* into 13
+  languages, or say what to change in your own words. The text changes in
+  place, links and variables kept; Ctrl+Z brings the previous one back.
 - **A gallery of ready-made emails** — newsletter, welcome, promotion, event
   invitation… each one with the sender's footer and the unsubscribe link, so
   nobody starts from a blank page or forgets the legal mentions.
@@ -312,7 +316,7 @@ const handler = createEmailBuilderHandler({
     model: claudeEmailModel({ client: new Anthropic() }), // ANTHROPIC_API_KEY
     compile: compileMjml, // MJML's own warnings go back to the model
   }),
-  rateLimits: { generatePerHour: 30 },                    // per user (default)
+  rateLimits: { generatePerHour: 30, rewritePerHour: 200 }, // per user (defaults)
 });
 ```
 
@@ -325,7 +329,7 @@ const handler = createEmailBuilderHandler({
   schema: name, subject, preheader, MJML) and is streamed, so a long email does
   not hit a request timeout. A generation takes from 20 seconds to a minute or
   two: give the route that long (`maxDuration` on Vercel, the proxy's timeout).
-- **Another provider** is a function `({ system, messages, schema, signal }) =>
+- **Another provider** is a function `({ system, messages, schema, signal, task }) =>
   Promise<string>` returning the JSON text — pass it as `model`.
 - What comes out is never trusted as is: shorthand padding is expanded,
   elements the builder does not edit (`mj-hero`, `mj-wrapper`, `mj-head`…)
@@ -336,8 +340,29 @@ const handler = createEmailBuilderHandler({
 - The prompt (`SYSTEM_PROMPT`, `buildUserPrompt`) and the purposes
   (`EMAIL_PURPOSES`) are exported, to read or to build on.
 
-The live demo has no server: there, *Generate* asks for the visitor's own
-Anthropic key, keeps it in the browser and calls Anthropic directly.
+**Rewrite with AI.** The same generator rewrites one text: with it, selecting
+a text block or a button shows a *Rewrite with AI* section in its properties —
+*Shorter*, *Longer*, *Fix mistakes*, *Friendlier*, *More formal*, *Translate*
+(13 languages, under their own names) and a field to say what to change. The
+answer replaces the text at once, in one step of the history: Ctrl+Z brings
+the previous text back, so there is nothing to accept or compare. Selecting
+another element cancels a rewrite in progress; if the text was edited
+meanwhile, the user's words win and the answer is dropped.
+
+- It is `POST {base}/rewrite`, enabled with `createHttpStorage({ generate: true })`
+  like generation; a generator without `rewrite` answers 501.
+- Every link (the same `href`, none added) and every variable (the same keys,
+  none added; a fallback after `|` may be translated) must survive, and the
+  HTML must pass the validator — otherwise the model gets one more turn, then
+  nothing is changed. A button label comes back as plain words.
+- `claudeEmailModel` asks a rewrite for `rewriteEffort: 'low'` (a few seconds);
+  another provider gets `task: 'rewrite'` in its request to tell the two apart.
+- `REWRITE_ACTIONS`, `REWRITE_LANGUAGES` and `REWRITE_SYSTEM_PROMPT` are
+  exported.
+
+The live demo has no server: there, *Generate* and *Rewrite with AI* ask for
+the visitor's own Anthropic key, keep it in the browser and call Anthropic
+directly.
 
 ## Component props
 
@@ -377,6 +402,7 @@ interface TemplateStorage {
   uploadImage(file): Promise<{ path }>;
   render?(input): Promise<{ html; warnings; quality }>;   // enables Preview
   generate?(input, { signal }): Promise<{ name; subject; preheader; mjml; warnings }>; // enables Generate
+  rewrite?(input, { signal }): Promise<{ text }>;        // enables Rewrite with AI
   sendTest?(input): Promise<{ sent; failed; invalid; results }>; // enables Send test
   listVariables?(): Promise<Variable[]>;                 // enable user-created variables
   saveVariable?(variable, { create }): Promise<Variable>;
@@ -471,6 +497,8 @@ touch the rest of your page, whether or not you use Tailwind yourself.
 - Test sends are limited (10 addresses, 20 sends per user per hour by default).
 - Generated emails pass the same MJML validation as saved ones; generation is
   limited per user (30 per hour by default) and needs the `write` permission.
+  A rewritten text keeps its links and variables (none added) and passes the
+  same validation; rewrites are limited too (200 per user per hour).
 
 ## Development
 

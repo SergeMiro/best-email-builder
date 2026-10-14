@@ -23,17 +23,25 @@ export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
  *   client: any,
  *   model?: string,
  *   effort?: 'low'|'medium'|'high'|'xhigh'|'max',
+ *   rewriteEffort?: 'low'|'medium'|'high'|'xhigh'|'max',
  *   maxTokens?: number,
  * }} options
- *   `effort`: how much the model thinks before writing — `low` answers
- *   faster, `high` takes more care.
+ *   `effort`: how much the model thinks before writing an email — `low`
+ *   answers faster, `high` takes more care. `rewriteEffort`: the same for
+ *   one text rewritten, where the user waits with the text selected.
  * @returns {import('./generator.js').EmailModel}
  */
-export function claudeEmailModel({ client, model = DEFAULT_CLAUDE_MODEL, effort = 'medium', maxTokens = 32000 } = /** @type {any} */ ({})) {
+export function claudeEmailModel({
+  client,
+  model = DEFAULT_CLAUDE_MODEL,
+  effort = 'medium',
+  rewriteEffort = 'low',
+  maxTokens = 32000,
+} = /** @type {any} */ ({})) {
   if (!client?.messages?.stream) {
     throw new Error('claudeEmailModel: pass an Anthropic client — `new Anthropic()` from @anthropic-ai/sdk');
   }
-  return async ({ system, messages, schema, signal }) => {
+  return async ({ system, messages, schema, signal, task }) => {
     const message = await client.messages
       .stream(
         {
@@ -41,7 +49,7 @@ export function claudeEmailModel({ client, model = DEFAULT_CLAUDE_MODEL, effort 
           max_tokens: maxTokens,
           system,
           messages,
-          output_config: { effort, format: { type: 'json_schema', schema } },
+          output_config: { effort: task === 'rewrite' ? rewriteEffort : effort, format: { type: 'json_schema', schema } },
         },
         { signal }
       )

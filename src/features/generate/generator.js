@@ -14,6 +14,9 @@
  *
  * Never trusted as is: the MJML that comes out has passed `validateMjml`, the
  * same check the server runs before compiling and saving.
+ *
+ * The same model also REWRITES one text of an email (`rewrite`, see
+ * rewrite.js): shorter, longer, fixed, another tone, translated.
  */
 
 import { DEFAULT_VARIABLES } from '../variables/catalog.js';
@@ -21,10 +24,13 @@ import { isSafeUrl } from '../../validation/urls.js';
 import { EmailGenerationError, normalizeGeneratedMjml, parseDraft, reviewDraft } from './draft.js';
 import { EMAIL_DRAFT_SCHEMA, SYSTEM_PROMPT, buildRepairPrompt, buildUserPrompt } from './prompt.js';
 import { purposeById } from './purposes.js';
+import { createRewriter } from './rewrite.js';
 
 /**
  * @typedef {{role: 'user'|'assistant', content: string}} ModelMessage
- * @typedef {(request: {system: string, messages: ModelMessage[], schema: object, signal?: AbortSignal}) => Promise<string>} EmailModel
+ * @typedef {(request: {system: string, messages: ModelMessage[], schema: object, signal?: AbortSignal, task?: 'generate'|'rewrite'}) => Promise<string>} EmailModel
+ *   `task`: a whole email, or one text rewritten (a lighter job: a model may
+ *   answer it with less effort).
  *
  * @typedef {{
  *   purpose?: string|null,
@@ -105,7 +111,7 @@ export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @
 
     for (let attempt = 1; attempt <= Math.max(1, maxAttempts); attempt += 1) {
       signal?.throwIfAborted();
-      const answer = await model({ system: SYSTEM_PROMPT, messages, schema: EMAIL_DRAFT_SCHEMA, signal });
+      const answer = await model({ system: SYSTEM_PROMPT, messages, schema: EMAIL_DRAFT_SCHEMA, signal, task: 'generate' });
       /** @type {string[]} */
       let problems;
       try {
@@ -130,5 +136,5 @@ export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @
     throw new EmailGenerationError('INVALID_OUTPUT', lastProblem);
   }
 
-  return { generate };
+  return { generate, rewrite: createRewriter({ model, maxAttempts }) };
 }

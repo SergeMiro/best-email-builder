@@ -10,6 +10,7 @@ import { GROUPS } from '../blocks/shared.js';
 import { PropertyField } from './fields.jsx';
 import { useT } from './context.jsx';
 import VariableInsertButton from '../features/variables/VariableInsertButton.jsx';
+import RewriteText from '../features/generate/RewriteText.jsx';
 
 /**
  * Properties panel, right of the canvas.
@@ -20,7 +21,8 @@ import VariableInsertButton from '../features/variables/VariableInsertButton.jsx
  *     the page (background, width), i.e. the email body.
  *
  * `actions`: the element action bar (move, duplicate, delete), provided by
- * the host screen. `onDismiss`: the panel is shown in a drawer — its header
+ * the host screen. `services.rewrite`: a text or a button also gets
+ * "Rewrite with AI". `onDismiss`: the panel is shown in a drawer — its header
  * button closes the drawer rather than deselecting.
  */
 
@@ -60,6 +62,9 @@ function PropertyGroups({ editor, element, block, idPrefix, services = null }) {
 }
 
 const LABEL_PROPERTY = { key: 'content', label: 'Label', type: 'text', group: GROUPS.content };
+
+/** Elements whose words the AI may rewrite: texts (headings included) and buttons. */
+const REWRITABLE_TAGS = new Set(['mj-text', 'mj-button']);
 
 function PanelHeader({ title, onClose, closeLabel = 'Deselect' }) {
   const t = useT();
@@ -215,6 +220,9 @@ export default function PropertiesPanel({
             )}
             {selection.tagName === 'mj-text' && (
               <p className="eb:text-[12px] eb:text-foreground-muted">{t('Double-click the text to edit it.')}</p>
+            )}
+            {services?.rewrite && REWRITABLE_TAGS.has(selection.tagName) && (
+              <RewriteText key={selection.id} editor={editor} selection={selection} rewrite={services.rewrite} />
             )}
             <PropertyGroups editor={editor} element={selection} block={block} idPrefix="eb-prop" services={services} />
           </div>

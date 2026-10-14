@@ -17,6 +17,7 @@
  *   POST   {base}/test                            write   test send (needs `transport`)
  *   POST   {base}/assets                          write   image upload (multipart, field `file`)
  *   POST   {base}/generate                        write   write an email from a purpose (needs `generator`)
+ *   POST   {base}/rewrite                         write   rewrite one text of an email (needs `generator`)
  *   GET    {base}/variables                       read    custom variables
  *   POST   {base}/variables                       write   create a custom variable
  *   PUT    {base}/variables/:key                  write   edit (label, group, sample, fallback)
@@ -56,7 +57,10 @@ import { EmailGenerationError } from '../features/generate/draft.js';
  *   assetsPath?: string,
  *   publicUrl?: string|null,
  *   transport?: import('./sendTest.js').EmailTransport|null,
- *   generator?: {generate: (input: import('../features/generate/generator.js').GenerateInput, options?: {signal?: AbortSignal}) => Promise<import('../features/generate/generator.js').GeneratedEmail>}|null,
+ *   generator?: {
+ *     generate: (input: import('../features/generate/generator.js').GenerateInput, options?: {signal?: AbortSignal}) => Promise<import('../features/generate/generator.js').GeneratedEmail>,
+ *     rewrite?: (input: import('../features/generate/rewrite.js').RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
+ *   }|null,
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
  *   variableStore?: import('./variables.js').VariableRepository|null,
  *   locale?: string,
@@ -65,7 +69,7 @@ import { EmailGenerationError } from '../features/generate/draft.js';
  *   previewUnsubscribeUrl?: string,
  *   maxVersions?: number,
  *   maxTestRecipients?: number,
- *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, generatePerHour?: number},
+ *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, generatePerHour?: number, rewritePerHour?: number},
  *   onError?: (error: unknown, request: Request) => void,
  * }} HandlerOptions
  */
@@ -138,6 +142,7 @@ export function createEmailBuilderHandler(options) {
   const testLimiter = createLimiter(rateLimits.testPerHour ?? 20);
   const uploadLimiter = createLimiter(rateLimits.uploadsPerHour ?? 100);
   const generateLimiter = createLimiter(rateLimits.generatePerHour ?? 30);
+  const rewriteLimiter = createLimiter(rateLimits.rewritePerHour ?? 200);
 
   /** @param {Request} request @param {Action} action */
   async function userFor(request, action) {
@@ -158,6 +163,22 @@ export function createEmailBuilderHandler(options) {
       return body ? JSON.parse(body) : {};
     } catch {
       throw new HttpError(400, t('Invalid JSON'), 'INVALID_JSON');
+    }
+  }
+
+  /**
+   * A model call answered as JSON: its errors as the interface shows them,
+   * a cancelled request (the user closed the dialog) as 499.
+   * @param {Request} request @param {() => Promise<unknown>} call
+   */
+  async function askModel(request, call) {
+    try {
+      return json({ data: await call() });
+    } catch (error) {
+      if (request.signal?.aborted) return json({ error: t('Cancelled'), code: 'CANCELLED' }, 499);
+      if (error instanceof EmailGenerationError) throw new HttpError(error.status, t(error.message), error.code);
+      onError(error, request);
+      throw new HttpError(502, t('The AI service did not answer — try again in a moment.'), 'MODEL_ERROR');
     }
   }
 
@@ -273,19 +294,20 @@ export function createEmailBuilderHandler(options) {
         throw new HttpError(429, t('Too many generated emails — try again later'), 'RATE_LIMITED');
       }
       const body = await readJson(request);
-      try {
-        // The variables are the server's catalog, whatever the browser sent.
-        const email = await generator.generate(
-          { ...body, language: body?.language || lang, variables: await customVariables.catalog() },
-          { signal: request.signal }
-        );
-        return json({ data: email });
-      } catch (error) {
-        if (request.signal?.aborted) return json({ error: t('Cancelled'), code: 'CANCELLED' }, 499);
-        if (error instanceof EmailGenerationError) throw new HttpError(error.status, t(error.message), error.code);
-        onError(error, request);
-        throw new HttpError(502, t('The AI service did not answer — try again in a moment.'), 'MODEL_ERROR');
-      }
+      // The variables are the server's catalog, whatever the browser sent.
+      const catalog = await customVariables.catalog();
+      return askModel(request, () =>
+        generator.generate({ ...body, language: body?.language || lang, variables: catalog }, { signal: request.signal })
+      );
+    }
+
+    if (section === 'rewrite' && !id && method === 'POST') {
+      const user = await userFor(request, 'write');
+      const rewrite = generator?.rewrite;
+      if (typeof rewrite !== 'function') throw new HttpError(501, t('Text rewriting is not configured'), 'NO_GENERATOR');
+      if (!rewriteLimiter(userKey(user))) throw new HttpError(429, t('Too many rewrites — try again later'), 'RATE_LIMITED');
+      const body = await readJson(request);
+      return askModel(request, () => rewrite(body, { signal: request.signal }));
     }
 
     if (section === 'assets' && !id && method === 'POST') {

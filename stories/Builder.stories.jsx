@@ -18,6 +18,10 @@ import { createEmailGenerator } from '../src/features/generate/generator.js';
  *   window.__generated     what "Generate" asked the fake model (purpose, details,
  *                          language, sender, variables); `__generateDelay` (ms)
  *                          and `__generateFail` (an error message) drive it
+ *   window.__rewritten     what "Rewrite with AI" asked (action, text, format…);
+ *                          the fake model answers `__rewriteAnswers` in turn,
+ *                          else the text with "Rewritten:" in front;
+ *                          `__rewriteDelay`, `__rewriteFail` as above
  *
  * `?lang=fr` in the story URL switches the interface to French.
  */
@@ -75,7 +79,13 @@ const wait = (ms, signal) =>
   });
 
 const fakeGenerator = createEmailGenerator({
-  model: async ({ signal }) => {
+  model: async ({ signal, task, messages }) => {
+    if (task === 'rewrite') {
+      await wait(window.__rewriteDelay ?? 300, signal);
+      if (window.__rewriteFail) throw new Error(window.__rewriteFail);
+      const asked = /<text>\n([\s\S]*)\n<\/text>/.exec(messages[0].content)?.[1] ?? '';
+      return JSON.stringify({ text: window.__rewriteAnswers?.length ? window.__rewriteAnswers.shift() : `Rewritten: ${asked}` });
+    }
     await wait(window.__generateDelay ?? 300, signal);
     if (window.__generateFail) throw new Error(window.__generateFail);
     return JSON.stringify(FAKE_EMAIL);
@@ -85,6 +95,11 @@ const fakeGenerator = createEmailGenerator({
 function fakeGenerate(input, options) {
   window.__generated = [...(window.__generated || []), input];
   return fakeGenerator.generate(input, options);
+}
+
+function fakeRewrite(input, options) {
+  window.__rewritten = [...(window.__rewritten || []), input];
+  return fakeGenerator.rewrite(input, options);
 }
 
 function Session({ storage, templateId, initial, onClose, locale }) {
@@ -113,7 +128,7 @@ function Session({ storage, templateId, initial, onClose, locale }) {
 
 function Bench() {
   const locale = new URLSearchParams(window.location.search).get('lang') || 'en';
-  const storage = useMemo(() => createMemoryStorage({ render: fakeRender, sendTest: fakeSendTest, generate: fakeGenerate }), []);
+  const storage = useMemo(() => createMemoryStorage({ render: fakeRender, sendTest: fakeSendTest, generate: fakeGenerate, rewrite: fakeRewrite }), []);
   const [session, setSession] = useState({ key: 0, templateId: null, open: true });
   const [closed, setClosed] = useState(0);
   window.__emailStorage = storage;

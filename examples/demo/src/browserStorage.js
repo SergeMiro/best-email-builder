@@ -5,10 +5,10 @@
  * Demo only. A real application compiles on its server: the browser must never
  * be trusted with the HTML that gets stored or sent.
  *
- * "Generate" runs in the browser too, with the VISITOR's own Anthropic key
- * (asked once, kept in this browser's localStorage, sent only to Anthropic).
- * A real application generates on its server, where its key stays
- * (`createEmailGenerator` + `claudeEmailModel`, see the README).
+ * "Generate" and "Rewrite with AI" run in the browser too, with the VISITOR's
+ * own Anthropic key (asked once, kept in this browser's localStorage, sent only
+ * to Anthropic). A real application calls the model on its server, where its
+ * key stays (`createEmailGenerator` + `claudeEmailModel`, see the README).
  */
 
 import { createMemoryStorage } from 'best-email-builder/builder';
@@ -57,13 +57,14 @@ async function compileWarnings(mjml) {
 }
 
 /**
- * `generate` of the demo storage.
+ * `generate` and `rewrite` of the demo storage: one key, one client.
  * @param {{askKey: () => string, onKey: (key: string) => void, messages: () => Record<string, string>}} options
  *   `askKey`: asks the visitor for a key ('' when they decline);
  *   `messages`: the demo's own error texts, in the page's current language.
  */
-export function createBrowserGenerate({ askKey, onKey, messages }) {
-  return async (input, { signal } = {}) => {
+export function createBrowserAi({ askKey, onKey, messages }) {
+  /** @param {(generator: ReturnType<typeof createEmailGenerator>) => Promise<any>} call */
+  const withClaude = async (call) => {
     let apiKey = readAiKey();
     if (!apiKey) {
       apiKey = askKey().trim();
@@ -76,7 +77,7 @@ export function createBrowserGenerate({ askKey, onKey, messages }) {
     // `low`: a visitor waits less; a server would keep the default.
     const generator = createEmailGenerator({ model: claudeEmailModel({ client, effort: 'low' }), compile: compileWarnings });
     try {
-      return await generator.generate(input, { signal });
+      return await call(generator);
     } catch (error) {
       if (error?.status === 401 || error?.status === 403) {
         writeAiKey('');
@@ -86,6 +87,10 @@ export function createBrowserGenerate({ askKey, onKey, messages }) {
       if (error?.status === 429 || error?.status === 529 || error?.status >= 500) throw new Error(messages().busy, { cause: error });
       throw error;
     }
+  };
+  return {
+    generate: (input, { signal } = {}) => withClaude((generator) => generator.generate(input, { signal })),
+    rewrite: (input, { signal } = {}) => withClaude((generator) => generator.rewrite(input, { signal })),
   };
 }
 
@@ -97,8 +102,8 @@ const read = (key) => {
   }
 };
 
-/** Memory storage + localStorage persistence + in-browser preview (and generation, when given). */
-export function createDemoStorage({ generate } = {}) {
+/** Memory storage + localStorage persistence + in-browser preview (and AI, when given). */
+export function createDemoStorage({ generate, rewrite } = {}) {
   let storage;
 
   async function render({ mjml, subject, preheader }) {
@@ -128,7 +133,7 @@ export function createDemoStorage({ generate } = {}) {
     };
   }
 
-  storage = createMemoryStorage({ render, generate });
+  storage = createMemoryStorage({ render, generate, rewrite });
   const index = new Map(); // memory id → saved entry
 
   const ready = (async () => {

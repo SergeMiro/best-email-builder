@@ -113,7 +113,13 @@ function Builder({
     () => buildGallery({ templates: galleryProp ?? TEMPLATE_GALLERY, sender: sender || {}, t }),
     [galleryProp, sender, t]
   );
-  const services = useMemo(() => ({ uploadImage: (file) => storage.uploadImage(file) }), [storage]);
+  const services = useMemo(
+    () => ({
+      uploadImage: (file) => storage.uploadImage(file),
+      rewrite: typeof storage.rewrite === 'function' ? (input, options) => storage.rewrite(input, options) : null,
+    }),
+    [storage]
+  );
   const state = useEmailEditorState(editor);
   const autosaveOn = isFeatureEnabled('autosave');
   const autosaveOptions = emailBuilderFeatures.get('autosave')?.options || {};

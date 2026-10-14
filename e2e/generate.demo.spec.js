@@ -119,3 +119,27 @@ test('a key Anthropic refuses is forgotten, and the dialog says so', async ({ pa
   await expect(page.getByTestId('demo-ai-note').getByRole('button', { name: 'Forget my key' })).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('best-email-builder-demo:anthropic-key'))).toBeFalsy();
 });
+
+test('rewrite with AI: the same key, one request, the selected text replaced', async ({ page }) => {
+  const seen = await fakeAnthropic(page, (request) => {
+    const rewriting = request.postDataJSON().messages[0].content.includes('<text>');
+    const answer = rewriting ? { text: 'Big autumn sale' } : DRAFT;
+    return { status: 200, contentType: 'text/event-stream', body: stream(JSON.stringify(answer)) };
+  });
+  await openEditor(page);
+  page.once('dialog', (dialog) => dialog.accept(KEY));
+  await expect(await generateSale(page)).toBeHidden({ timeout: 30_000 });
+
+  const canvas = page.frameLocator('.eb-canvas-frame');
+  await canvas.getByText('Autumn sale', { exact: true }).click();
+  await page.getByTestId('eb-rewrite').getByRole('button', { name: 'Shorter', exact: true }).click();
+  await expect(canvas.getByText('Big autumn sale', { exact: true })).toBeVisible({ timeout: 30_000 });
+
+  // No second prompt for the key: the one given to Generate is used.
+  expect(seen).toHaveLength(2);
+  const { headers, body } = seen[1];
+  expect(headers['x-api-key']).toBe(KEY);
+  expect(body.output_config.effort).toBe('low');
+  expect(body.output_config.format.schema.required).toEqual(['text']);
+  expect(body.messages[0].content).toContain('<text>\nAutumn sale\n</text>');
+});
