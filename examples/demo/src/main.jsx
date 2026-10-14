@@ -20,8 +20,9 @@ import {
   ServerCog,
   ShieldCheck,
   Smartphone,
+  Sparkles,
 } from 'lucide-react';
-import { createDemoStorage } from './browserStorage.js';
+import { createBrowserGenerate, createDemoStorage, readAiKey, writeAiKey } from './browserStorage.js';
 import { COMPETITORS } from './competitors.js';
 
 const REPOSITORY_URL = import.meta.env.VITE_REPOSITORY_URL || 'https://github.com/SergeMiro/best-email-builder';
@@ -53,6 +54,14 @@ const TEXT = {
     expand: 'Full screen',
     shrink: 'Exit full screen',
     note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
+    aiNote: '“Generate” writes a whole email with Claude, using your own Anthropic API key: it stays in this browser and goes only to Anthropic.',
+    aiForget: 'Forget my key',
+    ai: {
+      keyPrompt: 'Paste your Anthropic API key (sk-ant-…). It stays in this browser and is sent only to Anthropic.',
+      keyNeeded: 'This demo needs your Anthropic API key to generate. Click Generate again to enter it.',
+      keyRefused: 'Anthropic refused this API key. Click Generate again to enter another one.',
+      busy: 'Claude is busy right now. Try again in a minute.',
+    },
     copy: 'Copy the install command',
     copied: 'Copied',
     source: 'Source code',
@@ -80,6 +89,14 @@ const TEXT = {
     expand: 'Plein écran',
     shrink: 'Réduire',
     note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
+    aiNote: '« Générer » écrit un e-mail complet avec Claude, avec votre propre clé API Anthropic : elle reste dans ce navigateur et n’est envoyée qu’à Anthropic.',
+    aiForget: 'Oublier ma clé',
+    ai: {
+      keyPrompt: 'Collez votre clé API Anthropic (sk-ant-…). Elle reste dans ce navigateur et n’est envoyée qu’à Anthropic.',
+      keyNeeded: 'Cette démo a besoin de votre clé API Anthropic pour générer. Cliquez de nouveau sur Générer pour la saisir.',
+      keyRefused: 'Anthropic a refusé cette clé API. Cliquez de nouveau sur Générer pour en saisir une autre.',
+      busy: 'Claude est très sollicité. Réessayez dans une minute.',
+    },
     copy: 'Copier la commande d’installation',
     copied: 'Copié',
     source: 'Code source',
@@ -552,8 +569,23 @@ function DemoWindow({ text, step, expanded, setExpanded, children }) {
 }
 
 function App() {
-  const storage = useMemo(() => createDemoStorage(), []);
   const [locale, setLocale] = useState(initialLocale);
+  const text = TEXT[locale];
+  // The storage lives as long as the page; its generation reads the current language.
+  const textRef = useRef(text);
+  textRef.current = text;
+  const [aiKey, setAiKey] = useState(readAiKey);
+  const storage = useMemo(
+    () =>
+      createDemoStorage({
+        generate: createBrowserGenerate({
+          askKey: () => window.prompt(textRef.current.ai.keyPrompt) || '',
+          onKey: setAiKey,
+          messages: () => textRef.current.ai,
+        }),
+      }),
+    []
+  );
   const [route, navigate] = useHashRoute();
   /** The template to select when coming back to the bank. */
   const [lastId, setLastId] = useState(null);
@@ -563,7 +595,6 @@ function App() {
   const [savedAs, setSavedAs] = useState(null);
   const pageRef = useRef(null);
   usePointerGlow(pageRef);
-  const text = TEXT[locale];
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -635,6 +666,27 @@ function App() {
           <p className="note">
             <Info aria-hidden="true" />
             <span>{text.note}</span>
+          </p>
+          <p className="note" data-testid="demo-ai-note">
+            <Sparkles aria-hidden="true" />
+            <span>
+              {text.aiNote}
+              {aiKey && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="note-link"
+                    onClick={() => {
+                      writeAiKey('');
+                      setAiKey('');
+                    }}
+                  >
+                    {text.aiForget}
+                  </button>
+                </>
+              )}
+            </span>
           </p>
         </main>
       ) : (

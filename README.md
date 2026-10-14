@@ -21,8 +21,9 @@ canvas you have to wire to MJML, storage, validation and sending yourself.
 Best Email Builder is the second option done once, properly, and given away:
 
 - **Free and MIT-licensed** — use it in commercial products, fork it, ship it.
-- **No account, no API key, no vendor.** It is a React component and a server
-  handler you run in your own app, against your own database.
+- **No account, no vendor.** It is a React component and a server handler
+  you run in your own app, against your own database. The AI generation is
+  optional and runs on your server, with your own key.
 - **Readable from end to end.** The engine is hidden behind one adapter, every
   block and feature is a registry entry, and the rules a template must obey
   live in one validation folder — so it is easy to change what you need.
@@ -53,6 +54,12 @@ Best Email Builder is the second option done once, properly, and given away:
   value MJML will really use.
 - **Server-side rendering only.** The browser never sends HTML: the server
   validates the project and the MJML, compiles, and stores its own HTML.
+- **An email written from scratch by AI** — the user picks what it is for
+  among 68 purposes (sale, Christmas, password reset, meeting reminder, order
+  shipped…), adds a line of details if they want, and a complete email opens in
+  the editor, subject and preview text included, ready to edit and save. The
+  model's MJML is cleaned and checked like any template before it gets there.
+  Claude out of the box; any other model in a few lines.
 - **A gallery of ready-made emails** — newsletter, welcome, promotion, event
   invitation… each one with the sender's footer and the unsubscribe link, so
   nobody starts from a blank page or forgets the legal mentions.
@@ -280,6 +287,58 @@ const subject = applyVariablesToText(template.subject, values, variables);
 With an email provider that does its own merge, map the tags instead:
 `mapVariables(html, { 'contact.firstname': '{{ contact.FIRSTNAME }}' })`.
 
+### 4. Generating emails with AI (optional)
+
+The *Generate* button asks one thing: what the email is for (a badge among
+68, grouped: sales, holidays, events, news, account, orders, relationship,
+organization), with an optional line of details. The email is written in the
+interface's language, with the builder's sender and variables, and replaces
+the one being edited — the dialog says so before, not after.
+
+The model runs on the server, where its key is:
+
+```js
+import Anthropic from '@anthropic-ai/sdk';   // npm install @anthropic-ai/sdk
+import {
+  createEmailBuilderHandler,
+  createEmailGenerator,
+  claudeEmailModel,
+  compileMjml,
+} from 'best-email-builder/server';
+
+const handler = createEmailBuilderHandler({
+  /* … */
+  generator: createEmailGenerator({
+    model: claudeEmailModel({ client: new Anthropic() }), // ANTHROPIC_API_KEY
+    compile: compileMjml, // MJML's own warnings go back to the model
+  }),
+  rateLimits: { generatePerHour: 30 },                    // per user (default)
+});
+```
+
+```jsx
+<EmailBuilder storage={createHttpStorage({ generate: true })} />
+```
+
+- `claudeEmailModel({ client, model, effort, maxTokens })` — `claude-opus-5-5`
+  by default, `effort: 'medium'`; the answer is structured output (a JSON
+  schema: name, subject, preheader, MJML) and is streamed, so a long email does
+  not hit a request timeout. A generation takes from 20 seconds to a minute or
+  two: give the route that long (`maxDuration` on Vercel, the proxy's timeout).
+- **Another provider** is a function `({ system, messages, schema, signal }) =>
+  Promise<string>` returning the JSON text — pass it as `model`.
+- What comes out is never trusted as is: shorthand padding is expanded,
+  elements the builder does not edit (`mj-hero`, `mj-wrapper`, `mj-head`…)
+  are turned into sections and columns, stock photos are removed (the user
+  picks real images; the alt text stays), unknown variables become visible
+  `[placeholders]`, and the result must pass the same validation as a saved
+  template. When a problem remains, the model gets one more turn with the list.
+- The prompt (`SYSTEM_PROMPT`, `buildUserPrompt`) and the purposes
+  (`EMAIL_PURPOSES`) are exported, to read or to build on.
+
+The live demo has no server: there, *Generate* asks for the visitor's own
+Anthropic key, keeps it in the browser and calls Anthropic directly.
+
 ## Component props
 
 | Prop | Default | Description |
@@ -317,6 +376,7 @@ interface TemplateStorage {
   getVersion(id, versionId): Promise<Version & { document; mjml }>;
   uploadImage(file): Promise<{ path }>;
   render?(input): Promise<{ html; warnings; quality }>;   // enables Preview
+  generate?(input, { signal }): Promise<{ name; subject; preheader; mjml; warnings }>; // enables Generate
   sendTest?(input): Promise<{ sent; failed; invalid; results }>; // enables Send test
   listVariables?(): Promise<Variable[]>;                 // enable user-created variables
   saveVariable?(variable, { create }): Promise<Variable>;
@@ -409,6 +469,8 @@ touch the rest of your page, whether or not you use Tailwind yourself.
   `nosniff` and a sandboxing CSP.
 - Previews are rendered in an iframe with an empty `sandbox`.
 - Test sends are limited (10 addresses, 20 sends per user per hour by default).
+- Generated emails pass the same MJML validation as saved ones; generation is
+  limited per user (30 per hour by default) and needs the `write` permission.
 
 ## Development
 

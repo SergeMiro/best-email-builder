@@ -25,6 +25,19 @@ All notable changes are documented here. The format follows
   `mjml` / `sectionMjml` may be a function of `t`.
 
 ### Added
+- **Generate an email with AI.** A *Generate* button opens a dialog with 68
+  purposes as badges in 8 groups (sales, holidays, events, news, account,
+  orders, relationship, organization), a search field and an optional line of
+  details. The email is written in the interface's language with the
+  builder's sender and variables, cleaned for the builder (longhand padding,
+  sections and columns only, no stock photos, unknown variables as visible
+  placeholders), validated like a saved template, and opens in the editor with
+  its subject and preview text. Server: `createEmailGenerator({ model })`,
+  `claudeEmailModel({ client })` (Claude Opus 5.5, structured output,
+  streamed), the `generator` option of the handler (`POST /generate`, 30 per
+  user per hour); client: `createHttpStorage({ generate: true })`. Any other
+  provider plugs in as a function. The live demo generates with the visitor's
+  own Anthropic key.
 - Drag and drop with pointer events: a line shows where the block lands
   (between two elements of a column, or between two sections — a content block
   then gets a section of its own), the canvas scrolls near its edges, Esc

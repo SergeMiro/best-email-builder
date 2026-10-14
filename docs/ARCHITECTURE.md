@@ -21,7 +21,7 @@ component knows the model or the canvas: everything goes through the
 | `core/` | `EmailEditor` contract, versioned document envelope (`document.js`), registries, events |
 | `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
-| `features/` | one folder per feature + the `emailBuilderFeatures` registry (variables, autosave, versions, preview, test send) and the starter template |
+| `features/` | one folder per feature + the `emailBuilderFeatures` registry (generate, variables, autosave, versions, preview, test send) and the starter template |
 | `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template library (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |
 | `renderer/` | MJML preparation, service links, uploaded image URLs (shared browser/server) |
@@ -104,6 +104,24 @@ the HTML **compiled by the server**.
   template keeps a local draft in `localStorage`, offered at the next opening.
 - Every write carries the `revision` read at load time. The repository refuses
   the write when it changed (409): the user can save a copy instead.
+
+## Generation
+
+`features/generate/` writes an email from a purpose, in four separate steps:
+
+| File | Role |
+|---|---|
+| `purposes.js` | the 68 purposes and their 8 categories; each has a `kind` (marketing, transactional, security) that decides the footer, and a `brief` for the model |
+| `prompt.js` | the system prompt (the MJML the builder edits, email rules) and the JSON schema of a draft |
+| `draft.js` | reading the answer, cleaning the MJML for the builder (`normalizeGeneratedMjml`), the checks (`reviewDraft`: blocking = `validateMjml`, advice = footer, subject, MJML warnings) |
+| `generator.js` | the loop: ask, clean, check, at most one repair turn |
+| `claude.js` | the model for Claude (Anthropic SDK client passed in, never imported) |
+| `GenerateButton.jsx` | the toolbar button and the dialog |
+
+The model is a plain function, so the browser (the demo), the server (the
+handler's `POST /generate`) and the tests (a fake model) run the same
+generator. The interface only calls `storage.generate`; the button is shown
+when the storage has it.
 
 ## Variables
 

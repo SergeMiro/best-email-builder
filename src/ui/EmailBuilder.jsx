@@ -437,6 +437,7 @@ function Builder({
     canManageVariables,
     reloadVariables,
     testRecipients,
+    sender,
   };
   const toolbarFeatures = emailBuilderFeatures.list(
     (f) => f.enabled !== false && Boolean(f.toolbar) && (f.isAvailable ? f.isAvailable(featureContext) : true)

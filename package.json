@@ -106,6 +106,7 @@
     "tailwind-merge": "^3.4.1"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.130.0",
     "@eslint/js": "^10.0.1",
     "@ladle/react": "^5.1.1",
     "@playwright/test": "^1.64.0",

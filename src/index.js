@@ -53,5 +53,11 @@ export { createStarterMjml, STARTER_MJML } from './features/templates/starter.js
 export { TEMPLATE_GALLERY, buildGallery, withPlaceholderImages } from './features/templates/gallery.js';
 export { isAssetPath, absoluteAssetUrls, DEFAULT_ASSETS_PATH } from './renderer/links.js';
 
+/* ── Generation (AI) — the model runs where its key is: usually the server ── */
+export { createEmailGenerator } from './features/generate/generator.js';
+export { claudeEmailModel, DEFAULT_CLAUDE_MODEL } from './features/generate/claude.js';
+export { EmailGenerationError } from './features/generate/draft.js';
+export { EMAIL_PURPOSES, PURPOSE_CATEGORIES } from './features/generate/purposes.js';
+
 /* ── Translations ────────────────────────────────────────────────────────── */
 export { createTranslator, translatorFor, LOCALES } from './i18n/index.js';

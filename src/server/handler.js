@@ -16,6 +16,7 @@
  *   POST   {base}/render                          read    preview (server rendering)
  *   POST   {base}/test                            write   test send (needs `transport`)
  *   POST   {base}/assets                          write   image upload (multipart, field `file`)
+ *   POST   {base}/generate                        write   write an email from a purpose (needs `generator`)
  *   GET    {base}/variables                       read    custom variables
  *   POST   {base}/variables                       write   create a custom variable
  *   PUT    {base}/variables/:key                  write   edit (label, group, sample, fallback)
@@ -41,6 +42,7 @@ import { compileTemplate, personalize } from './render.js';
 import { MAX_TEST_RECIPIENTS, sendTestEmail } from './sendTest.js';
 import { createTemplateService } from './templates.js';
 import { createVariableService } from './variables.js';
+import { EmailGenerationError } from '../features/generate/draft.js';
 
 /**
  * @typedef {'read'|'write'} Action
@@ -54,6 +56,7 @@ import { createVariableService } from './variables.js';
  *   assetsPath?: string,
  *   publicUrl?: string|null,
  *   transport?: import('./sendTest.js').EmailTransport|null,
+ *   generator?: {generate: (input: import('../features/generate/generator.js').GenerateInput, options?: {signal?: AbortSignal}) => Promise<import('../features/generate/generator.js').GeneratedEmail>}|null,
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
  *   variableStore?: import('./variables.js').VariableRepository|null,
  *   locale?: string,
@@ -62,7 +65,7 @@ import { createVariableService } from './variables.js';
  *   previewUnsubscribeUrl?: string,
  *   maxVersions?: number,
  *   maxTestRecipients?: number,
- *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number},
+ *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, generatePerHour?: number},
  *   onError?: (error: unknown, request: Request) => void,
  * }} HandlerOptions
  */
@@ -110,6 +113,7 @@ export function createEmailBuilderHandler(options) {
     basePath = '/api/email-builder',
     publicUrl = null,
     transport = null,
+    generator = null,
     locale = 'en',
     messages,
     lang = locale.slice(0, 2),
@@ -133,6 +137,7 @@ export function createEmailBuilderHandler(options) {
   const customVariables = createVariableService({ repository: options.variableStore || null, system: variables, t });
   const testLimiter = createLimiter(rateLimits.testPerHour ?? 20);
   const uploadLimiter = createLimiter(rateLimits.uploadsPerHour ?? 100);
+  const generateLimiter = createLimiter(rateLimits.generatePerHour ?? 30);
 
   /** @param {Request} request @param {Action} action */
   async function userFor(request, action) {
@@ -261,6 +266,28 @@ export function createEmailBuilderHandler(options) {
       return json({ data: result });
     }
 
+    if (section === 'generate' && !id && method === 'POST') {
+      const user = await userFor(request, 'write');
+      if (!generator) throw new HttpError(501, t('Email generation is not configured'), 'NO_GENERATOR');
+      if (!generateLimiter(userKey(user))) {
+        throw new HttpError(429, t('Too many generated emails — try again later'), 'RATE_LIMITED');
+      }
+      const body = await readJson(request);
+      try {
+        // The variables are the server's catalog, whatever the browser sent.
+        const email = await generator.generate(
+          { ...body, language: body?.language || lang, variables: await customVariables.catalog() },
+          { signal: request.signal }
+        );
+        return json({ data: email });
+      } catch (error) {
+        if (request.signal?.aborted) return json({ error: t('Cancelled'), code: 'CANCELLED' }, 499);
+        if (error instanceof EmailGenerationError) throw new HttpError(error.status, t(error.message), error.code);
+        onError(error, request);
+        throw new HttpError(502, t('The AI service did not answer — try again in a moment.'), 'MODEL_ERROR');
+      }
+    }
+
     if (section === 'assets' && !id && method === 'POST') {
       const user = await userFor(request, 'write');
       if (!uploadLimiter(userKey(user))) throw new HttpError(429, t('Too many uploads — try again later'), 'RATE_LIMITED');
@@ -309,7 +336,8 @@ export function createEmailBuilderHandler(options) {
       return response || json({ error: t('Route not found'), code: 'ROUTE_NOT_FOUND' }, 404);
     } catch (error) {
       const status = statusOf(error);
-      if (status >= 500 && status !== 501) {
+      // A 5xx we raised ourselves (not configured, AI service down) says why.
+      if (status >= 500 && !(error instanceof HttpError)) {
         onError(error, request);
         return json({ error: t('Internal error'), code: 'INTERNAL' }, 500);
       }

@@ -13,6 +13,11 @@ export { createAssetService, createMemoryAssetRepository, inspectAsset } from '.
 export { compileMjml } from './compileMjml.js';
 export { compileTemplate, personalize, renderEmail, htmlToText } from './render.js';
 export { sendTestEmail, MAX_TEST_RECIPIENTS } from './sendTest.js';
+export { createEmailGenerator, cleanGenerateInput, MAX_DETAILS_LENGTH } from '../features/generate/generator.js';
+export { claudeEmailModel, DEFAULT_CLAUDE_MODEL } from '../features/generate/claude.js';
+export { EmailGenerationError, GENERATION_ERRORS, normalizeGeneratedMjml, parseDraft, reviewDraft } from '../features/generate/draft.js';
+export { EMAIL_PURPOSES, PURPOSE_CATEGORIES, purposeById, purposesByCategory } from '../features/generate/purposes.js';
+export { SYSTEM_PROMPT, EMAIL_DRAFT_SCHEMA, buildUserPrompt } from '../features/generate/prompt.js';
 
 export { createVariableService, createMemoryVariableRepository } from './variables.js';
 export {

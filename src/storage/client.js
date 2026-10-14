@@ -18,6 +18,8 @@
  *   listVariables()             → custom variables            (optional: user-defined
  *   saveVariable(variable)      → saved variable               variables, shared by
  *   deleteVariable(key)         → void                         every template)
+ *   generate(input, {signal})   → { name, subject, preheader, mjml, warnings }
+ *                                 (optional: "Generate", an email written by AI)
  *
  * Two implementations: HTTP (talks to `createEmailBuilderHandler` from
  * `best-email-builder/server`, or to any backend with the same routes) and memory
@@ -73,6 +75,8 @@ import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables
  *
  * @typedef {{mjml: string, subject?: string|null, preheader?: string|null}} RenderInput
  * @typedef {{html: string, warnings: {message: string}[], quality: {code: string, level: string, message: string}[]}} RenderResult
+ * @typedef {import('../features/generate/generator.js').GenerateInput} GenerateInput
+ * @typedef {import('../features/generate/generator.js').GeneratedEmail} GeneratedEmail
  * @typedef {{email: string, ok: boolean, error: string|null}} TestResult
  * @typedef {{sent: number, failed: number, invalid: string[], results: TestResult[]}} SendTestResult
  *
@@ -91,6 +95,7 @@ import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables
  *   listVariables?: () => Promise<EmailVariable[]>,
  *   saveVariable?: (variable: Partial<EmailVariable>, options?: {create?: boolean}) => Promise<EmailVariable>,
  *   deleteVariable?: (key: string) => Promise<void>,
+ *   generate?: (input: GenerateInput, options?: {signal?: AbortSignal}) => Promise<GeneratedEmail>,
  * }} TemplateStorage
  */
 
@@ -119,14 +124,18 @@ function withDocument(template) {
 /**
  * Client for the routes of `createEmailBuilderHandler` (`best-email-builder/server`).
  *
+ * `generate: true` turns on "Generate": the server must have a `generator`
+ * (otherwise it answers 501). Off by default, as the button would only fail.
+ *
  * @param {{
  *   baseUrl?: string,
  *   headers?: Record<string, string> | (() => Record<string, string>),
  *   fetch?: typeof fetch,
+ *   generate?: boolean,
  * }} [options]
  * @returns {TemplateStorage}
  */
-export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}, fetch: fetchImpl } = {}) {
+export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}, fetch: fetchImpl, generate = false } = {}) {
   const root = baseUrl.replace(/\/+$/, '');
   const doFetch = fetchImpl || ((input, init) => fetch(input, init));
   const extraHeaders = () => (typeof headers === 'function' ? headers() : headers);
@@ -176,6 +185,12 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
     deleteVariable: async (key) => {
       await call(`/variables/${encodeURIComponent(key)}`, { method: 'DELETE' });
     },
+    ...(generate
+      ? {
+          generate: async (input, { signal } = {}) =>
+            call('/generate', { method: 'POST', body: JSON.stringify(input), signal }),
+        }
+      : {}),
     async uploadImage(file) {
       assertUploadable(file);
       const form = new FormData();
@@ -191,17 +206,19 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
 /**
  * In-memory storage, same contract. Documents are kept SERIALIZED.
  * `render` and `sendTest` cannot run in a browser (MJML compiles on the
- * server): pass implementations to enable the preview and test buttons.
+ * server): pass implementations to enable the preview and test buttons;
+ * `generate` likewise for "Generate".
  *
  * @param {{
  *   render?: TemplateStorage['render'],
  *   sendTest?: TemplateStorage['sendTest'],
+ *   generate?: TemplateStorage['generate'],
  *   assetsPath?: string,
  *   systemVariables?: EmailVariable[],
  * }} [options]  `systemVariables`: keys a custom variable may not take
  * @returns {TemplateStorage & {dump: () => object}}
  */
-export function createMemoryStorage({ render, sendTest, assetsPath = DEFAULT_ASSETS_PATH, systemVariables = DEFAULT_VARIABLES } = {}) {
+export function createMemoryStorage({ render, sendTest, generate, assetsPath = DEFAULT_ASSETS_PATH, systemVariables = DEFAULT_VARIABLES } = {}) {
   /** @type {Map<string, any>} */
   const rows = new Map();
   /** @type {Map<string, any[]>} */
@@ -360,6 +377,7 @@ export function createMemoryStorage({ render, sendTest, assetsPath = DEFAULT_ASS
     },
     ...(render ? { render } : {}),
     ...(sendTest ? { sendTest } : {}),
+    ...(generate ? { generate } : {}),
     dump: () => ({
       rows: [...rows.values()],
       versions: Object.fromEntries(versions),
