@@ -16,6 +16,10 @@ const src = fileURLToPath(new URL('../../src/', import.meta.url));
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
+  // Its own dependency cache: the tests run this server beside Ladle, and two
+  // Vite servers sharing node_modules/.vite overwrite each other's optimized
+  // dependencies (the other one then answers 504 "Outdated Optimize Dep").
+  cacheDir: fileURLToPath(new URL('../../node_modules/.vite-demo', import.meta.url)),
   base: process.env.DEMO_BASE || '/',
   plugins: [react(), tailwindcss()],
   resolve: {

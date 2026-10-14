@@ -45,6 +45,10 @@ function emailBuilderApi() {
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
+  // Its own dependency cache: the tests run this server beside Ladle, and two
+  // Vite servers sharing node_modules/.vite overwrite each other's optimized
+  // dependencies (the other one then answers 504 "Outdated Optimize Dep").
+  cacheDir: fileURLToPath(new URL('../../node_modules/.vite-example', import.meta.url)),
   plugins: [react(), tailwindcss(), emailBuilderApi()],
   resolve: {
     alias: [
