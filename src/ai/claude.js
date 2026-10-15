@@ -12,20 +12,32 @@
  * schema of a draft, so the model cannot answer anything else. Streaming, read
  * to the end with `finalMessage()`: an email with the model's reasoning can
  * take a minute or more, longer than a plain request may stay open.
+ *
+ * In the page, with each user's own key, Claude is a provider of `createAi`:
+ *
+ *   createAi({
+ *     provider: ['openai', claudeProvider({ client: async (apiKey) =>
+ *       new (await import('@anthropic-ai/sdk')).default({ apiKey, dangerouslyAllowBrowser: true }) }), 'gemini'],
+ *     askKey: true,
+ *   });
  */
 
 import { EmailGenerationError } from './draft.js';
+import { failureCode } from './providers.js';
 
 export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
 
 /**
- * @param {{
- *   client: any,
+ * @typedef {{
  *   model?: string,
  *   effort?: 'low'|'medium'|'high'|'xhigh'|'max',
  *   rewriteEffort?: 'low'|'medium'|'high'|'xhigh'|'max',
  *   maxTokens?: number,
- * }} options
+ * }} ClaudeOptions
+ */
+
+/**
+ * @param {{client: any} & ClaudeOptions} options
  *   `effort`: how much the model thinks before writing an email — `low`
  *   answers faster, `high` takes more care. `rewriteEffort`: the same for
  *   the light jobs the user waits on — one text rewritten, subject ideas.
@@ -42,18 +54,30 @@ export function claudeEmailModel({
     throw new Error('claudeEmailModel: pass an Anthropic client — `new Anthropic()` from @anthropic-ai/sdk');
   }
   return async ({ system, messages, schema, signal, task }) => {
-    const message = await client.messages
-      .stream(
-        {
-          model,
-          max_tokens: maxTokens,
-          system,
-          messages,
-          output_config: { effort: task === 'rewrite' || task === 'subjects' ? rewriteEffort : effort, format: { type: 'json_schema', schema } },
-        },
-        { signal }
-      )
-      .finalMessage();
+    let message;
+    try {
+      message = await client.messages
+        .stream(
+          {
+            model,
+            max_tokens: maxTokens,
+            system,
+            messages,
+            output_config: { effort: task === 'rewrite' || task === 'subjects' ? rewriteEffort : effort, format: { type: 'json_schema', schema } },
+          },
+          { signal }
+        )
+        .finalMessage();
+    } catch (error) {
+      // The SDK's errors, as the errors the interface explains (a refused key
+      // is asked again); an abort goes through as it is.
+      const { status, name } = /** @type {any} */ (error) || {};
+      if (signal?.aborted || name === 'AbortError' || name === 'APIUserAbortError' || error instanceof EmailGenerationError) throw error;
+      const text = String(/** @type {any} */ (error)?.error?.error?.message || /** @type {any} */ (error)?.message || error);
+      // No status: the request did not get through (network, CORS).
+      if (typeof status !== 'number') throw new EmailGenerationError('MODEL_ERROR', `Claude: ${text.slice(0, 300)}`);
+      throw new EmailGenerationError(failureCode(status, text), `Claude ${status}: ${text.slice(0, 300)}`);
+    }
     if (message.stop_reason === 'refusal') {
       throw new EmailGenerationError('REFUSED');
     }
@@ -65,4 +89,52 @@ export function claudeEmailModel({
       .map((/** @type {any} */ block) => block.text)
       .join('');
   };
+}
+
+/**
+ * Claude as a provider of `createAi({ provider, askKey: true })`: each user
+ * connects their own Anthropic key, like the other providers. `client` makes
+ * the Anthropic client from that key — the application's own SDK, loaded when
+ * it is needed, so nothing here imports it:
+ *
+ *   claudeProvider({
+ *     client: async (apiKey) => {
+ *       const { default: Anthropic } = await import('@anthropic-ai/sdk');
+ *       return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+ *     },
+ *   })
+ *
+ * The other options are claudeEmailModel's (`model`, `effort`…).
+ *
+ * @param {{client: (apiKey: string) => any} & ClaudeOptions} options
+ * @returns {import('./providers.js').AiProvider}
+ */
+export function claudeProvider(options) {
+  const { client, ...rest } = options || /** @type {any} */ ({});
+  if (typeof client !== 'function') {
+    throw new TypeError('claudeProvider: `client` is a function that makes the Anthropic client from a key');
+  }
+  return Object.freeze({
+    id: 'anthropic',
+    name: 'Claude',
+    baseUrl: 'https://api.anthropic.com',
+    model: rest.model || DEFAULT_CLAUDE_MODEL,
+    keyUrl: 'https://console.anthropic.com/settings/keys',
+    keyHint: 'sk-ant-',
+    free: null,
+    format: /** @type {const} */ ('json_schema'),
+    tokens: /** @type {const} */ ('max_tokens'),
+    maxTokens: rest.maxTokens ?? 32000,
+    createModel: ({ apiKey }) => {
+      // One client per key: a new key (the last one refused) makes a new one.
+      /** @type {{key: string, model: import('./generator.js').EmailModel}|null} */
+      let current = null;
+      return async (request) => {
+        const key = String((await apiKey()) || '').trim();
+        if (!key) throw new EmailGenerationError('KEY_MISSING', 'Claude: no key');
+        if (!current || current.key !== key) current = { key, model: claudeEmailModel({ ...rest, client: await client(key) }) };
+        return current.model(request);
+      };
+    },
+  });
 }

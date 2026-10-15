@@ -23,7 +23,7 @@ import {
 } from '../../../src/features/variables/service.js';
 import { qualityReport } from '../../../src/validation/quality.js';
 import { validateMjml } from '../../../src/validation/mjmlValidator.js';
-import { createAi } from 'best-email-builder/ai';
+import { claudeProvider, createAi } from 'best-email-builder/ai';
 
 const TEMPLATES_KEY = 'best-email-builder-demo:templates';
 const VARIABLES_KEY = 'best-email-builder-demo:variables';
@@ -35,10 +35,19 @@ async function compileWarnings(mjml) {
   return { warnings: (result.errors || []).map((e) => ({ message: e.formattedMessage || e.message })) };
 }
 
+/** Claude through Anthropic's SDK, loaded only when a visitor chooses it. */
+const claude = claudeProvider({
+  client: async (apiKey) => {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    return new Anthropic({ apiKey, dangerouslyAllowBrowser: true, maxRetries: 1 });
+  },
+});
+
 /**
- * The demo's AI module: OpenRouter with the visitor's own key. The builder asks
- * for it in its Connect dialog (`askKey: true`), keeps it in this browser and
- * sends it only to OpenRouter; its free models need nothing but a free account.
+ * The demo's AI module: the visitor's own key, with the provider they choose
+ * in the builder's Connect dialog (`askKey: true`). The key stays in this
+ * browser and goes only to that provider. Gemini and Mistral have free plans
+ * that answer in seconds; OpenRouter's free models take minutes.
  */
 export function createBrowserAi() {
   try {
@@ -47,7 +56,7 @@ export function createBrowserAi() {
   } catch {
     // Private window.
   }
-  return createAi({ provider: 'openrouter', askKey: true, compile: compileWarnings });
+  return createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter'], askKey: true, compile: compileWarnings });
 }
 
 const read = (key, empty = []) => {

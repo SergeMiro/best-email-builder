@@ -146,4 +146,7 @@ export const fr = {
   "Free tier, with rate limits": "Offre gratuite, avec des limites de débit",
   "Free \"Experiment\" plan": "Offre gratuite « Experiment »",
   "Runs on your own machine": "Tourne sur votre propre machine",
+  "AI provider": "Fournisseur d'IA",
+  "Key saved": "Clé enregistrée",
+  "A key for {provider} is saved in this browser: Connect uses it, or paste another one.": "Une clé {provider} est enregistrée dans ce navigateur : Connecter l'utilise, ou collez-en une autre.",
 };

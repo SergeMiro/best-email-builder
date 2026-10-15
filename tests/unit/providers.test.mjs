@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
-import { AI_PROVIDERS, EmailGenerationError, GENERATION_ERRORS, providerEmailModel, resolveProvider } from '../../src/ai/server.js';
+import { AI_PROVIDERS, EmailGenerationError, GENERATION_ERRORS, claudeEmailModel, providerEmailModel, resolveProvider } from '../../src/ai/server.js';
 import { fr } from '../../src/ai/i18n/fr.js';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -201,6 +201,9 @@ test('the provider’s failures, as the errors the interface explains', async ()
     // Gemini: a wrong key is a 400.
     [{ status: 400, body: [{ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }] }, 'KEY_REFUSED'],
     [{ status: 402, body: { error: { message: 'Insufficient credits' } } }, 'MODEL_CREDITS'],
+    // The money, said with a 429 (OpenAI) or a 400 (Anthropic): not "busy", not "error".
+    [{ status: 429, body: { error: { message: 'You exceeded your current quota, please check your plan.', type: 'insufficient_quota' } } }, 'MODEL_CREDITS'],
+    [{ status: 400, body: { type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low to access the Anthropic API.' } } }, 'MODEL_CREDITS'],
     [{ status: 429, body: { error: { message: 'Rate limited' } } }, 'MODEL_BUSY'],
     [{ status: 503, body: 'Overloaded' }, 'MODEL_BUSY'],
     [{ status: 500, body: 'Boom' }, 'MODEL_ERROR'],
@@ -289,7 +292,7 @@ async function loadAiEntry() {
   });
   return import(`${pathToFileURL(outfile).href}?t=${fs.statSync(outfile).mtimeMs}`);
 }
-const { createAi } = await loadAiEntry();
+const { createAi, claudeProvider } = await loadAiEntry();
 
 /** A browser's localStorage, in memory. */
 function memoryStorage() {
@@ -459,4 +462,137 @@ test('askKey without a working localStorage: the key lives as long as the page',
   ai.key.forget();
   assert.equal(ai.key.get(), '');
   assert.throws(() => ai.key.set('  '), TypeError);
+});
+
+/* ── Several providers, Claude among them ───────────────────────────────── */
+
+test('a list of providers: with askKey only, each once; the first is offered first', () => {
+  const fetch = async () => new Response('{}');
+  assert.throws(() => createAi({ provider: ['openai', 'gemini'], apiKey: 'k' }), /a list of providers is for `askKey: true`/);
+  assert.throws(() => createAi({ provider: [], askKey: true }), /a list of providers/);
+  assert.throws(() => createAi({ provider: ['gemini', 'gemini'], askKey: true }), /each provider once/);
+  assert.throws(() => createAi({ provider: [{ createModel: () => async () => '' }], askKey: true }), /needs an `id` and a `name`/);
+  const ai = createAi({ provider: ['openai', 'gemini', 'openrouter'], askKey: true, fetch });
+  assert.deepEqual(
+    ai.key.providers.map((provider) => [provider.id, provider.model]),
+    [
+      ['openai', 'gpt-5-mini'],
+      ['gemini', 'gemini-3.5-flash-lite'],
+      ['openrouter', 'openrouter/free'],
+    ]
+  );
+  assert.equal(ai.key.provider.id, 'openai');
+});
+
+test('a list of providers: the user chooses one when asked; each keeps its own key; the choice is remembered', async (t) => {
+  const storage = memoryStorage();
+  globalThis.localStorage = storage;
+  t.after(() => delete globalThis.localStorage);
+  const { fetch, calls } = fakeProvider(REWRITTEN);
+  const ai = createAi({ provider: ['openai', 'gemini'], askKey: true, fetch });
+
+  const running = ai.rewrite(REWRITE);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(ai.key.state().asking, true);
+  // What the Connect dialog does when the user picks Gemini and pastes a key.
+  ai.key.choose('gemini');
+  ai.key.answer('AIza-mine');
+  assert.equal((await running).text, 'Welcome to our shop!');
+  assert.equal(calls[0].url, `${AI_PROVIDERS.gemini.baseUrl}/chat/completions`);
+  assert.equal(calls[0].headers.Authorization, 'Bearer AIza-mine');
+  assert.equal(storage.map.get('best-email-builder:ai-key:gemini'), 'AIza-mine');
+  assert.equal(storage.map.get('best-email-builder:ai-provider'), 'gemini');
+
+  // Another page of this browser: Gemini, with its key.
+  const later = createAi({ provider: ['openai', 'gemini'], askKey: true, fetch });
+  assert.equal(later.key.provider.id, 'gemini');
+  assert.equal(later.key.get(), 'AIza-mine');
+
+  // Back to OpenAI: its own key is asked; Gemini's is kept.
+  ai.key.choose('openai');
+  assert.equal(ai.key.get(), '');
+  assert.equal(ai.key.get('gemini'), 'AIza-mine');
+  assert.equal(ai.key.state().connected, false);
+  const second = ai.rewrite(REWRITE);
+  await new Promise((resolve) => setImmediate(resolve));
+  ai.key.answer('sk-openai');
+  await second;
+  assert.equal(calls[1].url, 'https://api.openai.com/v1/chat/completions');
+  assert.equal(calls[1].headers.Authorization, 'Bearer sk-openai');
+  assert.throws(() => ai.key.choose('groq'), /one of openai, gemini/);
+
+  // No remembered choice: the first provider with a key.
+  storage.map.delete('best-email-builder:ai-provider');
+  storage.map.delete('best-email-builder:ai-key:openai');
+  assert.equal(createAi({ provider: ['openai', 'gemini'], askKey: true, fetch }).key.provider.id, 'gemini');
+});
+
+test('claudeProvider: Claude in the list through the application\'s SDK client, one client per key; a refused key is asked again', async (t) => {
+  globalThis.localStorage = memoryStorage();
+  t.after(() => delete globalThis.localStorage);
+  const made = [];
+  const requests = [];
+  const client = async (apiKey) => {
+    made.push(apiKey);
+    return {
+      messages: {
+        stream: (params) => {
+          requests.push(params);
+          return {
+            finalMessage: async () => {
+              if (apiKey === 'sk-ant-bad') {
+                throw Object.assign(new Error('401 invalid x-api-key'), {
+                  status: 401,
+                  error: { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } },
+                });
+              }
+              return { stop_reason: 'end_turn', content: [{ type: 'text', text: '{"text":"Welcome to our shop!"}' }] };
+            },
+          };
+        },
+      },
+    };
+  };
+  assert.throws(() => claudeProvider({}), /`client` is a function/);
+  const claude = claudeProvider({ client, rewriteEffort: 'medium' });
+  assert.equal(claude.id, 'anthropic');
+  assert.equal(claude.name, 'Claude');
+  assert.equal(claude.model, 'claude-opus-5-5');
+  assert.equal(claude.keyHint, 'sk-ant-');
+
+  const ai = createAi({ provider: [claude, 'gemini'], askKey: true });
+  assert.equal(ai.key.provider.id, 'anthropic');
+  ai.key.set('sk-ant-bad');
+  const running = ai.rewrite(REWRITE);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(ai.key.state().refused, true, 'the dialog says the key was refused');
+  ai.key.answer('sk-ant-good');
+  assert.equal((await running).text, 'Welcome to our shop!');
+  assert.deepEqual(made, ['sk-ant-bad', 'sk-ant-good']);
+  assert.equal(requests[1].model, 'claude-opus-5-5');
+  assert.deepEqual(requests[1].output_config.effort, 'medium');
+  assert.equal(requests[1].output_config.format.type, 'json_schema');
+  await ai.rewrite(REWRITE);
+  assert.deepEqual(made, ['sk-ant-bad', 'sk-ant-good'], 'the same key: the same client');
+});
+
+test('claudeEmailModel: the SDK\'s errors become the errors the interface explains; an abort goes through', async () => {
+  const failing = (error) => ({ messages: { stream: () => ({ finalMessage: async () => Promise.reject(error) }) } });
+  const apiError = (status, message) => Object.assign(new Error(`${status} ${message}`), { status, error: { type: 'error', error: { message } } });
+  const cases = [
+    [apiError(401, 'invalid x-api-key'), 'KEY_REFUSED'],
+    [apiError(400, 'Your credit balance is too low to access the Anthropic API.'), 'MODEL_CREDITS'],
+    [apiError(429, 'Number of request tokens has exceeded your rate limit'), 'MODEL_BUSY'],
+    [apiError(529, 'Overloaded'), 'MODEL_BUSY'],
+    [apiError(500, 'Internal server error'), 'MODEL_ERROR'],
+  ];
+  for (const [error, code] of cases) {
+    assert.equal(await codeOf(claudeEmailModel({ client: failing(error) })(REQUEST)), code, error.message);
+  }
+  const controller = new AbortController();
+  controller.abort();
+  const abort = Object.assign(new Error('Request was aborted.'), { name: 'APIUserAbortError', status: undefined });
+  await assert.rejects(claudeEmailModel({ client: failing(abort) })({ ...REQUEST, signal: controller.signal }), (error) => error === abort);
+  const network = Object.assign(new Error('Connection error.'), { name: 'APIConnectionError' });
+  await assert.rejects(claudeEmailModel({ client: failing(network) })(REQUEST), (error) => error.code === 'MODEL_ERROR' && /Connection error/.test(error.detail));
 });

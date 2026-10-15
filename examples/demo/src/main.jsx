@@ -54,7 +54,9 @@ const TEXT = {
     expand: 'Full screen',
     shrink: 'Exit full screen',
     note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
-    aiNote: '“Generate” writes a whole email, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with your own OpenRouter key — its free models need only a free account. The key stays in this browser and goes only to OpenRouter.',
+    aiNote: '“Generate” writes a whole email, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with your own key: OpenAI, Claude, Mistral, Gemini or OpenRouter. Gemini and Mistral are free and answer in seconds; OpenRouter’s free models take minutes. The key stays in this browser and goes only to the provider you choose.',
+    aiConnected: 'Connected to {provider}.',
+    aiChange: 'Change provider',
     aiForget: 'Forget my key',
     copy: 'Copy the install command',
     copied: 'Copied',
@@ -83,7 +85,9 @@ const TEXT = {
     expand: 'Plein écran',
     shrink: 'Réduire',
     note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
-    aiNote: '« Générer » écrit un e-mail complet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec votre propre clé OpenRouter — ses modèles gratuits ne demandent qu’un compte gratuit. La clé reste dans ce navigateur et n’est envoyée qu’à OpenRouter.',
+    aiNote: '« Générer » écrit un e-mail complet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec votre propre clé : OpenAI, Claude, Mistral, Gemini ou OpenRouter. Gemini et Mistral sont gratuits et répondent en quelques secondes ; les modèles gratuits d’OpenRouter prennent plusieurs minutes. La clé reste dans ce navigateur et n’est envoyée qu’au fournisseur choisi.',
+    aiConnected: 'Connecté à {provider}.',
+    aiChange: 'Changer de fournisseur',
     aiForget: 'Oublier ma clé',
     copy: 'Copier la commande d’installation',
     copied: 'Copié',
@@ -223,7 +227,8 @@ const CODE_SAMPLES = [
     code: `import { createAi } from 'best-email-builder/ai';
 
 // Optional: without \`ai\`, no AI button and no AI code.
-const ai = createAi({ provider: 'openrouter', apiKey }); // 'gemini', 'groq', 'openai'…
+// Each user connects their own key, with the provider they choose:
+const ai = createAi({ provider: ['openai', 'mistral', 'gemini', 'openrouter'], askKey: true });
 
 <EmailStudio storage={storage} ai={ai} />`,
   },
@@ -572,6 +577,7 @@ function App() {
   const storage = useMemo(() => createDemoStorage(), []);
   const ai = useMemo(() => createBrowserAi(), []);
   const aiConnected = useSyncExternalStore(ai.key.subscribe, () => ai.key.state().connected);
+  const aiProvider = useSyncExternalStore(ai.key.subscribe, () => ai.key.provider.name);
   const [route, navigate] = useHashRoute();
   /** The template to select when coming back to the bank. */
   const [lastId, setLastId] = useState(null);
@@ -658,9 +664,19 @@ function App() {
             <Sparkles aria-hidden="true" />
             <span>
               {text.aiNote}
-              {aiConnected && (
+              {aiConnected && <> {text.aiConnected.replace('{provider}', aiProvider)}</>}
+              {/* The Connect dialog belongs to the editor: changing is offered there. */}
+              {route.page === 'editor' && (
                 <>
                   {' '}
+                  <button type="button" className="note-link" onClick={() => ai.key.request()}>
+                    {text.aiChange}
+                  </button>
+                </>
+              )}
+              {aiConnected && (
+                <>
+                  {route.page === 'editor' ? ' · ' : ' '}
                   <button type="button" className="note-link" onClick={() => ai.key.forget()}>
                     {text.aiForget}
                   </button>

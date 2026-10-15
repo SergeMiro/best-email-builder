@@ -6,6 +6,30 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **The user chooses the provider.** `createAi({ provider: [...], askKey: true })`
+  takes a list: the Connect dialog shows the providers as cards (name, model,
+  free or not, a dot on those whose key this browser keeps; arrows move
+  through them). The choice and one key per provider are remembered, and a
+  provider whose key is kept needs nothing pasted. `ai.key` gains `provider`,
+  `providers`, `choose(id)` and `get(id)`; `ai.key.request()` opens the dialog
+  to change provider.
+- **`claudeProvider({ client })`** — Claude as one of those providers, with
+  the user's own Anthropic key; the application's SDK is loaded when Claude
+  is chosen.
+- **`failureCode(status, message)`** — the rule that turns a provider's
+  failure into the interface's error, exported for a model of your own.
+- The live demo offers OpenAI, Claude, Mistral, Gemini and OpenRouter, says
+  which one is connected, and has a *Change provider* link.
+
+### Fixed
+- **An exhausted quota said "busy, try again".** OpenAI answers a quota
+  spent with a 429 (`insufficient_quota`), Anthropic an empty credit balance
+  with a 400: both are now `MODEL_CREDITS`.
+- **Claude's failures were all "could not answer".** The SDK's errors are now
+  read like every provider's: a refused key is `KEY_REFUSED` (asked again with
+  `askKey`), no credits `MODEL_CREDITS`, overloaded (529) `MODEL_BUSY`.
+
 ## [0.5.1] — 2026-10-15
 
 ### Fixed

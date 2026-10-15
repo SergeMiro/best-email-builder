@@ -20,6 +20,9 @@
  *   createAi({ provider, askKey: true }) the AI runs in the page with each user's own key
  *                                       (OpenRouter, Gemini, Groq… — see providers.js);
  *                                       the builder asks for it once (the Connect dialog)
+ *   createAi({ provider: [...], askKey: true })
+ *                                       the same, the user choosing the provider in that
+ *                                       dialog (Claude too: claudeProvider in claude.js)
  *   createAi({ provider, apiKey })      the same with one key for all (prototypes: the key
  *                                       is then in the page)
  *   createAi({ model })                 the generator runs in the page with this model
@@ -54,7 +57,7 @@ import SubjectIdeas from './SubjectIdeas.jsx';
  *   headers?: Record<string, string> | (() => Record<string, string>),
  *   fetch?: typeof fetch,
  *   model?: import('./generator.js').EmailModel,
- *   provider?: string | Partial<import('./providers.js').AiProvider>,
+ *   provider?: ProviderOption | ProviderOption[],
  *   apiKey?: string,
  *   askKey?: boolean,
  *   compile?: (mjml: string) => Promise<{warnings?: {message: string}[]}>,
@@ -65,8 +68,9 @@ import SubjectIdeas from './SubjectIdeas.jsx';
  * }} AiOptions
  *   `provider`: an id of `AI_PROVIDERS` ('openrouter', 'gemini', 'groq'…), or
  *   `{ id, model, baseUrl, headers }` for another model or an endpoint of your
- *   own. `apiKey`: one key for every user. `askKey`: each user connects their
- *   own (off by default). `compile`: with `provider` or `model`, MJML's own
+ *   own — or a list of them, with `askKey`: the user chooses (the first is
+ *   offered first). `apiKey`: one key for every user. `askKey`: each user
+ *   connects their own (off by default). `compile`: with `provider` or `model`, MJML's own
  *   warnings fed back to the model (see createEmailGenerator).
  *
  * @typedef {Readonly<{
@@ -81,6 +85,8 @@ import SubjectIdeas from './SubjectIdeas.jsx';
  *   `messages`: the module's own translations, by locale, merged under the
  *   host's `messages`. `components.Connect`: the dialog that asks for the key.
  */
+
+/** @typedef {string | Partial<import('./providers.js').AiProvider>} ProviderOption */
 
 const PARTS = /** @type {const} */ (['generate', 'rewrite', 'suggestSubjects']);
 const ROUTES = { generate: '/generate', rewrite: '/rewrite', suggestSubjects: '/subjects' };
@@ -108,7 +114,14 @@ export function createAi(options = {}) {
   }
   if (typeof askKey !== 'boolean') throw new TypeError('createAi: `askKey` must be true or false');
   if (apiKey && askKey) throw new TypeError('createAi: `apiKey` (one key for all) or `askKey` (each user\'s own), not both');
-  const provider = usesProvider ? resolveProvider(providerOption) : null;
+  const choice = Array.isArray(providerOption);
+  if (choice && (!providerOption.length || !askKey)) {
+    throw new TypeError('createAi: a list of providers is for `askKey: true` — each user chooses one and connects their own key');
+  }
+  /** @type {import('./providers.js').AiProvider[]} */
+  const providers = usesProvider ? (choice ? providerOption : [providerOption]).map(providerOf) : [];
+  if (new Set(providers.map((provider) => provider.id)).size !== providers.length) throw new TypeError('createAi: each provider once');
+  const [provider = null] = providers;
   if (provider && !apiKey && !askKey && !provider.keyless) {
     throw new TypeError(`createAi: ${provider.name} needs a key — \`apiKey\`, or \`askKey: true\` to let each user connect their own`);
   }
@@ -123,18 +136,32 @@ export function createAi(options = {}) {
   const ownOnly = !model && !http && PARTS.some((part) => typeof options[part] === 'function');
   /** @type {Partial<Record<typeof PARTS[number], Function>>} */
   let transport = {};
-  const key = provider && askKey ? createKeyStore(provider) : null;
+  const key = provider && askKey ? createKeyStore(providers) : null;
   if (provider) {
-    const generator = createEmailGenerator({
-      model: providerEmailModel({
-        provider,
-        fetch: fetchImpl,
-        // The user's key, asked when there is none ('' when they cancel: KEY_MISSING).
-        apiKey: key ? async () => key.get() || (await key.request()) : apiKey,
-      }),
-      maxAttempts,
-      compile,
-    });
+    /** @type {Map<string, import('./generator.js').EmailModel>} */
+    const models = new Map();
+    const keyFor = () => (key ? key.get() : apiKey || '');
+    /** The model of the provider in use, made once. @param {string} id */
+    const modelOf = (id) => {
+      if (!models.has(id)) {
+        const chosen = /** @type {import('./providers.js').AiProvider} */ (providers.find((item) => item.id === id));
+        models.set(
+          id,
+          chosen.createModel
+            ? chosen.createModel({ apiKey: keyFor, fetch: fetchImpl })
+            : providerEmailModel({ provider: chosen, fetch: fetchImpl, apiKey: keyFor })
+        );
+      }
+      return /** @type {import('./generator.js').EmailModel} */ (models.get(id));
+    };
+    /** @type {import('./generator.js').EmailModel} */
+    const model = async (request) => {
+      // The user's key, asked when there is none — they may choose another
+      // provider there ('' when they cancel: KEY_MISSING).
+      if (key && !key.get() && !providers.find((item) => item.id === key.provider.id)?.keyless) await key.request();
+      return modelOf(key ? key.provider.id : provider.id)(request);
+    };
+    const generator = createEmailGenerator({ model, maxAttempts, compile });
     for (const part of PARTS) transport[part] = key ? askedAgain(generator[part], key) : generator[part];
   } else if (model) {
     transport = createEmailGenerator({ model, maxAttempts, compile });
@@ -162,6 +189,20 @@ export function createAi(options = {}) {
     messages: AI_MESSAGES,
     components: Object.freeze({ Generate: GenerateButton, Rewrite: RewriteText, Subjects: SubjectIdeas, Connect: key ? ConnectAi : null }),
   });
+}
+
+/**
+ * A provider of the list: an id, `{ id, model, … }`, or one with its own
+ * `createModel` (claudeProvider) taken as it is.
+ * @param {ProviderOption} option
+ * @returns {import('./providers.js').AiProvider}
+ */
+function providerOf(option) {
+  if (option && typeof option === 'object' && typeof option.createModel === 'function') {
+    if (!option.id || !option.name) throw new TypeError('createAi: a provider with `createModel` needs an `id` and a `name`');
+    return /** @type {import('./providers.js').AiProvider} */ (option);
+  }
+  return resolveProvider(/** @type {any} */ (option));
 }
 
 /**

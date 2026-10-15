@@ -41,13 +41,16 @@ import { EmailGenerationError } from './draft.js';
  *   keyless?: boolean,
  *   headers?: Record<string, string>,
  *   body?: Record<string, unknown>,
+ *   createModel?: (options: {apiKey: () => string|Promise<string>, fetch?: typeof fetch}) => import('./generator.js').EmailModel,
  * }} AiProvider
  *   `model`: the default (null: to be given); `keyUrl`: where a user gets a
  *   key; `keyHint`: what a key starts with; `free`: what can be used without
  *   paying, in a few words (null: paid only); `format`: the best answer format
  *   the provider takes; `tokens`: how it names the output limit;
  *   `maxTokens`: that limit (an email is about 6 000 tokens, more for a model
- *   that reasons first); `body`: fields of its own added to each request.
+ *   that reasons first); `body`: fields of its own added to each request;
+ *   `createModel`: a provider that is not an OpenAI-compatible API makes its
+ *   own model from the user's key (`claudeProvider` does).
  */
 
 /** @param {Omit<AiProvider, 'tokens'|'format'|'maxTokens'> & Partial<Pick<AiProvider, 'tokens'|'format'|'maxTokens'>>} provider @returns {AiProvider} */
@@ -211,6 +214,21 @@ function refusal(status, message) {
   return 'KEY_REFUSED';
 }
 
+/**
+ * The error code of a failed request, from its status and the provider's
+ * message: the refusals above, the money (402, a quota, a credit balance too
+ * low — Anthropic says it with a 400, OpenAI with a 429), busy, or an error.
+ * @param {number} status @param {string} message
+ * @returns {'KEY_REFUSED'|'REFUSED'|'MODEL_CREDITS'|'MODEL_BUSY'|'MODEL_ERROR'}
+ */
+export function failureCode(status, message) {
+  const refused = refusal(status, message);
+  if (refused) return refused;
+  if (status === 402 || /credit balance|insufficient[ _](quota|credits|balance)|exceeded your current quota/i.test(message)) return 'MODEL_CREDITS';
+  if (status === 429 || status === 503 || status === 529) return 'MODEL_BUSY';
+  return 'MODEL_ERROR';
+}
+
 /** The text of an assistant message (a string, or parts). @param {any} message */
 function textOf(message) {
   const content = message?.content;
@@ -294,11 +312,7 @@ export function providerEmailModel(options = {}) {
           continue;
         }
         const detail = `${provider.name} ${response.status}: ${text.slice(0, 300)}`;
-        const refused = refusal(response.status, errorMessage(text));
-        if (refused) throw new EmailGenerationError(refused, detail);
-        if (response.status === 402) throw new EmailGenerationError('MODEL_CREDITS', detail);
-        if (response.status === 429 || response.status === 503 || response.status === 529) throw new EmailGenerationError('MODEL_BUSY', detail);
-        throw new EmailGenerationError('MODEL_ERROR', detail);
+        throw new EmailGenerationError(failureCode(response.status, errorMessage(text)), detail);
       }
       /** @type {any} */
       let data;
@@ -311,10 +325,7 @@ export function providerEmailModel(options = {}) {
       if (data?.error) {
         const code = Number(data.error.code) || 0;
         const detail = `${provider.name}: ${data.error.message || JSON.stringify(data.error).slice(0, 300)}`;
-        const refused = refusal(code, String(data.error.metadata?.raw || data.error.message || ''));
-        if (refused) throw new EmailGenerationError(refused, detail);
-        if (code === 429 || code === 503) throw new EmailGenerationError('MODEL_BUSY', detail);
-        throw new EmailGenerationError('MODEL_ERROR', detail);
+        throw new EmailGenerationError(failureCode(code, String(data.error.metadata?.raw || data.error.message || '')), detail);
       }
       const choice = data?.choices?.[0];
       if (choice?.message?.refusal) throw new EmailGenerationError('REFUSED', String(choice.message.refusal));

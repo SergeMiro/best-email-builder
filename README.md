@@ -61,7 +61,8 @@ Best Email Builder is the second option done once, properly, and given away:
   model's MJML is cleaned and checked like any template before it gets there.
   OpenRouter, Gemini, Groq, Mistral, OpenAI, DeepSeek, Cerebras, Ollama or any
   OpenAI-compatible API by its key — free tiers included — and Claude through
-  its SDK; on your server, or in the page with each user's own key.
+  its SDK; on your server, or in the page with each user's own key — and the
+  provider they choose.
 - **Any text rewritten in one click** — select a text or a button: *Shorter*,
   *Longer*, *Fix mistakes*, *Friendlier*, *More formal*, *Translate* into 13
   languages, or say what to change in your own words. The text changes in
@@ -363,9 +364,19 @@ the provider refuses is forgotten and asked again. Off by default:
 const ai = createAi({ provider: 'openrouter', askKey: true });
 ```
 
-`ai.key` reads and changes it: `get()`, `set(key)`, `forget()`,
-`request()`, `subscribe(fn)`, `state()` (`{ asking, refused, connected }`).
-This is what the live demo does.
+Give a list and each user chooses: the dialog shows the providers as cards
+(name, model, free or not, a dot on those whose key this browser keeps). The
+choice and one key per provider are remembered; going back to a provider whose
+key is kept needs nothing pasted.
+
+```jsx
+const ai = createAi({ provider: ['openai', 'mistral', 'gemini', 'openrouter'], askKey: true });
+```
+
+`ai.key` reads and changes it: `provider` (the one in use), `providers`,
+`choose(id)`, `get(id?)`, `set(key)`, `forget()`, `request()` (opens the
+dialog — to change provider, for one), `subscribe(fn)`, `state()`
+(`{ asking, refused, connected }`). This is what the live demo does.
 
 **In the page, with one key for everyone** — prototypes and internal tools
 only, the key is in the page's code: `createAi({ provider: 'groq', apiKey })`.
@@ -411,7 +422,10 @@ providerEmailModel({ provider: { baseUrl: 'http://localhost:1234/v1', model: 'qw
   quotes of HTML) can be told to skip it: `provider: { …, format: 'text' }`.
 - The provider's failures become errors the interface explains, in its
   language: `KEY_MISSING`, `KEY_REFUSED`, `MODEL_CREDITS`, `MODEL_BUSY`,
-  `MODEL_ERROR` (with the provider's own text in `detail`). None is a 401:
+  `MODEL_ERROR` (with the provider's own text in `detail`). An exhausted
+  quota is `MODEL_CREDITS`, not `MODEL_BUSY`, even when it comes as a 429
+  (OpenAI's `insufficient_quota`) or a 400 (Anthropic's credit balance);
+  `failureCode(status, message)` is that rule, for a model of your own. None is a 401:
   the key is the AI's, not the user's session. A 403 about the model (not
   available here, in this region) or the content is not `KEY_REFUSED`: with
   `askKey`, the user's key is not thrown away for it.
@@ -419,7 +433,21 @@ providerEmailModel({ provider: { baseUrl: 'http://localhost:1234/v1', model: 'qw
   Anthropic SDK (`npm install @anthropic-ai/sdk`) — `claude-opus-5-5` by
   default, `effort: 'medium'`, structured output, streamed so a long email
   does not hit a request timeout — or through OpenRouter with an
-  `anthropic/…` model and one key for every model.
+  `anthropic/…` model and one key for every model. With `askKey`, Claude is
+  one more provider to choose, with the user's own Anthropic key and the SDK
+  loaded only when it is chosen:
+
+  ```js
+  import { claudeProvider, createAi } from 'best-email-builder/ai';
+
+  const claude = claudeProvider({
+    client: async (apiKey) => {
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
+      return new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+    },
+  });
+  createAi({ provider: ['openai', claude, 'gemini'], askKey: true });
+  ```
 - **Anything else** is a function `({ system, messages, schema, signal, task })
   => Promise<string>` returning the JSON text — `createEmailGenerator({ model })`
   on the server, `createAi({ model })` in the page.
@@ -474,7 +502,8 @@ another click another one, the first row brings the user's subject back.
   are exported.
 
 The live demo has no server: there, the AI runs in the page with the
-visitor's own OpenRouter key (`createAi({ provider: 'openrouter', askKey: true })`).
+visitor's own key, for the provider they choose — OpenAI, Claude, Mistral,
+Gemini or OpenRouter (`createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter'], askKey: true })`).
 
 ### 5. Your brand (optional)
 

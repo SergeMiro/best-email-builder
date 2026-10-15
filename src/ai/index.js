@@ -19,6 +19,6 @@ export { EmailGenerationError, GENERATION_ERRORS } from './draft.js';
 // The generator itself, to run the AI in the page (`createAi({ model })`
 // does it for you) — the model's key is then in the page.
 export { createEmailGenerator } from './generator.js';
-export { claudeEmailModel, DEFAULT_CLAUDE_MODEL } from './claude.js';
+export { claudeEmailModel, claudeProvider, DEFAULT_CLAUDE_MODEL } from './claude.js';
 // The providers `createAi({ provider })` runs in the page.
-export { AI_PROVIDERS, providerEmailModel, resolveProvider } from './providers.js';
+export { AI_PROVIDERS, failureCode, providerEmailModel, resolveProvider } from './providers.js';

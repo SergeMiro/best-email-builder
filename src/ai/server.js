@@ -22,7 +22,7 @@
 
 export { createEmailGenerator, cleanGenerateInput, MAX_DETAILS_LENGTH } from './generator.js';
 export { claudeEmailModel, DEFAULT_CLAUDE_MODEL } from './claude.js';
-export { AI_PROVIDERS, providerEmailModel, resolveProvider } from './providers.js';
+export { AI_PROVIDERS, failureCode, providerEmailModel, resolveProvider } from './providers.js';
 export { EmailGenerationError, GENERATION_ERRORS, normalizeGeneratedMjml, parseDraft, reviewDraft } from './draft.js';
 export { EMAIL_PURPOSES, PURPOSE_CATEGORIES, purposeById, purposesByCategory } from './purposes.js';
 export { SYSTEM_PROMPT, EMAIL_DRAFT_SCHEMA, buildUserPrompt } from './prompt.js';
