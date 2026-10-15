@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-10-15
+
 ### Fixed
 - **An image with no picture yet is left out of the email.** `<mj-image>`
   without `src` (AI drafts leave them for the user, so do the gallery's
