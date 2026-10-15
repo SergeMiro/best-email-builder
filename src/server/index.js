@@ -19,6 +19,8 @@ export { EmailGenerationError, GENERATION_ERRORS, normalizeGeneratedMjml, parseD
 export { EMAIL_PURPOSES, PURPOSE_CATEGORIES, purposeById, purposesByCategory } from '../features/generate/purposes.js';
 export { SYSTEM_PROMPT, EMAIL_DRAFT_SCHEMA, buildUserPrompt } from '../features/generate/prompt.js';
 export { REWRITE_ACTIONS, REWRITE_LANGUAGES, REWRITE_SYSTEM_PROMPT, createRewriter, reviewRewrite } from '../features/generate/rewrite.js';
+export { SUBJECTS_SYSTEM_PROMPT, createSubjectSuggester, emailWords, reviewSubjects } from '../features/generate/subjects.js';
+export { simulateDarkMode } from '../features/preview/darkMode.js';
 
 export { createVariableService, createMemoryVariableRepository } from './variables.js';
 export { createBrandService, createMemoryBrandRepository } from './brand.js';

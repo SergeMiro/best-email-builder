@@ -18,6 +18,7 @@
  *   POST   {base}/assets                          write   image upload (multipart, field `file`)
  *   POST   {base}/generate                        write   write an email from a purpose (needs `generator`)
  *   POST   {base}/rewrite                         write   rewrite one text of an email (needs `generator`)
+ *   POST   {base}/subjects                        write   three other subject lines (needs `generator`)
  *   GET    {base}/variables                       read    custom variables
  *   POST   {base}/variables                       write   create a custom variable
  *   PUT    {base}/variables/:key                  write   edit (label, group, sample, fallback)
@@ -66,6 +67,7 @@ import { EmailGenerationError } from '../features/generate/draft.js';
  *   generator?: {
  *     generate: (input: import('../features/generate/generator.js').GenerateInput, options?: {signal?: AbortSignal}) => Promise<import('../features/generate/generator.js').GeneratedEmail>,
  *     rewrite?: (input: import('../features/generate/rewrite.js').RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
+ *     suggestSubjects?: (input: import('../features/generate/subjects.js').SubjectsInput, options?: {signal?: AbortSignal}) => Promise<{subjects: string[]}>,
  *   }|null,
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
  *   variableStore?: import('./variables.js').VariableRepository|null,
@@ -77,7 +79,7 @@ import { EmailGenerationError } from '../features/generate/draft.js';
  *   previewUnsubscribeUrl?: string,
  *   maxVersions?: number,
  *   maxTestRecipients?: number,
- *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, generatePerHour?: number, rewritePerHour?: number, brandImportsPerHour?: number},
+ *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, generatePerHour?: number, rewritePerHour?: number, subjectsPerHour?: number, brandImportsPerHour?: number},
  *   onError?: (error: unknown, request: Request) => void,
  * }} HandlerOptions
  */
@@ -154,6 +156,7 @@ export function createEmailBuilderHandler(options) {
   const uploadLimiter = createLimiter(rateLimits.uploadsPerHour ?? 100);
   const generateLimiter = createLimiter(rateLimits.generatePerHour ?? 30);
   const rewriteLimiter = createLimiter(rateLimits.rewritePerHour ?? 200);
+  const subjectsLimiter = createLimiter(rateLimits.subjectsPerHour ?? 100);
   const brandImportLimiter = createLimiter(rateLimits.brandImportsPerHour ?? 20);
 
   /** @param {Request} request @param {Action} action */
@@ -320,6 +323,19 @@ export function createEmailBuilderHandler(options) {
       if (!rewriteLimiter(userKey(user))) throw new HttpError(429, t('Too many rewrites — try again later'), 'RATE_LIMITED');
       const body = await readJson(request);
       return askModel(request, () => rewrite(body, { signal: request.signal }));
+    }
+
+    if (section === 'subjects' && !id && method === 'POST') {
+      const user = await userFor(request, 'write');
+      const suggestSubjects = generator?.suggestSubjects;
+      if (typeof suggestSubjects !== 'function') throw new HttpError(501, t('Subject ideas are not configured'), 'NO_GENERATOR');
+      if (!subjectsLimiter(userKey(user))) throw new HttpError(429, t('Too many subject ideas — try again later'), 'RATE_LIMITED');
+      const body = await readJson(request);
+      // The merge tags are the server's catalog, whatever the browser sent.
+      const catalog = await customVariables.catalog();
+      return askModel(request, () =>
+        suggestSubjects({ ...body, language: body?.language || lang, variables: catalog }, { signal: request.signal })
+      );
     }
 
     if (section === 'assets' && !id && method === 'POST') {

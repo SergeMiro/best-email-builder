@@ -5,7 +5,7 @@
  * Demo only. A real application compiles on its server: the browser must never
  * be trusted with the HTML that gets stored or sent.
  *
- * "Generate" and "Rewrite with AI" run in the browser too, with the VISITOR's
+ * "Generate", "Rewrite with AI" and "Suggest subjects" run in the browser too, with the VISITOR's
  * own Anthropic key (asked once, kept in this browser's localStorage, sent only
  * to Anthropic). A real application calls the model on its server, where its
  * key stays (`createEmailGenerator` + `claudeEmailModel`, see the README).
@@ -58,7 +58,8 @@ async function compileWarnings(mjml) {
 }
 
 /**
- * `generate` and `rewrite` of the demo storage: one key, one client.
+ * `generate`, `rewrite` and `suggestSubjects` of the demo storage: one key,
+ * one client.
  * @param {{askKey: () => string, onKey: (key: string) => void, messages: () => Record<string, string>}} options
  *   `askKey`: asks the visitor for a key ('' when they decline);
  *   `messages`: the demo's own error texts, in the page's current language.
@@ -92,6 +93,7 @@ export function createBrowserAi({ askKey, onKey, messages }) {
   return {
     generate: (input, { signal } = {}) => withClaude((generator) => generator.generate(input, { signal })),
     rewrite: (input, { signal } = {}) => withClaude((generator) => generator.rewrite(input, { signal })),
+    suggestSubjects: (input, { signal } = {}) => withClaude((generator) => generator.suggestSubjects(input, { signal })),
   };
 }
 
@@ -104,7 +106,7 @@ const read = (key, empty = []) => {
 };
 
 /** Memory storage + localStorage persistence + in-browser preview (and AI, when given). */
-export function createDemoStorage({ generate, rewrite } = {}) {
+export function createDemoStorage({ generate, rewrite, suggestSubjects } = {}) {
   let storage;
 
   async function render({ mjml, subject, preheader }) {
@@ -136,7 +138,7 @@ export function createDemoStorage({ generate, rewrite } = {}) {
 
   // The brand is kept too; reading it from a website needs a server, so the
   // demo has no "Get my brand" field.
-  storage = createMemoryStorage({ render, generate, rewrite, brand: read(BRAND_KEY, null) });
+  storage = createMemoryStorage({ render, generate, rewrite, suggestSubjects, brand: read(BRAND_KEY, null) });
   const index = new Map(); // memory id → saved entry
 
   const ready = (async () => {

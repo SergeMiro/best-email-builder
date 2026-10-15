@@ -165,3 +165,33 @@ test('brand: set by hand in the demo, kept after a reload, new emails start in i
   await expect(page.frameLocator('.eb-canvas-frame').getByText('Acme Rockets', { exact: true })).toBeVisible();
   await expect(page.getByTestId('eb-brand-button').locator('span[aria-hidden="true"]')).toHaveCSS('background-color', 'rgb(233, 30, 99)');
 });
+
+test('preview in dark mode: the page darkens, the text lightens, the button keeps its color', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en#/editor/new`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const dialog = page.getByRole('dialog').filter({ hasText: 'Email preview' });
+  const frame = dialog.frameLocator('iframe[title="Email preview"]');
+  const greeting = frame.getByText('Hello Jane,');
+  await expect(greeting).toBeVisible({ timeout: 30_000 });
+  // The colors as the reader sees them: computed in the frame.
+  const color = (locator, property) => locator.evaluate((el, name) => getComputedStyle(el)[name], property);
+  const buttonCell = frame.locator('td[bgcolor]').filter({ hasText: 'Learn more' }).last();
+  const lightButton = await color(buttonCell, 'backgroundColor');
+  expect(await color(greeting, 'color')).toBe('rgb(43, 48, 56)');
+
+  await dialog.getByRole('tab', { name: 'Dark mode' }).click();
+  await expect(dialog.locator('[data-scheme="dark"]')).toBeVisible();
+  await expect(dialog.getByTestId('eb-dark-hint')).toBeVisible();
+  await expect.poll(() => color(frame.getByText('Hello Jane,'), 'color')).not.toBe('rgb(43, 48, 56)');
+  const [r, g, b] = (await color(frame.getByText('Hello Jane,'), 'color')).match(/\d+/g).map(Number);
+  expect(Math.min(r, g, b)).toBeGreaterThan(180);
+  // The pale page behind the email (#eceff4) is now dark, of the same cool hue.
+  const behind = (await color(frame.locator('body'), 'backgroundColor')).match(/\d+/g).map(Number);
+  expect(Math.max(...behind)).toBeLessThan(40);
+  expect(behind[2]).toBeGreaterThan(behind[0]);
+  expect(await color(frame.locator('td[bgcolor]').filter({ hasText: 'Learn more' }).last(), 'backgroundColor')).toBe(lightButton);
+
+  await dialog.getByRole('tab', { name: 'Light mode' }).click();
+  await expect.poll(() => color(frame.getByText('Hello Jane,'), 'color')).toBe('rgb(43, 48, 56)');
+});

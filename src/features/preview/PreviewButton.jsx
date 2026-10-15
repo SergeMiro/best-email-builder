@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Eye, Info, Loader2, Monitor, RefreshCw, Smartphone } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Eye, Info, Loader2, Monitor, Moon, RefreshCw, Smartphone, Sun } from 'lucide-react';
 import { EMAIL_MOBILE_WIDTH } from '../../core/constants.js';
 import { FRAME_SCROLLBAR_CSS } from '../../core/scrollbars.js';
 import { useUi } from '../../ui/context.jsx';
@@ -7,6 +7,7 @@ import { Button } from '../../ui/primitives/button.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
 import { SectionLabel, Tabs, TabsList, TabsTrigger } from '../../ui/primitives/misc.jsx';
 import { cn } from '../../ui/primitives/cn.js';
+import { DARK_PAGE, simulateDarkMode } from './darkMode.js';
 
 /**
  * PREVIEW of the FINAL email — rendered by the server, as it will be stored.
@@ -19,6 +20,9 @@ import { cn } from '../../ui/primitives/cn.js';
  * The HTML is shown in an iframe with an EMPTY sandbox: no script, form,
  * navigation, nor same origin. An email is a complete HTML document: injected
  * into the page it would inherit the application's styles and lie.
+ *
+ * Sun / moon: the email in light mode, or as the apps that repaint emails in
+ * dark mode show it (see `darkMode.js`).
  */
 
 const LEVEL_ICON = { warning: AlertTriangle, info: Info };
@@ -66,16 +70,18 @@ const PREVIEW_SCROLLBAR_CSS = `<style data-preview-scrollbar>${FRAME_SCROLLBAR_C
 const withPreviewScrollbars = (html) =>
   !html ? '' : /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${PREVIEW_SCROLLBAR_CSS}</head>`) : PREVIEW_SCROLLBAR_CSS + html;
 
-/** Sandboxed preview frame, desktop or mobile width. */
+/** Sandboxed preview frame, desktop or mobile width, light or dark. */
 export function EmailPreview({ html, loading = false, error = null, device = 'desktop', onDeviceChange, onRefresh, hint = true }) {
   const { t } = useUi();
   const isMobile = device === 'mobile';
+  const [scheme, setScheme] = useState('light');
+  const dark = scheme === 'dark';
   // `srcDoc`, not a blob URL: nothing to revoke when the HTML changes.
-  const srcDoc = useMemo(() => withPreviewScrollbars(html), [html]);
+  const srcDoc = useMemo(() => withPreviewScrollbars(dark ? simulateDarkMode(html) : html), [html, dark]);
 
   return (
     <div className="eb:flex eb:h-full eb:min-h-0 eb:flex-col">
-      <div className="eb:mb-2 eb:flex eb:shrink-0 eb:items-center eb:justify-between eb:gap-2">
+      <div className="eb:mb-2 eb:flex eb:shrink-0 eb:flex-wrap eb:items-center eb:gap-2">
         {/* The same switch as the editor's toolbar. */}
         <Tabs value={device} onValueChange={(value) => onDeviceChange?.(value)}>
           <TabsList aria-label={t('Device')}>
@@ -89,6 +95,17 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
             </TabsTrigger>
           </TabsList>
         </Tabs>
+        <Tabs value={scheme} onValueChange={setScheme}>
+          <TabsList aria-label={t('Color scheme')}>
+            <TabsTrigger value="light" aria-label={t('Light mode')} title={t('Light mode')}>
+              <Sun />
+            </TabsTrigger>
+            <TabsTrigger value="dark" aria-label={t('Dark mode')} title={t('Dark mode')}>
+              <Moon />
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <span className="eb:flex-1" />
         {onRefresh && (
           <Button variant="outline" size="sm-compact" onClick={onRefresh} disabled={loading}>
             {loading ? <Loader2 className="eb:animate-spin" /> : <RefreshCw />}
@@ -108,27 +125,34 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
           // Narrows and widens like the editor's canvas (width .35s ease).
           <div
             className={cn(
-              'eb:mx-auto eb:max-w-full eb:bg-white eb:transition-[width,box-shadow] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none',
+              'eb:mx-auto eb:max-w-full eb:transition-[width,box-shadow] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none',
               isMobile && 'eb:shadow-sm'
             )}
-            style={{ width: isMobile ? EMAIL_MOBILE_WIDTH : '100%' }}
+            style={{ width: isMobile ? EMAIL_MOBILE_WIDTH : '100%', background: dark ? DARK_PAGE : '#ffffff' }}
             data-device={device}
+            data-scheme={scheme}
           >
             <iframe
               sandbox=""
               srcDoc={srcDoc}
               title={t('Email preview')}
-              className="eb:block eb:w-full eb:border-0 eb:bg-white eb:transition-[height] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none"
-              style={{ height: isMobile ? 760 : 900 }}
+              className="eb:block eb:w-full eb:border-0 eb:transition-[height] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none"
+              style={{ height: isMobile ? 760 : 900, background: dark ? DARK_PAGE : '#ffffff' }}
             />
           </div>
         )}
       </div>
 
-      {hint && (
-        <p className="eb:mt-2 eb:shrink-0 eb:text-[11px] eb:leading-relaxed eb:text-foreground-lighter">
-          {t('Indicative preview — check it with “Send test”.')}
+      {dark ? (
+        <p className="eb:mt-2 eb:shrink-0 eb:text-[11px] eb:leading-relaxed eb:text-foreground-lighter" data-testid="eb-dark-hint">
+          {t('Dark mode as Gmail and Outlook apps show it: light backgrounds turn dark, dark text turns light, images stay as they are.')}
         </p>
+      ) : (
+        hint && (
+          <p className="eb:mt-2 eb:shrink-0 eb:text-[11px] eb:leading-relaxed eb:text-foreground-lighter">
+            {t('Indicative preview — check it with “Send test”.')}
+          </p>
+        )
       )}
     </div>
   );

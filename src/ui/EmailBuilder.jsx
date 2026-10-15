@@ -133,6 +133,8 @@ function Builder({
     () => ({
       uploadImage: (file) => storage.uploadImage(file),
       rewrite: typeof storage.rewrite === 'function' ? (input, options) => storage.rewrite(input, options) : null,
+      suggestSubjects:
+        typeof storage.suggestSubjects === 'function' ? (input, options) => storage.suggestSubjects(input, options) : null,
     }),
     [storage]
   );

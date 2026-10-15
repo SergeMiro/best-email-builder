@@ -16,7 +16,8 @@
  * same check the server runs before compiling and saving.
  *
  * The same model also REWRITES one text of an email (`rewrite`, see
- * rewrite.js): shorter, longer, fixed, another tone, translated.
+ * rewrite.js): shorter, longer, fixed, another tone, translated; and SUGGESTS
+ * three other subject lines (`suggestSubjects`, see subjects.js).
  */
 
 import { DEFAULT_VARIABLES } from '../variables/catalog.js';
@@ -26,12 +27,13 @@ import { applyBrand, cleanBrand } from '../brand/brand.js';
 import { EMAIL_DRAFT_SCHEMA, SYSTEM_PROMPT, buildRepairPrompt, buildUserPrompt } from './prompt.js';
 import { purposeById } from './purposes.js';
 import { createRewriter } from './rewrite.js';
+import { createSubjectSuggester } from './subjects.js';
 
 /**
  * @typedef {{role: 'user'|'assistant', content: string}} ModelMessage
- * @typedef {(request: {system: string, messages: ModelMessage[], schema: object, signal?: AbortSignal, task?: 'generate'|'rewrite'}) => Promise<string>} EmailModel
- *   `task`: a whole email, or one text rewritten (a lighter job: a model may
- *   answer it with less effort).
+ * @typedef {(request: {system: string, messages: ModelMessage[], schema: object, signal?: AbortSignal, task?: 'generate'|'rewrite'|'subjects'}) => Promise<string>} EmailModel
+ *   `task`: a whole email, one text rewritten or subject ideas (lighter jobs:
+ *   a model may answer them with less effort).
  *
  * @typedef {{
  *   purpose?: string|null,
@@ -143,5 +145,9 @@ export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @
     throw new EmailGenerationError('INVALID_OUTPUT', lastProblem);
   }
 
-  return { generate, rewrite: createRewriter({ model, maxAttempts }) };
+  return {
+    generate,
+    rewrite: createRewriter({ model, maxAttempts }),
+    suggestSubjects: createSubjectSuggester({ model, maxAttempts }),
+  };
 }

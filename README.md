@@ -64,13 +64,20 @@ Best Email Builder is the second option done once, properly, and given away:
   *Longer*, *Fix mistakes*, *Friendlier*, *More formal*, *Translate* into 13
   languages, or say what to change in your own words. The text changes in
   place, links and variables kept; Ctrl+Z brings the previous one back.
+- **Three subject lines on demand** — drawn from the words of the email, each
+  from its own angle; a click puts one in the subject, your own stays in the
+  list to come back to.
+- **Your brand in every email** — give your website: the logo, colors and
+  font are read from it (or set by hand), and new emails, templates and
+  blocks start in them.
 - **A gallery of ready-made emails** — newsletter, welcome, promotion, event
   invitation… each one with the sender's footer and the unsubscribe link, so
   nobody starts from a blank page or forgets the legal mentions.
 - **Production features**: undo/redo, desktop/mobile canvas, autosave and local
   drafts, versions, conflict detection between concurrent editors, image
   uploads, server preview with quality checks (missing alt text, missing
-  unsubscribe link, unknown variables, Gmail clipping…), test sends.
+  unsubscribe link, unknown variables, Gmail clipping…) and a dark-mode view
+  (as the Gmail and Outlook apps repaint emails), test sends.
 - **Merge-tag variables your users create themselves** — searchable menu,
   insertion at the caret, in the subject line too, sample values for the
   preview and fallbacks for recipients without a value.
@@ -134,7 +141,7 @@ and each has its own entry point, so one never brings the other's code:
 
 | Block | Import | What it is |
 |---|---|---|
-| A — the library | `import { TemplateLibrary } from 'best-email-builder/library'` | Your templates and the ready-made bases in a searchable list, the selected one's details, its rendered preview (desktop / mobile). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts an editor, and loads neither the editor's engine nor its MJML compiler. |
+| A — the library | `import { TemplateLibrary } from 'best-email-builder/library'` | Your templates and the ready-made bases in a searchable list, the selected one's details, its rendered preview (desktop / mobile, light / dark). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` / `onCreate(start)` — it never mounts an editor, and loads neither the editor's engine nor its MJML compiler. |
 | B — the editor | `import { EmailBuilder } from 'best-email-builder/builder'` | The editor (above). Opens whatever the host hands it; knows nothing of the library. |
 | A + B | `import { EmailStudio } from 'best-email-builder'` | The two wired together: the library, then the editor, then back to the library with the template just saved selected. The editor has no *Templates* button there — the bases are in the library. |
 
@@ -316,7 +323,7 @@ const handler = createEmailBuilderHandler({
     model: claudeEmailModel({ client: new Anthropic() }), // ANTHROPIC_API_KEY
     compile: compileMjml, // MJML's own warnings go back to the model
   }),
-  rateLimits: { generatePerHour: 30, rewritePerHour: 200 }, // per user (defaults)
+  rateLimits: { generatePerHour: 30, rewritePerHour: 200, subjectsPerHour: 100 }, // per user (defaults)
 });
 ```
 
@@ -360,9 +367,26 @@ meanwhile, the user's words win and the answer is dropped.
 - `REWRITE_ACTIONS`, `REWRITE_LANGUAGES` and `REWRITE_SYSTEM_PROMPT` are
   exported.
 
-The live demo has no server: there, *Generate* and *Rewrite with AI* ask for
-the visitor's own Anthropic key, keep it in the browser and call Anthropic
-directly.
+**Suggest subjects.** Under the subject of the email, *Suggest subjects* asks
+for three other subject lines, drawn from the words of the email, each from
+its own angle (clear, curious, personal or timely). They come as a list to
+pick from, with the user's own subject first: a click puts one in the field,
+another click another one, the first row brings the user's subject back.
+*More ideas* asks for three new ones, *Done* closes the list.
+
+- It is `POST {base}/subjects` (`generator.suggestSubjects`), enabled with
+  `createHttpStorage({ generate: true })` too; 100 per user per hour.
+- The subjects are plain lines, different from the current subject and from
+  each other, in the language of the email; a merge tag is allowed only from
+  the server's catalog. Otherwise the model gets one more turn; fewer than
+  three good ones are still shown.
+- `claudeEmailModel` uses `rewriteEffort` for them as well (`task: 'subjects'`).
+  `emailWords(mjml)` (the words a reader sees) and `SUBJECTS_SYSTEM_PROMPT`
+  are exported.
+
+The live demo has no server: there, *Generate*, *Rewrite with AI* and
+*Suggest subjects* ask for the visitor's own Anthropic key, keep it in the
+browser and call Anthropic directly.
 
 ### 5. Your brand (optional)
 
@@ -457,6 +481,7 @@ interface TemplateStorage {
   render?(input): Promise<{ html; warnings; quality }>;   // enables Preview
   generate?(input, { signal }): Promise<{ name; subject; preheader; mjml; warnings }>; // enables Generate
   rewrite?(input, { signal }): Promise<{ text }>;        // enables Rewrite with AI
+  suggestSubjects?(input, { signal }): Promise<{ subjects }>; // enables Suggest subjects
   sendTest?(input): Promise<{ sent; failed; invalid; results }>; // enables Send test
   listVariables?(): Promise<Variable[]>;                 // enable user-created variables
   saveVariable?(variable, { create }): Promise<Variable>;
@@ -564,7 +589,8 @@ touch the rest of your page, whether or not you use Tailwind yourself.
 - Generated emails pass the same MJML validation as saved ones; generation is
   limited per user (30 per hour by default) and needs the `write` permission.
   A rewritten text keeps its links and variables (none added) and passes the
-  same validation; rewrites are limited too (200 per user per hour).
+  same validation; rewrites are limited too (200 per user per hour), and so
+  are subject ideas (100), whose merge tags come from the server's catalog.
 
 ## Development
 

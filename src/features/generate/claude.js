@@ -28,7 +28,7 @@ export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
  * }} options
  *   `effort`: how much the model thinks before writing an email — `low`
  *   answers faster, `high` takes more care. `rewriteEffort`: the same for
- *   one text rewritten, where the user waits with the text selected.
+ *   the light jobs the user waits on — one text rewritten, subject ideas.
  * @returns {import('./generator.js').EmailModel}
  */
 export function claudeEmailModel({
@@ -49,7 +49,7 @@ export function claudeEmailModel({
           max_tokens: maxTokens,
           system,
           messages,
-          output_config: { effort: task === 'rewrite' ? rewriteEffort : effort, format: { type: 'json_schema', schema } },
+          output_config: { effort: task === 'rewrite' || task === 'subjects' ? rewriteEffort : effort, format: { type: 'json_schema', schema } },
         },
         { signal }
       )

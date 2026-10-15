@@ -54,7 +54,7 @@ const TEXT = {
     expand: 'Full screen',
     shrink: 'Exit full screen',
     note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
-    aiNote: '“Generate” writes a whole email and “Rewrite with AI” reworks a selected text, with Claude and your own Anthropic API key: it stays in this browser and goes only to Anthropic.',
+    aiNote: '“Generate” writes a whole email, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with Claude and your own Anthropic API key: it stays in this browser and goes only to Anthropic.',
     aiForget: 'Forget my key',
     ai: {
       keyPrompt: 'Paste your Anthropic API key (sk-ant-…). It stays in this browser and is sent only to Anthropic.',
@@ -89,7 +89,7 @@ const TEXT = {
     expand: 'Plein écran',
     shrink: 'Réduire',
     note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
-    aiNote: '« Générer » écrit un e-mail complet et « Réécrire avec l’IA » retravaille le texte sélectionné, avec Claude et votre propre clé API Anthropic : elle reste dans ce navigateur et n’est envoyée qu’à Anthropic.',
+    aiNote: '« Générer » écrit un e-mail complet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec Claude et votre propre clé API Anthropic : elle reste dans ce navigateur et n’est envoyée qu’à Anthropic.',
     aiForget: 'Oublier ma clé',
     ai: {
       keyPrompt: 'Collez votre clé API Anthropic (sk-ant-…). Elle reste dans ce navigateur et n’est envoyée qu’à Anthropic.',

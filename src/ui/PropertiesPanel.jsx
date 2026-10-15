@@ -11,6 +11,7 @@ import { PropertyField } from './fields.jsx';
 import { useT } from './context.jsx';
 import VariableInsertButton from '../features/variables/VariableInsertButton.jsx';
 import RewriteText from '../features/generate/RewriteText.jsx';
+import SubjectIdeas from '../features/generate/SubjectIdeas.jsx';
 
 /**
  * Properties panel, right of the canvas.
@@ -22,7 +23,8 @@ import RewriteText from '../features/generate/RewriteText.jsx';
  *
  * `actions`: the element action bar (move, duplicate, delete), provided by
  * the host screen. `services.rewrite`: a text or a button also gets
- * "Rewrite with AI". `onDismiss`: the panel is shown in a drawer — its header
+ * "Rewrite with AI"; `services.suggestSubjects`: the subject gets "Suggest
+ * subjects". `onDismiss`: the panel is shown in a drawer — its header
  * button closes the drawer rather than deselecting.
  */
 
@@ -83,7 +85,7 @@ function PanelHeader({ title, onClose, closeLabel = 'Deselect' }) {
 }
 
 /** Nothing selected: the template and the page. */
-function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, variables = null, onDismiss = null }) {
+function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, variables = null, services = null, onDismiss = null }) {
   const t = useT();
   const subjectRef = useRef(null);
   const preheaderRef = useRef(null);
@@ -130,6 +132,15 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
               )}
             </div>
             <Input ref={subjectRef} id="eb-meta-subject" maxLength={250} value={meta.subject} onChange={field('subject')} />
+            {services?.suggestSubjects && (
+              <SubjectIdeas
+                editor={editor}
+                meta={meta}
+                onSubject={(subject) => onMetaChange({ ...meta, subject })}
+                suggest={services.suggestSubjects}
+                variables={variables}
+              />
+            )}
           </div>
           <div className="eb:space-y-1.5">
             <div className="eb:flex eb:h-6 eb:items-center eb:justify-between">
@@ -188,6 +199,7 @@ export default function PropertiesPanel({
           changes={changes}
           showErrors={showErrors}
           variables={variables}
+          services={services}
           onDismiss={onDismiss}
         />
       ) : (

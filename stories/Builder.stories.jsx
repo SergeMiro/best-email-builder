@@ -22,6 +22,10 @@ import { createEmailGenerator } from '../src/features/generate/generator.js';
  *                          the fake model answers `__rewriteAnswers` in turn,
  *                          else the text with "Rewritten:" in front;
  *                          `__rewriteDelay`, `__rewriteFail` as above
+ *   window.__subjectAsks   what "Suggest subjects" asked (subject, text, avoid…);
+ *                          the fake model answers `__subjectAnswers` in turn
+ *                          (an array of subjects each), else three fixed ones;
+ *                          `__subjectDelay`, `__subjectFail` as above
  *   window.__brandImports  the addresses "Get my brand" was asked to read; the
  *                          fake answers `__brandResult` ({brand, notes}) or the
  *                          Acme Rockets brand; `__brandDelay`, `__brandFail` as above
@@ -89,6 +93,14 @@ const fakeGenerator = createEmailGenerator({
       const asked = /<text>\n([\s\S]*)\n<\/text>/.exec(messages[0].content)?.[1] ?? '';
       return JSON.stringify({ text: window.__rewriteAnswers?.length ? window.__rewriteAnswers.shift() : `Rewritten: ${asked}` });
     }
+    if (task === 'subjects') {
+      await wait(window.__subjectDelay ?? 300, signal);
+      if (window.__subjectFail) throw new Error(window.__subjectFail);
+      const subjects = window.__subjectAnswers?.length
+        ? window.__subjectAnswers.shift()
+        : ['Your new password is one click away', 'Locked out? Not for long', '{{contact.firstname}}, reset your password'];
+      return JSON.stringify({ subjects });
+    }
     await wait(window.__generateDelay ?? 300, signal);
     if (window.__generateFail) throw new Error(window.__generateFail);
     return JSON.stringify(FAKE_EMAIL);
@@ -98,6 +110,11 @@ const fakeGenerator = createEmailGenerator({
 function fakeGenerate(input, options) {
   window.__generated = [...(window.__generated || []), input];
   return fakeGenerator.generate(input, options);
+}
+
+function fakeSuggestSubjects(input, options) {
+  window.__subjectAsks = [...(window.__subjectAsks || []), input];
+  return fakeGenerator.suggestSubjects(input, options);
 }
 
 function fakeRewrite(input, options) {
@@ -151,6 +168,7 @@ function Bench() {
         sendTest: fakeSendTest,
         generate: fakeGenerate,
         rewrite: fakeRewrite,
+        suggestSubjects: fakeSuggestSubjects,
         importBrand: fakeImportBrand,
       }),
     []

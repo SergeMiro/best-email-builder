@@ -67,6 +67,23 @@ All notable changes are documented here. The format follows
   `brandedSender`, `isPublicAddress`, `editor.setBrand` and `editor.setMjml`
   (replace the email in one undoable step) are exported. The live demo keeps
   the brand in `localStorage`.
+- **Suggest subjects.** Under the subject, one click gives three other
+  subject lines drawn from the words of the email, each from its own angle.
+  They are a list to pick from, the user's own subject first to come back to;
+  *More ideas* asks for three new ones. Plain lines, distinct, in the email's
+  language, merge tags only from the catalog (one repair turn, fewer than
+  three still shown). Server: `generator.suggestSubjects`, `POST /subjects`
+  (100 per user per hour, `rateLimits.subjectsPerHour`); client:
+  `storage.suggestSubjects`, given by `createHttpStorage({ generate: true })`.
+  `emailWords` and `SUBJECTS_SYSTEM_PROMPT` are exported.
+- **Dark mode in the preview.** A sun / moon switch next to Desktop / Mobile
+  shows the email as the apps that repaint it in dark mode do (Gmail and
+  Outlook apps, Outlook.com): light backgrounds and borders turn dark of the
+  same hue, dark text turns light, brand colors, light text and images stay —
+  a dark logo on a transparent background disappears there as it does in
+  those apps. Simulated on the compiled HTML, without script: the frame stays
+  sandboxed. In the editor's preview and in the template library.
+  `simulateDarkMode(html)` is exported.
 - Drag and drop with pointer events: a line shows where the block lands
   (between two elements of a column, or between two sections — a content block
   then gets a section of its own), the canvas scrolls near its edges, Esc

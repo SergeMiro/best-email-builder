@@ -20,7 +20,9 @@
  *   deleteVariable(key)         → void                         every template)
  *   generate(input, {signal})   → { name, subject, preheader, mjml, warnings }
  *   rewrite(input, {signal})    → { text }
- *                                 (optional: "Generate", an email written by AI)
+ *   suggestSubjects(input, {signal}) → { subjects }
+ *                                 (optional: "Generate", an email written by AI,
+ *                                 "Rewrite with AI", "Suggest subjects")
  *
  * Two implementations: HTTP (talks to `createEmailBuilderHandler` from
  * `best-email-builder/server`, or to any backend with the same routes) and memory
@@ -80,6 +82,7 @@ import { cleanBrand } from '../features/brand/brand.js';
  * @typedef {import('../features/generate/generator.js').GenerateInput} GenerateInput
  * @typedef {import('../features/generate/generator.js').GeneratedEmail} GeneratedEmail
  * @typedef {import('../features/generate/rewrite.js').RewriteInput} RewriteInput
+ * @typedef {import('../features/generate/subjects.js').SubjectsInput} SubjectsInput
  * @typedef {import('../features/brand/brand.js').Brand} Brand
  * @typedef {{brand: Brand, notes: string[]}} BrandImportResult
  *   `notes`: what could not be read (`LOGO_NOT_FOUND`, `LOGO_UNSUPPORTED`,
@@ -104,6 +107,7 @@ import { cleanBrand } from '../features/brand/brand.js';
  *   deleteVariable?: (key: string) => Promise<void>,
  *   generate?: (input: GenerateInput, options?: {signal?: AbortSignal}) => Promise<GeneratedEmail>,
  *   rewrite?: (input: RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
+ *   suggestSubjects?: (input: SubjectsInput, options?: {signal?: AbortSignal}) => Promise<{subjects: string[]}>,
  *   loadBrand?: () => Promise<Brand>,
  *   saveBrand?: (brand: Brand) => Promise<Brand>,
  *   importBrand?: (url: string, options?: {signal?: AbortSignal}) => Promise<BrandImportResult>,
@@ -135,8 +139,8 @@ function withDocument(template) {
 /**
  * Client for the routes of `createEmailBuilderHandler` (`best-email-builder/server`).
  *
- * `generate: true` turns on "Generate" and the AI rewriting of a text: the
- * server must have a `generator` (otherwise it answers 501). Off by default,
+ * `generate: true` turns on "Generate", the AI rewriting of a text and the
+ * subject ideas: the server must have a `generator` (otherwise it answers 501). Off by default,
  * as the buttons would only fail.
  *
  * `brand: true` turns on the Brand button: the server must have a
@@ -207,6 +211,8 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
           generate: async (input, { signal } = {}) =>
             call('/generate', { method: 'POST', body: JSON.stringify(input), signal }),
           rewrite: async (input, { signal } = {}) => call('/rewrite', { method: 'POST', body: JSON.stringify(input), signal }),
+          suggestSubjects: async (input, { signal } = {}) =>
+            call('/subjects', { method: 'POST', body: JSON.stringify(input), signal }),
         }
       : {}),
     ...(brand
@@ -237,7 +243,7 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
  * In-memory storage, same contract. Documents are kept SERIALIZED.
  * `render` and `sendTest` cannot run in a browser (MJML compiles on the
  * server): pass implementations to enable the preview and test buttons;
- * `generate` and `rewrite` likewise for the AI, `importBrand` for reading a
+ * `generate`, `rewrite` and `suggestSubjects` likewise for the AI, `importBrand` for reading a
  * brand from a website. The brand itself is kept in memory (`brand`: the
  * one to start with).
  *
@@ -246,6 +252,7 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
  *   sendTest?: TemplateStorage['sendTest'],
  *   generate?: TemplateStorage['generate'],
  *   rewrite?: TemplateStorage['rewrite'],
+ *   suggestSubjects?: TemplateStorage['suggestSubjects'],
  *   importBrand?: TemplateStorage['importBrand'],
  *   brand?: Brand|null,
  *   assetsPath?: string,
@@ -258,6 +265,7 @@ export function createMemoryStorage({
   sendTest,
   generate,
   rewrite,
+  suggestSubjects,
   importBrand,
   brand = null,
   assetsPath = DEFAULT_ASSETS_PATH,
@@ -432,6 +440,7 @@ export function createMemoryStorage({
     ...(sendTest ? { sendTest } : {}),
     ...(generate ? { generate } : {}),
     ...(rewrite ? { rewrite } : {}),
+    ...(suggestSubjects ? { suggestSubjects } : {}),
     dump: () => ({
       rows: [...rows.values()],
       versions: Object.fromEntries(versions),

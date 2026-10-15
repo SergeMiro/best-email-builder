@@ -52,6 +52,9 @@ export const GENERATION_ERRORS = {
   NOTHING_TO_REWRITE: { status: 400, message: 'There is no text to rewrite.' },
   REWRITE_REFUSED: { status: 422, message: 'The AI declined to rewrite this text.' },
   REWRITE_UNUSABLE: { status: 502, message: 'The rewritten text lost a link or a variable, so nothing was changed. Try again.' },
+  NOTHING_TO_SUGGEST: { status: 400, message: 'Write the email or a subject first: the ideas are drawn from it.' },
+  SUBJECTS_REFUSED: { status: 422, message: 'The AI declined to suggest subjects for this email.' },
+  SUBJECTS_UNUSABLE: { status: 502, message: 'No usable subject came back. Try again.' },
 };
 
 export class EmailGenerationError extends Error {
