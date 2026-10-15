@@ -37,17 +37,21 @@ import { EmailGenerationError } from './draft.js';
  *   free: string|null,
  *   format: AnswerFormat,
  *   tokens: 'max_tokens'|'max_completion_tokens',
+ *   maxTokens: number,
  *   keyless?: boolean,
  *   headers?: Record<string, string>,
+ *   body?: Record<string, unknown>,
  * }} AiProvider
  *   `model`: the default (null: to be given); `keyUrl`: where a user gets a
  *   key; `keyHint`: what a key starts with; `free`: what can be used without
  *   paying, in a few words (null: paid only); `format`: the best answer format
- *   the provider takes; `tokens`: how it names the output limit.
+ *   the provider takes; `tokens`: how it names the output limit;
+ *   `maxTokens`: that limit (an email is about 6 000 tokens, more for a model
+ *   that reasons first); `body`: fields of its own added to each request.
  */
 
-/** @param {Omit<AiProvider, 'tokens'|'format'> & Partial<Pick<AiProvider, 'tokens'|'format'>>} provider @returns {AiProvider} */
-const define = (provider) => Object.freeze({ format: 'json_schema', tokens: 'max_tokens', ...provider });
+/** @param {Omit<AiProvider, 'tokens'|'format'|'maxTokens'> & Partial<Pick<AiProvider, 'tokens'|'format'|'maxTokens'>>} provider @returns {AiProvider} */
+const define = (provider) => Object.freeze({ format: 'json_schema', tokens: 'max_tokens', maxTokens: 16000, ...provider });
 
 /** The providers `providerEmailModel` knows, by id. */
 export const AI_PROVIDERS = Object.freeze({
@@ -55,12 +59,18 @@ export const AI_PROVIDERS = Object.freeze({
     id: 'openrouter',
     name: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
-    // A router across the free models of the day.
+    // A router across the free models of the day — a name that lasts, where
+    // the free models themselves come and go (and an unknown one is a 400).
     model: 'openrouter/free',
     keyUrl: 'https://openrouter.ai/keys',
     keyHint: 'sk-or-',
     free: 'Free models, with a free account',
     headers: { 'X-Title': 'Best Email Builder' },
+    // Most free models reason before they answer: 5 000 to 12 000 tokens
+    // before the email itself, which a limit of 16 000 cut short. Less
+    // reasoning where the model lets it be chosen.
+    maxTokens: 32000,
+    body: { reasoning: { effort: 'low' } },
   }),
   openai: define({
     id: 'openai',
@@ -172,6 +182,35 @@ function responseFormat(format, schema, task) {
 /** A 400 about the answer format: the provider (or that model) does not take it. @param {number} status @param {string} text */
 const formatRefused = (status, text) => (status === 400 || status === 422) && /response_format|json_schema|json_object|structured|schema|grammar/i.test(text);
 
+/** The message of a provider's error answer, else its text. @param {string} text */
+function errorMessage(text) {
+  try {
+    const data = JSON.parse(text);
+    const error = Array.isArray(data) ? data[0]?.error : data?.error;
+    return String(error?.metadata?.raw || error?.message || text);
+  } catch {
+    return text;
+  }
+}
+
+/**
+ * What a refused request means. A 401 is the key; so is a 403, unless the
+ * provider says it is the content (moderation), the money, or the model (one
+ * this key cannot use, a region) — the user's key must not be thrown away for
+ * those. Gemini answers a wrong key with a 400.
+ * @param {number} status @param {string} message
+ * @returns {'KEY_REFUSED'|'REFUSED'|'MODEL_CREDITS'|'MODEL_ERROR'|null} null: not a refusal
+ */
+function refusal(status, message) {
+  if (status === 401) return 'KEY_REFUSED';
+  if (status === 400) return /api[ _-]?key not valid|API_KEY_INVALID|invalid[ _-]api[ _-]key/i.test(message) ? 'KEY_REFUSED' : null;
+  if (status !== 403) return null;
+  if (/flagged|moderation/i.test(message)) return 'REFUSED';
+  if (/credit|limit exceeded|quota/i.test(message)) return 'MODEL_CREDITS';
+  if (/\bmodels?\b|harness|region|country|territory|not available|not allowed to (sample|access|use)/i.test(message)) return 'MODEL_ERROR';
+  return 'KEY_REFUSED';
+}
+
 /** The text of an assistant message (a string, or parts). @param {any} message */
 function textOf(message) {
   const content = message?.content;
@@ -187,18 +226,22 @@ function textOf(message) {
  *   model?: string,
  *   baseUrl?: string,
  *   headers?: Record<string, string>,
+ *   body?: Record<string, unknown>,
  *   maxTokens?: number,
  *   temperature?: number,
  *   fetch?: typeof fetch,
  * }} options
  *   `apiKey`: the key, or a function that gives it at each call (asked to the
  *   user, read from a vault); `model`, `baseUrl`: instead of the provider's;
- *   `maxTokens`: the longest answer (an email is about 6 000).
+ *   `maxTokens`: the longest answer (the provider's by default); `body`:
+ *   fields of your own for each request (for example OpenRouter's fallback
+ *   `models`, or `reasoning`).
  * @returns {import('./generator.js').EmailModel & {provider: AiProvider, model: string}}
  */
 export function providerEmailModel(options = {}) {
-  const { apiKey, maxTokens = 16000, temperature, fetch: fetchImpl } = options;
+  const { apiKey, temperature, fetch: fetchImpl } = options;
   const provider = resolveProvider(options.provider ?? 'openai-compatible');
+  const maxTokens = options.maxTokens ?? provider.maxTokens;
   const model = options.model || provider.model;
   const baseUrl = String(options.baseUrl || provider.baseUrl).replace(/\/+$/, '');
   if (!baseUrl) throw new TypeError(`providerEmailModel: ${provider.name} needs a \`baseUrl\``);
@@ -217,6 +260,8 @@ export function providerEmailModel(options = {}) {
     if (!key && !provider.keyless) throw new EmailGenerationError('KEY_MISSING', `${provider.name}: no key`);
     for (;;) {
       const body = {
+        ...provider.body,
+        ...options.body,
         model,
         messages: [{ role: 'system', content: system + answerInstruction(schema) }, ...messages],
         [provider.tokens]: maxTokens,
@@ -249,7 +294,8 @@ export function providerEmailModel(options = {}) {
           continue;
         }
         const detail = `${provider.name} ${response.status}: ${text.slice(0, 300)}`;
-        if (response.status === 401 || response.status === 403) throw new EmailGenerationError('KEY_REFUSED', detail);
+        const refused = refusal(response.status, errorMessage(text));
+        if (refused) throw new EmailGenerationError(refused, detail);
         if (response.status === 402) throw new EmailGenerationError('MODEL_CREDITS', detail);
         if (response.status === 429 || response.status === 503 || response.status === 529) throw new EmailGenerationError('MODEL_BUSY', detail);
         throw new EmailGenerationError('MODEL_ERROR', detail);
@@ -265,7 +311,8 @@ export function providerEmailModel(options = {}) {
       if (data?.error) {
         const code = Number(data.error.code) || 0;
         const detail = `${provider.name}: ${data.error.message || JSON.stringify(data.error).slice(0, 300)}`;
-        if (code === 401 || code === 403) throw new EmailGenerationError('KEY_REFUSED', detail);
+        const refused = refusal(code, String(data.error.metadata?.raw || data.error.message || ''));
+        if (refused) throw new EmailGenerationError(refused, detail);
         if (code === 429 || code === 503) throw new EmailGenerationError('MODEL_BUSY', detail);
         throw new EmailGenerationError('MODEL_ERROR', detail);
       }

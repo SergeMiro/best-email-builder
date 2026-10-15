@@ -617,6 +617,18 @@ test.describe('Images, preview, test send', () => {
       .toBe(1);
   });
 
+  test('image with no picture yet: saving says it stays out of the email until one is added', async ({ page }) => {
+    await openBuilder(page);
+    await saveNew(page, 'With an image to fill');
+    await page.locator('[data-block-id="image"]').click();
+    await page.keyboard.press('Control+s');
+    await expect(
+      notice(page, 'Saved. 1 image(s) have no picture yet: they are left out of the email until you add one.')
+    ).toBeVisible();
+    // Still in the email being edited, with its frame to fill.
+    await expect.poll(() => mjml(page)).toMatch(/<mj-image\b/);
+  });
+
   test('preview: rendering of the MJML on screen, points to check', async ({ page }) => {
     await openBuilder(page);
     await page.getByRole('button', { name: 'Preview', exact: true }).click();

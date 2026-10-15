@@ -40,7 +40,7 @@ export {
   unknownVariables,
 } from '../features/variables/service.js';
 export { applyServiceLinks, absoluteAssetUrls, isAssetPath, DEFAULT_ASSETS_PATH } from '../renderer/links.js';
-export { prepareMjml } from '../renderer/prepareMjml.js';
+export { prepareMjml, countImagesWithoutPicture } from '../renderer/prepareMjml.js';
 export { validateMjml, assertValidMjml } from '../validation/mjmlValidator.js';
 export { validateProject, assertValidProject } from '../validation/projectValidator.js';
 export { qualityReport, GMAIL_CLIP_BYTES } from '../validation/quality.js';

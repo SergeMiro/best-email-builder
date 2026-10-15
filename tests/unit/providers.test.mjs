@@ -109,8 +109,27 @@ test('the request: chat completions, the key, the schema as structured output an
   assert.ok(body.messages[0].content.includes(JSON.stringify(REQUEST.schema)));
   assert.deepEqual(body.messages.slice(1), REQUEST.messages);
   assert.deepEqual(body.response_format, { type: 'json_schema', json_schema: { name: 'rewrite', strict: true, schema: REQUEST.schema } });
-  assert.equal(body.max_tokens, 16000);
+  // Free models reason first: room for it, and less of it where it can be chosen.
+  assert.equal(body.max_tokens, 32000);
+  assert.deepEqual(body.reasoning, { effort: 'low' });
   assert.equal('temperature' in body, false);
+});
+
+test('fields of your own in each request; the request itself is not theirs to change', async () => {
+  const { fetch, calls } = fakeProvider(reply('{}'));
+  const body = { models: ['a/b:free'], reasoning: { effort: 'medium' }, model: 'x/y', messages: [], max_tokens: 5 };
+  await providerEmailModel({ provider: 'openrouter', apiKey: 'sk-or-x', fetch, body })(REQUEST);
+  const [{ body: sent }] = calls;
+  assert.deepEqual(sent.models, ['a/b:free']);
+  assert.deepEqual(sent.reasoning, { effort: 'medium' });
+  assert.equal(sent.model, 'openrouter/free');
+  assert.equal(sent.max_tokens, 32000);
+  assert.equal(sent.messages[0].role, 'system');
+
+  const groq = fakeProvider(reply('{}'));
+  await providerEmailModel({ provider: 'groq', apiKey: 'gsk_x', fetch: groq.fetch })(REQUEST);
+  assert.equal(groq.calls[0].body.max_tokens, 16000);
+  assert.equal('reasoning' in groq.calls[0].body, false);
 });
 
 test('per provider: its address, its name for the output limit, its answer format; options override', async () => {
@@ -173,6 +192,14 @@ test('the provider’s failures, as the errors the interface explains', async ()
   const cases = [
     [{ status: 401, body: { error: { message: 'Invalid key' } } }, 'KEY_REFUSED'],
     [{ status: 403, body: 'Forbidden' }, 'KEY_REFUSED'],
+    [{ status: 403, body: { error: { message: 'Invalid API key' } } }, 'KEY_REFUSED'],
+    // A 403 about the model, the content or the money: the key stays.
+    [{ status: 403, body: { error: { message: 'This model is only available on agentic harnesses' } } }, 'MODEL_ERROR'],
+    [{ status: 403, body: { error: { message: 'This model is not available in your region' } } }, 'MODEL_ERROR'],
+    [{ status: 403, body: { error: { message: 'Input was flagged by moderation', metadata: { reasons: ['x'] } } } }, 'REFUSED'],
+    [{ status: 403, body: { error: { message: 'Key limit exceeded' } } }, 'MODEL_CREDITS'],
+    // Gemini: a wrong key is a 400.
+    [{ status: 400, body: [{ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }] }, 'KEY_REFUSED'],
     [{ status: 402, body: { error: { message: 'Insufficient credits' } } }, 'MODEL_CREDITS'],
     [{ status: 429, body: { error: { message: 'Rate limited' } } }, 'MODEL_BUSY'],
     [{ status: 503, body: 'Overloaded' }, 'MODEL_BUSY'],
@@ -181,6 +208,7 @@ test('the provider’s failures, as the errors the interface explains', async ()
     // OpenRouter: an upstream failure inside a 200.
     [{ status: 200, body: { error: { code: 429, message: 'Upstream rate limited' } } }, 'MODEL_BUSY'],
     [{ status: 200, body: { error: { code: 401, message: 'User not found' } } }, 'KEY_REFUSED'],
+    [{ status: 200, body: { error: { code: 403, message: 'Provider returned error', metadata: { raw: 'content flagged' } } } }, 'REFUSED'],
     [{ status: 200, body: { error: { code: 502, message: 'Provider returned error' } } }, 'MODEL_ERROR'],
     [reply('{"text":"half', 'length'), 'TRUNCATED'],
     [reply('', 'content_filter'), 'REFUSED'],
@@ -395,6 +423,19 @@ test('askKey: a refused key is forgotten and asked again in the same action; ref
     calls.map((call) => call.headers.Authorization),
     ['Bearer sk-or-old', 'Bearer sk-or-good', 'Bearer sk-or-bad', 'Bearer sk-or-worse']
   );
+});
+
+test('askKey: a 403 about the model, not the key, keeps the key and asks nothing', async (t) => {
+  const storage = memoryStorage();
+  storage.setItem('best-email-builder:ai-key:openrouter', 'sk-or-mine');
+  globalThis.localStorage = storage;
+  t.after(() => delete globalThis.localStorage);
+  const { fetch, calls } = fakeProvider({ status: 403, body: { error: { message: 'This model is only available on agentic harnesses' } } });
+  const ai = createAi({ provider: 'openrouter', askKey: true, fetch });
+  assert.equal(await codeOf(ai.rewrite(REWRITE)), 'MODEL_ERROR');
+  assert.equal(calls.length, 1);
+  assert.equal(ai.key.get(), 'sk-or-mine');
+  assert.deepEqual(ai.key.state(), { asking: false, refused: false, connected: true });
 });
 
 test('askKey without a working localStorage: the key lives as long as the page', async (t) => {

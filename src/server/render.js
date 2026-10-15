@@ -28,14 +28,17 @@ import { compileMjml } from './compileMjml.js';
  * tags that are not in the catalog (typos), which would render empty.
  *
  * @param {{mjml: string, subject?: string|null, preheader?: string|null}} input
- * @param {{t?: Translate, lang?: string, variables?: EmailVariable[]}} [options]
+ * @param {{t?: Translate, lang?: string, variables?: EmailVariable[], preview?: boolean}} [options]
+ *   `preview`: for a person, not an inbox — an image with no picture yet is
+ *   kept (the page draws its frame) instead of left out.
  */
 export async function compileTemplate(
   { mjml, subject = null, preheader = null },
-  { t = identity, lang = 'en', variables = DEFAULT_VARIABLES } = {}
+  { t = identity, lang = 'en', variables = DEFAULT_VARIABLES, preview = false } = {}
 ) {
   assertValidMjml(mjml, { t });
-  const { html, warnings } = await compileMjml(prepareMjml(mjml, { title: subject, preheader, lang }));
+  const prepared = prepareMjml(mjml, { title: subject, preheader, lang, emptyImages: preview ? 'keep' : 'drop' });
+  const { html, warnings } = await compileMjml(prepared);
   const quality = qualityReport({ mjml, html, subject }, { t });
   const unknown = unknownVariables([mjml, subject || '', preheader || ''].join('\n'), variables);
   if (unknown.length) {

@@ -11,6 +11,7 @@ import { createAutosaveScheduler } from '../features/autosave/scheduler.js';
 import { clearLocalDraft, readLocalDraft, saveLocalDraft } from '../features/autosave/localDraft.js';
 import { createHttpStorage } from '../storage/client.js';
 import { messagesOf } from '../i18n/index.js';
+import { countImagesWithoutPicture } from '../renderer/prepareMjml.js';
 import { NoticeArea, UiProvider, useUi } from './context.jsx';
 import { Button } from './primitives/button.jsx';
 import { cn } from './primitives/cn.js';
@@ -317,10 +318,18 @@ function Builder({
         if (!current.id) clearLocalDraft();
         latest.current.onSaved?.(result.template);
         const warnings = result.warnings || [];
+        const withoutPicture = auto ? 0 : countImagesWithoutPicture(mjml);
         if (warnings.length) {
           notify(
             'warning',
             t('Saved, with {count} MJML warning(s): {message}', { count: warnings.length, message: warnings[0].message })
+          );
+        } else if (withoutPicture) {
+          notify(
+            'warning',
+            t('Saved. {count} image(s) have no picture yet: they are left out of the email until you add one.', {
+              count: withoutPicture,
+            })
           );
         } else if (!auto) {
           notify(

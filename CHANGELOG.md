@@ -6,6 +6,28 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- **An image with no picture yet is left out of the email.** `<mj-image>`
+  without `src` (AI drafts leave them for the user, so do the gallery's
+  newsletter and promotion) compiled to `<img src="">` — a broken image in
+  every inbox, a red cross in Outlook. Saving, exporting and sending now leave
+  it out; the canvas and the preview (`/render`) still draw the frame to fill.
+  Saving says how many are left out. `prepareMjml(…, { emptyImages: 'keep' })`
+  keeps them; `countImagesWithoutPicture(mjml)` counts them.
+- **Drafts through `openrouter/free` were cut short.** Most free models
+  reason first — 5 000 to 12 000 tokens before the email — and hit the limit
+  of 16 000 (`TRUNCATED`). OpenRouter now asks for less reasoning
+  (`reasoning: { effort: 'low' }`) and allows 32 000 tokens.
+- **A 403 was always the key.** One about the model (only for some apps, not
+  in this region), the content (moderation) or the money now says so
+  (`MODEL_ERROR`, `REFUSED`, `MODEL_CREDITS`), and `askKey` keeps the user's
+  key. Gemini's wrong key (a 400) is `KEY_REFUSED`.
+
+### Added
+- `providerEmailModel({ body })` and `provider: { body, maxTokens }`: fields
+  of your own in each request (OpenRouter's `models` fallback list, `reasoning`)
+  and a provider's own output limit.
+
 ## [0.5.0] — 2026-10-15
 
 ### Changed — the AI is a module (breaking)

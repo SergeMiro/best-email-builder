@@ -373,8 +373,8 @@ only, the key is in the page's code: `createAi({ provider: 'groq', apiKey })`.
 #### Providers
 
 Every provider here speaks the OpenAI *chat completions* API; nothing to
-install. `provider` is an id below, or `{ id, model, baseUrl, headers }` to
-change the model or reach an endpoint of your own. `AI_PROVIDERS` lists them
+install. `provider` is an id below, or `{ id, model, baseUrl, headers, maxTokens, body }`
+to change the model or reach an endpoint of your own. `AI_PROVIDERS` lists them
 (name, address, default model, where to get a key, what is free).
 
 | `provider` | Default model | Free to start | Key |
@@ -396,6 +396,15 @@ providerEmailModel({ provider: { baseUrl: 'http://localhost:1234/v1', model: 'qw
 
 - Model names change often: the defaults were current at this release —
   pass `model` to be sure of yours.
+- `openrouter/free` costs nothing and is slow: most free models reason before
+  they write, so an email takes two to six minutes, and some days a free
+  model is busy upstream. OpenRouter is asked for less reasoning
+  (`reasoning: { effort: 'low' }`) and given room for it (`maxTokens: 32000`;
+  16 000 elsewhere). For drafts in seconds, use a free tier with a key of its
+  own (Gemini, Groq, Cerebras) or a paid model.
+- `body` adds fields of your own to each request — OpenRouter's fallback list,
+  for one: `providerEmailModel({ provider: 'openrouter', apiKey, body: { models: [...] } })`.
+  It cannot change the model, the messages or the output limit.
 - The answer is asked as structured output (a JSON schema); a model that
   refuses it is asked for a JSON object, then for plain JSON — once, then
   remembered. A model whose structured output breaks the JSON (some do on the
@@ -403,7 +412,9 @@ providerEmailModel({ provider: { baseUrl: 'http://localhost:1234/v1', model: 'qw
 - The provider's failures become errors the interface explains, in its
   language: `KEY_MISSING`, `KEY_REFUSED`, `MODEL_CREDITS`, `MODEL_BUSY`,
   `MODEL_ERROR` (with the provider's own text in `detail`). None is a 401:
-  the key is the AI's, not the user's session.
+  the key is the AI's, not the user's session. A 403 about the model (not
+  available here, in this region) or the content is not `KEY_REFUSED`: with
+  `askKey`, the user's key is not thrown away for it.
 - **Claude**: `claudeEmailModel({ client: new Anthropic() })` with the
   Anthropic SDK (`npm install @anthropic-ai/sdk`) — `claude-opus-5-5` by
   default, `effort: 'medium'`, structured output, streamed so a long email

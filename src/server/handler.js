@@ -280,7 +280,7 @@ export function createEmailBuilderHandler(options) {
       const catalog = await customVariables.catalog();
       const { compiled, warnings, quality } = await compileTemplate(
         { mjml: body?.mjml, subject: body?.subject, preheader: body?.preheader },
-        { t, lang, variables: catalog }
+        { t, lang, variables: catalog, preview: true }
       );
       // Same origin as the application: uploaded images stay relative.
       const values = sampleValues(catalog);

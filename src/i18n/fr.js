@@ -372,6 +372,7 @@ export const fr = {
   "Saved — version {n}.": "Enregistré — version {n}.",
   "Saved at {time}": "Enregistré à {time}",
   "Saved, with {count} MJML warning(s): {message}": "Enregistré, avec {count} avertissement(s) MJML : {message}",
+  "Saved. {count} image(s) have no picture yet: they are left out of the email until you add one.": "Enregistré. {count} image(s) sans visuel pour l’instant : elles restent hors de l’e-mail tant que vous n’en ajoutez pas.",
   "Saving…": "Enregistrement…",
   "script not allowed": "script interdit",
   "Search variables…": "Rechercher une variable…",

@@ -24,7 +24,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import mjmlBrowser from 'mjml-browser';
 import { compileMjml } from '../../src/server/compileMjml.js';
-import { prepareMjml } from '../../src/renderer/prepareMjml.js';
+import { compileTemplate } from '../../src/server/render.js';
+import { countImagesWithoutPicture, prepareMjml } from '../../src/renderer/prepareMjml.js';
 import { validateMjml } from '../../src/validation/mjmlValidator.js';
 import { functionExport } from '../../src/engine/unwrapModule.js';
 import { emails } from '../fixtures/emails.mjs';
@@ -130,4 +131,42 @@ test('what the canvas shows is what is sent: the canvas compiler and the server 
     const body = (html) => /<body[^>]*>([\s\S]*)<\/body>/.exec(html)[1].replace(/\s+/g, ' ').trim();
     assert.equal(body(canvas.html), body(server.html), id);
   }
+});
+
+test('an image with no picture yet is left out, never sent as a broken image (Outlook draws a red cross)', async () => {
+  const mjml = (images) =>
+    `<mjml><mj-body><mj-section><mj-column>${images}<mj-text>Text</mj-text></mj-column></mj-section></mj-body></mjml>`;
+  const empty = [
+    '<mj-image src="" alt="Empty" />',
+    '<mj-image alt="No src" width="200px"/>',
+    '<mj-image src="   " alt="Blank" />',
+    '<mj-image src="" alt="Closed"></mj-image>',
+    "<mj-image src='' alt='Single quotes' />",
+    '<mj-image alt="A > in the alt" src="" />',
+  ];
+  const kept = '<mj-image src="https://example.com/a.png" alt="Kept" />';
+  const source = mjml(empty.join('') + kept);
+  assert.equal(countImagesWithoutPicture(source), empty.length);
+  assert.equal(countImagesWithoutPicture(mjml(kept)), 0);
+
+  const prepared = prepareMjml(source);
+  assert.equal(countImagesWithoutPicture(prepared), 0);
+  assert.equal((prepared.match(/<mj-image\b/g) || []).length, 1);
+  const { html, warnings } = await compileMjml(prepared);
+  assert.deepEqual(warnings, []);
+  const images = html.match(/<img\b[^>]*>/g) || [];
+  assert.equal(images.length, 1);
+  assert.match(images[0], /src="https:\/\/example\.com\/a\.png"/);
+  assert.match(html, />Text</);
+});
+
+test('a preview keeps the image with no picture yet (its frame is drawn), what is sent leaves it out', async () => {
+  const mjml =
+    '<mjml><mj-body><mj-section><mj-column><mj-image src="" alt="To fill" /><mj-text>Text <a href="{{ unsubscribe }}">Unsubscribe</a></mj-text></mj-column></mj-section></mj-body></mjml>';
+  const sent = await compileTemplate({ mjml, subject: 'S' });
+  const preview = await compileTemplate({ mjml, subject: 'S' }, { preview: true });
+  assert.doesNotMatch(sent.compiled, /<img\b/);
+  assert.match(preview.compiled, /<img\b[^>]*alt="To fill"/);
+  // Both say it, so the person fills it.
+  for (const { quality } of [sent, preview]) assert.ok(quality.some((issue) => issue.code === 'IMAGE_NO_SRC'));
 });

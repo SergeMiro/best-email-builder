@@ -68,7 +68,7 @@ export function createDemoStorage() {
     const catalog = mergeVariables(DEFAULT_VARIABLES, await storage.listVariables());
     const { default: mjml2html } = await import('mjml-browser');
     // MJML 5 compiles asynchronously.
-    const result = await mjml2html(prepareMjml(mjml, { title: subject, preheader }), { validationLevel: 'soft' });
+    const result = await mjml2html(prepareMjml(mjml, { title: subject, preheader, emptyImages: 'keep' }), { validationLevel: 'soft' });
     const values = sampleValues(catalog);
     const html = applyServiceLinks(applyVariables(result.html, values, catalog), { unsubscribeUrl: '#' });
     const quality = qualityReport({ mjml, html: result.html, subject });
