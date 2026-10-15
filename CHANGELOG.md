@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-10-15
+
 ### Added
 - **The user chooses the model.** In the Connect dialog, under the key, a
   field opens the provider's list of models in place: the default first,
