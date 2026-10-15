@@ -18,6 +18,13 @@ All notable changes are documented here. The format follows
   reason first — 5 000 to 12 000 tokens before the email — and hit the limit
   of 16 000 (`TRUNCATED`). OpenRouter now asks for less reasoning
   (`reasoning: { effort: 'low' }`) and allows 32 000 tokens.
+- **AI drafts, what free models get wrong, fixed without asking again:** an
+  `<mj-image>` put inside a text (dead HTML there) becomes an image block in
+  its place; attributes MJML reports as illegal (`align` on a column) are
+  removed after compiling; a button whose words do not read on its fill (a
+  text color given, the fill forgotten) gets white or ink words. The prompt
+  shows the greeting's default in three languages: a French email no longer
+  starts with "Hello … there".
 - **A 403 was always the key.** One about the model (only for some apps, not
   in this region), the content (moderation) or the money now says so
   (`MODEL_ERROR`, `REFUSED`, `MODEL_CREDITS`), and `askKey` keeps the user's

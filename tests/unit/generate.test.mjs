@@ -29,6 +29,7 @@ import {
   parseDraft,
   purposeById,
 } from '../../src/ai/server.js';
+import { withoutIllegalAttributes } from '../../src/ai/draft.js';
 import { parseMjml } from '../../src/engine/mjml.js';
 
 const GOOD_MJML =
@@ -185,6 +186,69 @@ test('normalize: the sender logo is kept; unknown variables become placeholders,
   assert.match(out, /<a href="https:\/\/example\.com">see it<\/a>/);
   assert.match(out, /<mj-button href="https:\/\/example\.com"/);
   assert.match(out, /href="\{\{ unsubscribe \}\}"/);
+});
+
+test('normalize: an image put inside a text becomes an image block in its place; other MJML tags in a text are dropped', () => {
+  const mjml =
+    '<mjml><mj-body><mj-section><mj-column>' +
+    '<mj-text color="#2b3038"><mj-image src="https://cdn.example.com/bag.jpg" alt="Coffee beans" width="120"></mj-image>\n  <strong>Beans A</strong> — [price]</mj-text>' +
+    '<mj-text color="#2b3038">Before <mj-image alt="Grinder" /> after<mj-divider></mj-divider></mj-text>' +
+    '<mj-text><mj-image alt="Alone"></mj-image></mj-text>' +
+    '<mj-button href="https://example.com">Go<mj-spacer /></mj-button>' +
+    '</mj-column></mj-section></mj-body></mjml>';
+  const out = normalizeGeneratedMjml(mjml);
+  const column = parseMjml(out).children[0].children[0].children[0];
+  assert.deepEqual(
+    column.children.map((node) => [node.tag, node.attributes.alt || node.content]),
+    [
+      ['mj-image', 'Coffee beans'],
+      ['mj-text', '<strong>Beans A</strong> — [price]'],
+      ['mj-text', 'Before'],
+      ['mj-image', 'Grinder'],
+      ['mj-text', 'after'],
+      ['mj-image', 'Alone'],
+      ['mj-button', 'Go'],
+    ]
+  );
+  assert.equal(column.children[0].attributes.src, '', 'a lifted image is emptied like any other');
+  assert.equal(column.children[0].attributes.width, '120px');
+  assert.equal(column.children[1].attributes.color, '#2b3038');
+  assert.equal(new Set(column.children.map((node) => node.id)).size, column.children.length);
+  assert.ok(validateMjml(out).ok);
+});
+
+test('normalize: a button whose words do not read on its fill gets white or ink words; a readable one is left alone', () => {
+  const mjml =
+    '<mjml><mj-body><mj-section><mj-column>' +
+    '<mj-button href="https://example.com" color="#2977bc">No fill: dark grey</mj-button>' +
+    '<mj-button href="https://example.com" background-color="#fafafa" color="#ffffff">White on white</mj-button>' +
+    '<mj-button href="https://example.com" background-color="#ffffff" color="#2977bc">Readable</mj-button>' +
+    '<mj-button href="https://example.com" background-color="{{brand.color}}" color="#ffffff">Unknown fill</mj-button>' +
+    '</mj-column></mj-section></mj-body></mjml>';
+  const buttons = parseMjml(normalizeGeneratedMjml(mjml)).children[0].children[0].children[0].children;
+  assert.deepEqual(
+    buttons.map((button) => button.attributes.color),
+    ['#ffffff', '#2b3038', '#2977bc', '#ffffff']
+  );
+});
+
+test('illegal attributes MJML reports are removed from every element of that tag, and only those', async () => {
+  const mjml = GOOD_MJML.replaceAll('<mj-column>', '<mj-column align="center" width="100%">');
+  const { warnings } = await compileMjml(mjml);
+  assert.ok(warnings.some((warning) => /align is illegal/.test(warning.message)));
+  const legal = withoutIllegalAttributes(mjml, warnings);
+  assert.doesNotMatch(legal, /<mj-column[^>]*align=/);
+  assert.match(legal, /<mj-column width="100%">/);
+  assert.match(legal, /<mj-text [^>]*align="center"/, 'a legal align elsewhere stays');
+  assert.deepEqual((await compileMjml(legal)).warnings, []);
+  assert.equal(withoutIllegalAttributes(GOOD_MJML, []), null);
+
+  // The generator does it without asking the model again.
+  const { model, calls } = scripted(answer(mjml));
+  const email = await createEmailGenerator({ model, compile: compileMjml }).generate({ purpose: 'sale' });
+  assert.equal(calls.length, 1);
+  assert.deepEqual(email.warnings, []);
+  assert.doesNotMatch(email.mjml, /<mj-column[^>]*align=/);
 });
 
 test('generator: a messy answer comes out valid, compiled and clean in one call', async () => {

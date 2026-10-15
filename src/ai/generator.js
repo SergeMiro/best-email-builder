@@ -22,7 +22,7 @@
 
 import { DEFAULT_VARIABLES } from '../features/variables/catalog.js';
 import { isSafeUrl } from '../validation/urls.js';
-import { EmailGenerationError, normalizeGeneratedMjml, parseDraft, reviewDraft } from './draft.js';
+import { EmailGenerationError, normalizeGeneratedMjml, parseDraft, reviewDraft, withoutIllegalAttributes } from './draft.js';
 import { applyBrand, cleanBrand } from '../features/brand/brand.js';
 import { EMAIL_DRAFT_SCHEMA, SYSTEM_PROMPT, buildRepairPrompt, buildUserPrompt } from './prompt.js';
 import { purposeById } from './purposes.js';
@@ -129,7 +129,12 @@ export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @
         draft.mjml = normalizeGeneratedMjml(draft.mjml, { variables: request.variables, keepImages });
         // The model was told the brand; whatever it chose instead is repainted.
         draft.mjml = applyBrand(draft.mjml, request.brand);
-        const compileWarnings = compile ? (await compile(draft.mjml)).warnings || [] : [];
+        let compileWarnings = compile ? (await compile(draft.mjml)).warnings || [] : [];
+        const legal = withoutIllegalAttributes(draft.mjml, compileWarnings);
+        if (legal && compile) {
+          draft.mjml = legal;
+          compileWarnings = (await compile(draft.mjml)).warnings || [];
+        }
         const { blocking, advice } = reviewDraft(draft, { kind, compileWarnings });
         if (!blocking.length) {
           usable = { ...draft, warnings: advice, attempts: attempt };

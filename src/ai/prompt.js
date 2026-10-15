@@ -78,7 +78,7 @@ Return one JSON object, nothing else: {"name": string, "subject": string, "prehe
 
 # Copy
 - Write the real email for the purpose and the details given: specific, useful, warm and concise. Never lorem ipsum, never meta comments.
-- Personalize with the variables listed in the request, written exactly as {{key}}. A greeting gives the first name a natural default after a pipe, in the email's language, used when the name is unknown: Hello {{contact.firstname|there}},. Use no other {{...}} variable.
+- Personalize with the variables listed in the request, written exactly as {{key}}. A greeting gives the first name a natural default after a pipe, used when the name is unknown; the greeting and its default are in the email's language: Hello {{contact.firstname|there}}, in English, Bonjour {{contact.firstname|à vous}}, in French, Вітаємо, {{contact.firstname|друже}}! in Ukrainian. Use no other {{...}} variable.
 - Information that is not given and not in the variables (an order number, a date, a price, a code, an address) is written as a short placeholder in square brackets that the user will replace: [order number], [date], [20%]. Never invent facts that would be wrong.
 - Links read as what they do ("Reset my password", "See the collection"), never "click here".
 - The footer (last section): the sender's name and postal address (or [Company address]) in 12px #6d7484 text, centered, and the footer line the request asks for. The unsubscribe link is exactly <a href="{{ unsubscribe }}" style="color:#6d7484;text-decoration:underline;">...</a>.

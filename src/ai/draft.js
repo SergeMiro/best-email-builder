@@ -18,6 +18,14 @@
  *   images            every source is emptied, except the sender's logo: a
  *                     stock photo from a third-party service would end up in
  *                     a real send one day;
+ *   MJML in a text    an `<mj-image>` put inside an `mj-text` (dead HTML
+ *                     there: no picture, nothing to fill) becomes an image
+ *                     block next to the text; other `<mj-…>` tags are dropped;
+ *   buttons           words that do not read on the fill (a text color given,
+ *                     the fill forgotten: MJML's is dark grey) become white
+ *                     or ink;
+ *   illegal attributes  those MJML reports (`align` on a column) are removed
+ *                     by the generator after compiling (`withoutIllegalAttributes`);
  *   variables         a `{{tag}}` the catalog does not know becomes a
  *                     `[placeholder]` the user sees and replaces (an https
  *                     example link inside a URL).
@@ -29,10 +37,12 @@
  * on the server and in unit tests.
  */
 
-import { parseMjml, serializeMjml } from '../engine/mjml.js';
-import { createNode } from '../engine/model.js';
+import { parseMjml, parseMjmlFragment, serializeMjml } from '../engine/mjml.js';
+import { createId, createNode } from '../engine/model.js';
 import { LONGHAND_SPACING, SIDES, parseSpacing } from '../core/mjmlAttributes.js';
 import { PALETTE } from '../blocks/shared.js';
+import { MJML_DEFAULTS } from '../core/mjmlDefaults.js';
+import { contrastRatio, parseColor, readableOn } from '../features/brand/brand.js';
 import { validateMjml } from '../validation/mjmlValidator.js';
 
 /**
@@ -174,6 +184,11 @@ function cleanAttributes(node, keepImages) {
     if (unitless && (PIXEL_ATTRIBUTES.has(name) || /^padding-/.test(name))) attributes[name] = `${value.trim()}px`;
   }
   if (node.tag === 'mj-image' && attributes.src !== undefined && !keepImages.has(attributes.src.trim())) attributes.src = '';
+  if (node.tag === 'mj-button') {
+    const fill = attributes['background-color'] ?? MJML_DEFAULTS['mj-button']['background-color'];
+    const words = attributes.color ?? MJML_DEFAULTS['mj-button'].color;
+    if (parseColor(fill) && parseColor(words) && contrastRatio(fill, words) < 3) attributes.color = readableOn(fill);
+  }
   delete attributes['background-url'];
   return attributes;
 }
@@ -200,6 +215,41 @@ function wrapLoose(children, isLoose, wrap) {
   }
   flush();
   return out;
+}
+
+/** An `<mj-image>` (self-closing or not), or any other MJML tag, found in HTML. */
+const MJML_IN_HTML = /<mj-image\b(?:[^>"']|"[^"]*"|'[^']*')*?(?:\/>|>[\s\S]*?<\/mj-image\s*>)|<\/?mj-[a-z-]*\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
+
+/**
+ * A text whose HTML holds MJML: each image becomes a block of its own, in its
+ * place between the parts of the text; other MJML tags are dropped, their
+ * words kept. A part with no words left is dropped.
+ * @param {EmailNode} node @param {Record<string, string>} attributes @param {Set<string>} keepImages
+ * @returns {EmailNode[]}
+ */
+function liftImages(node, attributes, keepImages) {
+  const content = String(node.content);
+  /** @type {EmailNode[]} */
+  const parts = [];
+  let text = '';
+  const flush = () => {
+    if (text.replace(/<[^>]*>|&nbsp;|\s/g, '')) {
+      parts.push({ ...node, id: parts.length ? createId() : node.id, attributes, content: text.trim() });
+    }
+    text = '';
+  };
+  let last = 0;
+  for (const match of content.matchAll(MJML_IN_HTML)) {
+    text += content.slice(last, match.index);
+    last = (match.index ?? 0) + match[0].length;
+    const image = /^<mj-image\b/i.test(match[0]) && parseMjmlFragment(match[0]).find((child) => child.tag === 'mj-image');
+    if (!image) continue;
+    flush();
+    parts.push(...cleanNode(image, keepImages));
+  }
+  text += content.slice(last);
+  flush();
+  return parts;
 }
 
 /**
@@ -235,6 +285,10 @@ function cleanNode(node, keepImages) {
     const wrapped = wrapLoose(sectioned, (child) => CONTENT_TAGS.has(child.tag), (nodes) => whiteSection([column(nodes)]));
     return [{ ...node, attributes: { 'background-color': PALETTE.canvas, ...attributes, width: '600px' }, children: wrapped }];
   }
+  if (typeof node.content === 'string' && /<\/?mj-/i.test(node.content)) {
+    if (node.tag === 'mj-text') return liftImages(node, attributes, keepImages);
+    return [{ ...node, attributes, children, content: node.content.replace(MJML_IN_HTML, '') }];
+  }
   return [{ ...node, attributes, children }];
 }
 
@@ -269,6 +323,32 @@ export function normalizeGeneratedMjml(mjml, { variables = [], keepImages = [] }
   const [root] = cleanNode(tree, new Set(keepImages.filter(Boolean)));
   const known = new Set(['unsubscribe', ...variables.map((variable) => variable.key)]);
   return replaceUnknownVariables(serializeMjml(root), known);
+}
+
+/**
+ * The attributes MJML reports as illegal on a tag (`Attribute align is
+ * illegal` on an `mj-column`) removed from every element of that tag: MJML
+ * ignores them, and their warning would stay with the email.
+ * @param {string} mjml
+ * @param {{message: string, tagName?: string}[]} warnings MJML's, from compiling it
+ * @returns {string|null} null: none to remove
+ */
+export function withoutIllegalAttributes(mjml, warnings) {
+  /** @type {Map<string, Set<string>>} */
+  const illegal = new Map();
+  for (const warning of warnings) {
+    const name = /Attribute ([\w-]+) is illegal/.exec(warning.message)?.[1];
+    const tag = warning.tagName || /\((mj-[\w-]+)\)/.exec(warning.message)?.[1];
+    if (name && tag) illegal.set(tag, new Set([...(illegal.get(tag) || []), name]));
+  }
+  if (!illegal.size) return null;
+  /** @param {EmailNode} node @returns {EmailNode} */
+  const strip = (node) => {
+    const names = illegal.get(node.tag);
+    const attributes = names ? Object.fromEntries(Object.entries(node.attributes).filter(([name]) => !names.has(name))) : node.attributes;
+    return { ...node, attributes, children: node.children.map(strip) };
+  };
+  return serializeMjml(strip(parseMjml(mjml)));
 }
 
 /* ── Review ──────────────────────────────────────────────────────────────── */
