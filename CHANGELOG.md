@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-15
+
 ### Changed — the AI is a module (breaking)
 - Everything AI moved to its own entries: `best-email-builder/ai` (the
   builder's side) and `best-email-builder/ai/server` (the generator, the
