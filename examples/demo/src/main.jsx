@@ -224,11 +224,26 @@ const CODE_SAMPLES = [
   },
   {
     id: 'ai',
-    code: `import { createAi } from 'best-email-builder/ai';
+    code: `import Anthropic from '@anthropic-ai/sdk';
+import { claudeProvider, createAi } from 'best-email-builder/ai';
 
 // Optional: without \`ai\`, no AI button and no AI code.
-// Each user connects their own key, with the provider they choose:
-const ai = createAi({ provider: ['openai', 'mistral', 'gemini', 'openrouter'], askKey: true });
+const claude = claudeProvider({
+  client: (apiKey) =>
+    new Anthropic({ apiKey, dangerouslyAllowBrowser: true }),
+});
+
+// Each user picks a provider and connects their own key:
+const ai = createAi({
+  provider: [
+    'openai',      // ChatGPT
+    claude,        // Anthropic
+    'mistral',
+    'gemini',
+    'openrouter',
+  ],
+  askKey: true,
+});
 
 <EmailStudio storage={storage} ai={ai} />`,
   },

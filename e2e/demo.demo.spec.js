@@ -84,6 +84,13 @@ test('landing: the marquee lists the editors this one can replace', async ({ pag
   await page.keyboard.press('ArrowLeft');
   await expect(page.getByRole('tab', { name: 'Editor only' })).toBeFocused();
   await expect(page.locator('.code pre')).toContainText("from 'best-email-builder/builder'");
+  // The AI sample: the five providers, one per line, nothing cut at the right.
+  await page.getByRole('tab', { name: 'With AI' }).click();
+  await expect(page.locator('.code pre')).toContainText('claudeProvider({');
+  for (const provider of ["'openai',", 'claude,', "'mistral',", "'gemini',", "'openrouter',"]) {
+    await expect(page.locator('.code pre')).toContainText(`    ${provider}`);
+  }
+  expect(await page.locator('.code pre').evaluate((pre) => pre.scrollWidth - pre.clientWidth)).toBe(0);
   const marquee = page.locator('.marquee-list').first();
   await expect(marquee).toContainText('Brevo');
   await expect(marquee).toContainText('Mailchimp');
