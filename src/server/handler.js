@@ -22,6 +22,9 @@
  *   POST   {base}/variables                       write   create a custom variable
  *   PUT    {base}/variables/:key                  write   edit (label, group, sample, fallback)
  *   DELETE {base}/variables/:key                  write   delete
+ *   GET    {base}/brand                           read    the workspace's brand
+ *   PUT    {base}/brand                           write   save it (needs `brandStore`)
+ *   POST   {base}/brand/import                    write   read a brand from a website (needs `brandImporter`)
  *   GET    {assetsPath}:key                       PUBLIC  uploaded image
  *
  * Images are PUBLIC on purpose: mail clients download them without any
@@ -43,6 +46,9 @@ import { compileTemplate, personalize } from './render.js';
 import { MAX_TEST_RECIPIENTS, sendTestEmail } from './sendTest.js';
 import { createTemplateService } from './templates.js';
 import { createVariableService } from './variables.js';
+import { createBrandService } from './brand.js';
+import { BrandImportError } from './brandImport.js';
+import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
 import { EmailGenerationError } from '../features/generate/draft.js';
 
 /**
@@ -63,19 +69,22 @@ import { EmailGenerationError } from '../features/generate/draft.js';
  *   }|null,
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
  *   variableStore?: import('./variables.js').VariableRepository|null,
+ *   brandStore?: import('./brand.js').BrandRepository|null,
+ *   brandImporter?: {import: (url: string, options?: {signal?: AbortSignal}) => Promise<import('./brandImport.js').BrandImport>}|null,
  *   locale?: string,
  *   messages?: Record<string, string>,
  *   lang?: string,
  *   previewUnsubscribeUrl?: string,
  *   maxVersions?: number,
  *   maxTestRecipients?: number,
- *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, generatePerHour?: number, rewritePerHour?: number},
+ *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, generatePerHour?: number, rewritePerHour?: number, brandImportsPerHour?: number},
  *   onError?: (error: unknown, request: Request) => void,
  * }} HandlerOptions
  */
 
 /** Largest JSON body accepted (project 2 MB + MJML 512 KB + metadata). */
 const MAX_JSON_BYTES = 3 * 1024 * 1024;
+
 const HOUR = 60 * 60 * 1000;
 
 const json = (data, status = 200) =>
@@ -118,6 +127,7 @@ export function createEmailBuilderHandler(options) {
     publicUrl = null,
     transport = null,
     generator = null,
+    brandImporter = null,
     locale = 'en',
     messages,
     lang = locale.slice(0, 2),
@@ -139,10 +149,12 @@ export function createEmailBuilderHandler(options) {
   const templates = createTemplateService({ repository: templateRepository, t, lang, maxVersions });
   const assets = createAssetService({ repository: assetRepository, publicPath: assetsPath, t });
   const customVariables = createVariableService({ repository: options.variableStore || null, system: variables, t });
+  const brand = createBrandService({ repository: options.brandStore || null, t });
   const testLimiter = createLimiter(rateLimits.testPerHour ?? 20);
   const uploadLimiter = createLimiter(rateLimits.uploadsPerHour ?? 100);
   const generateLimiter = createLimiter(rateLimits.generatePerHour ?? 30);
   const rewriteLimiter = createLimiter(rateLimits.rewritePerHour ?? 200);
+  const brandImportLimiter = createLimiter(rateLimits.brandImportsPerHour ?? 20);
 
   /** @param {Request} request @param {Action} action */
   async function userFor(request, action) {
@@ -349,7 +361,51 @@ export function createEmailBuilderHandler(options) {
       }
     }
 
+    if (section === 'brand' && !sub) {
+      if (!id && method === 'GET') {
+        await userFor(request, 'read');
+        return json({ data: await brand.get() });
+      }
+      if (!id && method === 'PUT') {
+        const user = await userFor(request, 'write');
+        return json({ data: await brand.save(await readJson(request), user) });
+      }
+      if (id === 'import' && method === 'POST') {
+        const user = await userFor(request, 'write');
+        if (!brandImporter) throw new HttpError(501, t('Reading a brand from a website is not configured'), 'NO_BRAND_IMPORTER');
+        if (!brandImportLimiter(userKey(user))) {
+          throw new HttpError(429, t('Too many websites read — try again later'), 'RATE_LIMITED');
+        }
+        const body = await readJson(request);
+        return json({ data: await importBrand(request, body?.url, user) });
+      }
+    }
+
     throw new HttpError(404, t('Route not found'), 'ROUTE_NOT_FOUND');
+  }
+
+  /**
+   * A website's brand, its logo stored like an upload. Not saved: the user
+   * looks at it first.
+   * @param {Request} request @param {unknown} address @param {User} user
+   */
+  async function importBrand(request, address, user) {
+    let result;
+    try {
+      result = await /** @type {NonNullable<typeof brandImporter>} */ (brandImporter).import(String(address ?? ''), { signal: request.signal });
+    } catch (error) {
+      if (request.signal?.aborted) throw new HttpError(499, t('Cancelled'), 'CANCELLED');
+      if (!(error instanceof BrandImportError)) throw error;
+      const [status, message] = BRAND_IMPORT_ERRORS[error.code] || BRAND_IMPORT_ERRORS.UNREACHABLE;
+      throw new HttpError(status, t(message), `BRAND_${error.code}`);
+    }
+    const found = { ...result.brand };
+    if (result.logo) {
+      const { path } = await assets.upload({ bytes: result.logo.bytes, name: `logo.${result.logo.ext}`, user });
+      found.logoUrl = path;
+      found.logoWidth = result.logo.shownWidth;
+    }
+    return { brand: found, notes: result.notes };
   }
 
   async function handle(request) {

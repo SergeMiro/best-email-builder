@@ -22,6 +22,9 @@ import { createEmailGenerator } from '../src/features/generate/generator.js';
  *                          the fake model answers `__rewriteAnswers` in turn,
  *                          else the text with "Rewritten:" in front;
  *                          `__rewriteDelay`, `__rewriteFail` as above
+ *   window.__brandImports  the addresses "Get my brand" was asked to read; the
+ *                          fake answers `__brandResult` ({brand, notes}) or the
+ *                          Acme Rockets brand; `__brandDelay`, `__brandFail` as above
  *
  * `?lang=fr` in the story URL switches the interface to French.
  */
@@ -102,6 +105,19 @@ function fakeRewrite(input, options) {
   return fakeGenerator.rewrite(input, options);
 }
 
+const ACME = {
+  brand: { name: 'Acme Rockets', primary: '#e91e63', heading: '#1a1a2e', font: 'Georgia, Times, serif', website: 'https://acme.example/' },
+  notes: ['LOGO_NOT_FOUND'],
+};
+
+/** "Get my brand" without a network (the real reading is tested on the server). */
+async function fakeImportBrand(url, { signal } = {}) {
+  window.__brandImports = [...(window.__brandImports || []), url];
+  await wait(window.__brandDelay ?? 300, signal);
+  if (window.__brandFail) throw new Error(window.__brandFail);
+  return window.__brandResult || ACME;
+}
+
 function Session({ storage, templateId, initial, onClose, locale }) {
   const adapter = useMemo(() => createNativeAdapter(), []);
   const editor = useMemo(
@@ -128,7 +144,17 @@ function Session({ storage, templateId, initial, onClose, locale }) {
 
 function Bench() {
   const locale = new URLSearchParams(window.location.search).get('lang') || 'en';
-  const storage = useMemo(() => createMemoryStorage({ render: fakeRender, sendTest: fakeSendTest, generate: fakeGenerate, rewrite: fakeRewrite }), []);
+  const storage = useMemo(
+    () =>
+      createMemoryStorage({
+        render: fakeRender,
+        sendTest: fakeSendTest,
+        generate: fakeGenerate,
+        rewrite: fakeRewrite,
+        importBrand: fakeImportBrand,
+      }),
+    []
+  );
   const [session, setSession] = useState({ key: 0, templateId: null, open: true });
   const [closed, setClosed] = useState(0);
   window.__emailStorage = storage;

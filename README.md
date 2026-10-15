@@ -364,6 +364,60 @@ The live demo has no server: there, *Generate* and *Rewrite with AI* ask for
 the visitor's own Anthropic key, keep it in the browser and call Anthropic
 directly.
 
+### 5. Your brand (optional)
+
+The *Brand* button opens one dialog. Its first field is the company's
+website: *Get my brand* reads its logo, main color, headings color, font and
+name, and fills the fields below. Everything can then be changed by hand
+(upload a logo, pick a color), and a small preview follows every change.
+*Save* keeps the brand for the whole workspace:
+
+- the email being edited is repainted (the box *Also apply to this email* is
+  ticked by default) — one step of the history, Ctrl+Z brings the previous
+  look back;
+- new emails, gallery templates, inserted blocks and AI-generated emails
+  start in the brand: the logo (or the name) at the top, the name in the
+  footer, buttons and banners in the main color, headings in their color.
+
+Emails are repainted by **role**, not by exact color, so any email works —
+a template, a generated one, one built by hand: filled buttons and colored
+banners take the main color, and their text switches to white or dark
+whichever reads; bold headings take the headings color; colored links take
+the main color (or the headings color when the main one is too light to read
+on white); gray footers and body text keep theirs.
+
+```js
+import {
+  createBrandImporter,
+  createMemoryBrandRepository,
+} from 'best-email-builder/server';
+
+const handler = createEmailBuilderHandler({
+  // …
+  brandStore: createMemoryBrandRepository(), // one row: { get(), save(brand) }
+  brandImporter: createBrandImporter(),      // optional: "Get my brand"
+  rateLimits: { brandImportsPerHour: 20 },   // per user (default)
+});
+
+// In the browser:
+const storage = createHttpStorage({ brand: true }); // { brand: { import: false } } without an importer
+```
+
+- Routes: `GET {base}/brand`, `PUT {base}/brand` (write permission),
+  `POST {base}/brand/import` with `{ url }` (write permission). The import
+  saves nothing: the user reviews the result first. A logo found on the site
+  is stored like an upload (PNG, JPEG or GIF; SVG and WebP logos are skipped,
+  since most email apps do not show them — the dialog says so).
+- Without `brandImporter` the dialog has no website field; without
+  `brandStore` there is no *Brand* button.
+- Some websites refuse automated readers (bot protection answers 403): the
+  dialog says so, and the brand is filled in by hand.
+- `applyBrand(mjml, brand)` and `cleanBrand(brand)` are exported for your
+  own pipeline (e.g. rebranding stored templates).
+
+The live demo keeps the brand in `localStorage` and has no website field
+(reading a website needs a server).
+
 ## Component props
 
 | Prop | Default | Description |
@@ -407,6 +461,9 @@ interface TemplateStorage {
   listVariables?(): Promise<Variable[]>;                 // enable user-created variables
   saveVariable?(variable, { create }): Promise<Variable>;
   deleteVariable?(key): Promise<void>;
+  loadBrand?(): Promise<Brand>;                          // enable the Brand button
+  saveBrand?(brand): Promise<Brand>;
+  importBrand?(url, { signal }): Promise<{ brand; notes }>; // enables "Get my brand"
 }
 ```
 
@@ -495,6 +552,15 @@ touch the rest of your page, whether or not you use Tailwind yourself.
   `nosniff` and a sandboxing CSP.
 - Previews are rendered in an iframe with an empty `sandbox`.
 - Test sends are limited (10 addresses, 20 sends per user per hour by default).
+- Reading a brand from a website is a request your server makes to an address
+  a user typed, so it is fenced: http(s) on ports 80 and 443 only, no
+  credentials in the address, and every address the name resolves to must be
+  public — loopback, private networks, link-local and cloud metadata
+  (`169.254.169.254`), carrier-grade NAT, multicast and IPv4 hidden in IPv6
+  (mapped, NAT64, 6to4) are refused, at the lookup itself so a DNS answer
+  cannot slip through. Redirects (4 at most) are checked the same way. Pages,
+  stylesheets and logos have size limits after decompression, the whole
+  reading 8 seconds, and imports are limited per user (20 per hour).
 - Generated emails pass the same MJML validation as saved ones; generation is
   limited per user (30 per hour by default) and needs the `write` permission.
   A rewritten text keeps its links and variables (none added) and passes the

@@ -139,3 +139,29 @@ test('after a first save, switching the language reopens the saved template (no 
   await page.getByRole('button', { name: 'Retour' }).click();
   await expect(page.getByTestId('eb-library-templates')).toContainText('Modèles (1)');
 });
+
+test('brand: set by hand in the demo, kept after a reload, new emails start in it', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en#/editor/new`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByTestId('eb-brand-button').click();
+  const box = page.getByTestId('eb-brand');
+  await expect(box.getByRole('heading', { name: 'Your brand' })).toBeVisible();
+  // Reading a website needs a server: no such field here.
+  await expect(box.getByLabel('Your website')).toHaveCount(0);
+  await box.getByLabel('Company name').fill('Acme Rockets');
+  await box.getByLabel('Main color').fill('#e91e63');
+  await box.getByTestId('eb-brand-save').click();
+  await expect(builder(page).getByText('Brand applied. Ctrl+Z brings back the previous look.')).toBeVisible();
+  await expect(page.frameLocator('.eb-canvas-frame').getByText('Acme Rockets', { exact: true })).toBeVisible();
+
+  await page.reload();
+  // The autosaved draft may be offered first: start over, from the brand alone.
+  const resume = page.getByRole('alertdialog').filter({ hasText: 'Resume the draft?' });
+  const ready = page.locator('[data-testid="email-builder"][data-status="ready"]');
+  await expect(resume.or(ready)).toBeVisible({ timeout: 60_000 });
+  if (await resume.isVisible()) await resume.getByRole('button', { name: 'Start over' }).click();
+  await expect(ready).toBeVisible();
+  // A new email, in the brand kept by the demo.
+  await expect(page.frameLocator('.eb-canvas-frame').getByText('Acme Rockets', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('eb-brand-button').locator('span[aria-hidden="true"]')).toHaveCSS('background-color', 'rgb(233, 30, 99)');
+});

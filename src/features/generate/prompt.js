@@ -123,10 +123,11 @@ function variableLines(variables) {
  *   details?: string,
  *   language?: string,
  *   sender?: PromptSender,
+ *   brand?: {primary?: string, heading?: string, font?: string},
  *   variables?: PromptVariable[],
  * }} input
  */
-export function buildUserPrompt({ purpose = null, details = '', language = 'en', sender = {}, variables = [] }) {
+export function buildUserPrompt({ purpose = null, details = '', language = 'en', sender = {}, brand = {}, variables = [] }) {
   const lines = [];
   if (purpose) {
     lines.push(`Write a "${purpose.label}" email.`, '', `Brief: ${purpose.brief}`);
@@ -146,6 +147,12 @@ export function buildUserPrompt({ purpose = null, details = '', language = 'en',
       ? `- logo: put <mj-image src="${sender.logoUrl}" alt="${sender.name || 'Logo'}" width="140px" align="left"> in the header (this is the one image whose src you fill).`
       : '- logo: none, write the sender name in bold in the header.'
   );
+  const look = [
+    brand.primary && `- main color (buttons, banners, links): ${brand.primary}`,
+    brand.heading && `- headings color: ${brand.heading}`,
+    brand.font && `- font: font-family="${brand.font}" on every text and button`,
+  ].filter(Boolean);
+  if (look.length) lines.push('', 'Brand (use exactly these):', ...look);
   const vars = variableLines(variables);
   if (vars) lines.push('', 'Variables you may use:', vars);
   lines.push('', FOOTER_RULES[purpose?.kind || 'marketing']);

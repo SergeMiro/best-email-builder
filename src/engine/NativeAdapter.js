@@ -715,6 +715,12 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
       replace(parseMjml(mjml || EMPTY_MJML));
     },
 
+    setMjml(mjml) {
+      requireRoot();
+      view?.finishEditing();
+      commit(parseMjml(mjml || EMPTY_MJML), { select: null });
+    },
+
     exportMjml: () => serializeMjml(requireRoot()),
 
     async exportHtml(mjml = null) {

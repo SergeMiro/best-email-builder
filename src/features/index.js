@@ -17,6 +17,7 @@ import { previewFeature } from './preview/index.js';
 import { testEmailFeature } from './test-email/index.js';
 import { templatesFeature } from './templates/index.js';
 import { generateFeature } from './generate/index.js';
+import { brandFeature } from './brand/index.js';
 
 /** @typedef {import('../core/EmailEditor.js').EmailBuilderFeature} EmailBuilderFeature */
 
@@ -24,6 +25,7 @@ import { generateFeature } from './generate/index.js';
 const FEATURES = [
   generateFeature,
   templatesFeature,
+  brandFeature,
   variablesFeature,
   autosaveFeature,
   versionsFeature,

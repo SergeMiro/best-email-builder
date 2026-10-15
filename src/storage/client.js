@@ -35,6 +35,7 @@ import { readDocument } from '../core/document.js';
 import { DEFAULT_ASSETS_PATH } from '../renderer/links.js';
 import { IMAGE_TYPES, imageUploadError } from '../validation/images.js';
 import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables/catalog.js';
+import { cleanBrand } from '../features/brand/brand.js';
 
 /**
  * @typedef {import('../core/document.js').EmailDocument} EmailDocument
@@ -79,6 +80,10 @@ import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables
  * @typedef {import('../features/generate/generator.js').GenerateInput} GenerateInput
  * @typedef {import('../features/generate/generator.js').GeneratedEmail} GeneratedEmail
  * @typedef {import('../features/generate/rewrite.js').RewriteInput} RewriteInput
+ * @typedef {import('../features/brand/brand.js').Brand} Brand
+ * @typedef {{brand: Brand, notes: string[]}} BrandImportResult
+ *   `notes`: what could not be read (`LOGO_NOT_FOUND`, `LOGO_UNSUPPORTED`,
+ *   `LOGO_ICON`, `COLORS_NOT_FOUND`).
  * @typedef {{email: string, ok: boolean, error: string|null}} TestResult
  * @typedef {{sent: number, failed: number, invalid: string[], results: TestResult[]}} SendTestResult
  *
@@ -99,6 +104,9 @@ import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables
  *   deleteVariable?: (key: string) => Promise<void>,
  *   generate?: (input: GenerateInput, options?: {signal?: AbortSignal}) => Promise<GeneratedEmail>,
  *   rewrite?: (input: RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
+ *   loadBrand?: () => Promise<Brand>,
+ *   saveBrand?: (brand: Brand) => Promise<Brand>,
+ *   importBrand?: (url: string, options?: {signal?: AbortSignal}) => Promise<BrandImportResult>,
  * }} TemplateStorage
  */
 
@@ -131,15 +139,20 @@ function withDocument(template) {
  * server must have a `generator` (otherwise it answers 501). Off by default,
  * as the buttons would only fail.
  *
+ * `brand: true` turns on the Brand button: the server must have a
+ * `brandStore`, and a `brandImporter` to read a brand from a website
+ * (`brand: {import: false}` when it has none).
+ *
  * @param {{
  *   baseUrl?: string,
  *   headers?: Record<string, string> | (() => Record<string, string>),
  *   fetch?: typeof fetch,
  *   generate?: boolean,
+ *   brand?: boolean|{import?: boolean},
  * }} [options]
  * @returns {TemplateStorage}
  */
-export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}, fetch: fetchImpl, generate = false } = {}) {
+export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}, fetch: fetchImpl, generate = false, brand = false } = {}) {
   const root = baseUrl.replace(/\/+$/, '');
   const doFetch = fetchImpl || ((input, init) => fetch(input, init));
   const extraHeaders = () => (typeof headers === 'function' ? headers() : headers);
@@ -196,6 +209,18 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
           rewrite: async (input, { signal } = {}) => call('/rewrite', { method: 'POST', body: JSON.stringify(input), signal }),
         }
       : {}),
+    ...(brand
+      ? {
+          loadBrand: async () => call('/brand'),
+          saveBrand: async (value) => call('/brand', { method: 'PUT', body: JSON.stringify(value) }),
+          ...(brand === true || brand.import !== false
+            ? {
+                importBrand: async (url, { signal } = {}) =>
+                  call('/brand/import', { method: 'POST', body: JSON.stringify({ url }), signal }),
+              }
+            : {}),
+        }
+      : {}),
     async uploadImage(file) {
       assertUploadable(file);
       const form = new FormData();
@@ -212,19 +237,32 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
  * In-memory storage, same contract. Documents are kept SERIALIZED.
  * `render` and `sendTest` cannot run in a browser (MJML compiles on the
  * server): pass implementations to enable the preview and test buttons;
- * `generate` and `rewrite` likewise for the AI.
+ * `generate` and `rewrite` likewise for the AI, `importBrand` for reading a
+ * brand from a website. The brand itself is kept in memory (`brand`: the
+ * one to start with).
  *
  * @param {{
  *   render?: TemplateStorage['render'],
  *   sendTest?: TemplateStorage['sendTest'],
  *   generate?: TemplateStorage['generate'],
  *   rewrite?: TemplateStorage['rewrite'],
+ *   importBrand?: TemplateStorage['importBrand'],
+ *   brand?: Brand|null,
  *   assetsPath?: string,
  *   systemVariables?: EmailVariable[],
  * }} [options]  `systemVariables`: keys a custom variable may not take
  * @returns {TemplateStorage & {dump: () => object}}
  */
-export function createMemoryStorage({ render, sendTest, generate, rewrite, assetsPath = DEFAULT_ASSETS_PATH, systemVariables = DEFAULT_VARIABLES } = {}) {
+export function createMemoryStorage({
+  render,
+  sendTest,
+  generate,
+  rewrite,
+  importBrand,
+  brand = null,
+  assetsPath = DEFAULT_ASSETS_PATH,
+  systemVariables = DEFAULT_VARIABLES,
+} = {}) {
   /** @type {Map<string, any>} */
   const rows = new Map();
   /** @type {Map<string, any[]>} */
@@ -233,6 +271,7 @@ export function createMemoryStorage({ render, sendTest, generate, rewrite, asset
   const images = new Map();
   /** @type {Map<string, EmailVariable>} */
   const customVariables = new Map();
+  let savedBrand = cleanBrand(brand);
   let nextId = 1;
   let tick = Date.parse('2026-01-01T00:00:00.000Z');
   const now = () => new Date((tick += 1000)).toISOString();
@@ -381,6 +420,14 @@ export function createMemoryStorage({ render, sendTest, generate, rewrite, asset
     async deleteVariable(key) {
       if (!customVariables.delete(String(key))) throw new StorageError('Variable not found', 404, 'NOT_FOUND');
     },
+    async loadBrand() {
+      return { ...savedBrand };
+    },
+    async saveBrand(value) {
+      savedBrand = cleanBrand(value);
+      return { ...savedBrand };
+    },
+    ...(importBrand ? { importBrand } : {}),
     ...(render ? { render } : {}),
     ...(sendTest ? { sendTest } : {}),
     ...(generate ? { generate } : {}),
@@ -390,6 +437,7 @@ export function createMemoryStorage({ render, sendTest, generate, rewrite, asset
       versions: Object.fromEntries(versions),
       images: [...images.keys()],
       variables: [...customVariables.values()],
+      brand: savedBrand,
     }),
   };
   return storage;

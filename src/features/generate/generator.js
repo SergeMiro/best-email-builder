@@ -22,6 +22,7 @@
 import { DEFAULT_VARIABLES } from '../variables/catalog.js';
 import { isSafeUrl } from '../../validation/urls.js';
 import { EmailGenerationError, normalizeGeneratedMjml, parseDraft, reviewDraft } from './draft.js';
+import { applyBrand, cleanBrand } from '../brand/brand.js';
 import { EMAIL_DRAFT_SCHEMA, SYSTEM_PROMPT, buildRepairPrompt, buildUserPrompt } from './prompt.js';
 import { purposeById } from './purposes.js';
 import { createRewriter } from './rewrite.js';
@@ -37,8 +38,10 @@ import { createRewriter } from './rewrite.js';
  *   details?: string,
  *   language?: string,
  *   sender?: {name?: string, address?: string, logoUrl?: string},
+ *   brand?: {primary?: string, heading?: string, font?: string},
  *   variables?: {key: string, label?: string}[],
  * }} GenerateInput
+ *   `brand`: the colors and font the email is written in (features/brand).
  *
  * @typedef {import('./draft.js').EmailDraft & {warnings: string[], attempts: number}} GeneratedEmail
  */
@@ -51,7 +54,7 @@ const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, 
 
 /**
  * The input as the generator uses it: bounded strings, a known purpose or
- * none, an https logo or none.
+ * none, an https logo or none, the brand's colors and font or none.
  * @param {GenerateInput} input
  */
 export function cleanGenerateInput(input) {
@@ -65,6 +68,7 @@ export function cleanGenerateInput(input) {
     .filter((variable) => variable && /^[A-Za-z][\w.]*$/.test(String(variable.key)))
     .slice(0, MAX_VARIABLES)
     .map((variable) => ({ key: String(variable.key), label: text(variable.label, 80) }));
+  const { primary, heading, font } = cleanBrand(source.brand);
   return {
     purpose,
     details,
@@ -74,6 +78,7 @@ export function cleanGenerateInput(input) {
       address: text(sender.address, 300),
       logoUrl: logoUrl && /^https:\/\//i.test(logoUrl) && isSafeUrl(logoUrl, 'image') ? logoUrl : '',
     },
+    brand: { ...(primary ? { primary } : {}), ...(heading ? { heading } : {}), ...(font ? { font } : {}) },
     variables,
   };
 }
@@ -117,6 +122,8 @@ export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @
       try {
         const draft = parseDraft(answer);
         draft.mjml = normalizeGeneratedMjml(draft.mjml, { variables: request.variables, keepImages });
+        // The model was told the brand; whatever it chose instead is repainted.
+        draft.mjml = applyBrand(draft.mjml, request.brand);
         const compileWarnings = compile ? (await compile(draft.mjml)).warnings || [] : [];
         const { blocking, advice } = reviewDraft(draft, { kind, compileWarnings });
         if (!blocking.length) {

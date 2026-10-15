@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { EmailBuilder, createHttpStorage } from 'best-email-builder';
 import 'best-email-builder/styles.css';
 
-const storage = createHttpStorage({ baseUrl: '/api/email-builder' });
+const storage = createHttpStorage({ baseUrl: '/api/email-builder', brand: true });
 const locale = new URLSearchParams(window.location.search).get('lang') || 'en';
 
 /** A minimal template list around the builder. */

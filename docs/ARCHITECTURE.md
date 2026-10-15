@@ -21,7 +21,7 @@ component knows the model or the canvas: everything goes through the
 | `core/` | `EmailEditor` contract, versioned document envelope (`document.js`), registries, events |
 | `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
-| `features/` | one folder per feature + the `emailBuilderFeatures` registry (generate, variables, autosave, versions, preview, test send) and the starter template |
+| `features/` | one folder per feature + the `emailBuilderFeatures` registry (generate, brand, variables, autosave, versions, preview, test send) and the starter template |
 | `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template library (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |
 | `renderer/` | MJML preparation, service links, uploaded image URLs (shared browser/server) |
@@ -39,7 +39,8 @@ an application can install either screen alone. Each has its own entry —
 `src/library.js` (`best-email-builder/library`) and `src/builder.js`
 (`best-email-builder/builder`) — and `tests/unit/entries.test.mjs` bundles
 both and fails if one reaches the other (or if the library reaches the engine
-or the MJML compiler).
+or the MJML compiler — only the engine's text parser, `model.js` and
+`mjml.js`, which the brand uses to repaint the gallery, is allowed).
 Hence no module under `ui/` imports `src/index.js`: the default editor is
 built in `src/defaultEditor.js`.
 
@@ -132,6 +133,35 @@ element: selecting another one aborts the request. The text sent is the
 stored one (`describe(id).html` for a text block, `content` for a button
 label), so links and variables are compared on the source, not on what the
 canvas shows.
+
+## Brand
+
+`features/brand/` keeps a company's look (name, logo, main color, headings
+color, font) and applies it:
+
+| File | Role |
+|---|---|
+| `brand.js` | colors (parse, contrast, what reads on what), `cleanBrand`, and `applyBrand`: repaints an email by role — filled buttons and colored banners, bold headings, colored links, fonts — and optionally puts the logo or the name in the header and the name in the footer |
+| `extract.js` | what a home page says: `readPage` (name, logo candidates, stylesheets, inline styles, theme color) and `brandFromCss` (custom properties, weights by selector, noise filtered, near colors clustered); `imageSize`, `logoWidthFor` |
+| `messages.js` | why a website could not be read, and the notes about what it did not give |
+| `useBrand.js` | the brand of a storage, read once and shared by the screens using it |
+| `BrandButton.jsx` | the toolbar button and the dialog |
+
+The brand reaches every way an email starts: the starter and the gallery
+(`brandTemplate`, in `EmailBuilder` and `TemplateLibrary`), inserted blocks
+(`editor.setBrand` paints a block's MJML before the adapter gets it), and
+generated emails (the colors and font are in the prompt, and the answer is
+repainted anyway). Applying it to the open email is `editor.setMjml` — one
+commit, so Ctrl+Z is the undo.
+
+Reading a website is the server's job (`server/brandImport.js`), because the
+browser cannot read another site and the server must not read just anything:
+`isPublicAddress` refuses every non-public range (IPv6 forms of IPv4
+included), a custom DNS lookup refuses a name if any of its addresses is
+refused, each redirect is checked again, and downloads are bounded in size
+(after decompression) and time. The page is read as text (no DOM, no script
+run); the logo, if it is a PNG, JPEG or GIF, is stored through the asset
+service like an upload.
 
 ## Variables
 

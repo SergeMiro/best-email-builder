@@ -11,8 +11,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import {
+  createBrandImporter,
   createEmailBuilderHandler,
   createMemoryAssetRepository,
+  createMemoryBrandRepository,
   createMemoryTemplateRepository,
   createMemoryVariableRepository,
   toNodeListener,
@@ -28,6 +30,9 @@ function emailBuilderApi() {
         templates: createMemoryTemplateRepository(),
         assets: createMemoryAssetRepository(),
         variableStore: createMemoryVariableRepository(),
+        brandStore: createMemoryBrandRepository(),
+        // Reads public websites only (private and local addresses are refused).
+        brandImporter: createBrandImporter(),
         // Demo only: everyone is "demo". Plug your session check here.
         authorize: () => ({ id: 'demo', name: 'demo' }),
         publicUrl: 'http://localhost:5174',

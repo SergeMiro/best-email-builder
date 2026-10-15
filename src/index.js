@@ -59,6 +59,7 @@ export { claudeEmailModel, DEFAULT_CLAUDE_MODEL } from './features/generate/clau
 export { EmailGenerationError } from './features/generate/draft.js';
 export { EMAIL_PURPOSES, PURPOSE_CATEGORIES } from './features/generate/purposes.js';
 export { REWRITE_ACTIONS, REWRITE_LANGUAGES } from './features/generate/rewrite.js';
+export { applyBrand, cleanBrand, brandedSender } from './features/brand/brand.js';
 
 /* ── Translations ────────────────────────────────────────────────────────── */
 export { createTranslator, translatorFor, LOCALES } from './i18n/index.js';

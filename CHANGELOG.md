@@ -49,6 +49,24 @@ All notable changes are documented here. The format follows
   `rewriteEffort` (`'low'`); client: `storage.rewrite`, given by
   `createHttpStorage({ generate: true })`. `editor.getElement(id).html` returns
   the stored HTML of a text block.
+- **Your brand.** A *Brand* button opens one dialog: the company's website
+  first (*Get my brand* reads its logo, main color, headings color, font and
+  name), then every field by hand, with a live preview. Saving keeps the
+  brand for the workspace and repaints the email being edited in one step
+  (Ctrl+Z); new emails, gallery templates, inserted blocks and generated
+  emails start in it. Emails are repainted by role (filled buttons and
+  colored banners, bold headings, colored links, fonts; gray footers and body
+  text kept), and the text on a colored background switches to what reads.
+  Server: `brandStore` (`createMemoryBrandRepository`), `brandImporter`
+  (`createBrandImporter`: public http(s) addresses on ports 80/443 only,
+  private, link-local, metadata and IPv4-in-IPv6 addresses refused at the
+  DNS lookup and on every redirect, size and time limits), routes
+  `GET/PUT /brand` and `POST /brand/import` (20 per user per hour,
+  `rateLimits.brandImportsPerHour`); client: `createHttpStorage({ brand: true })`,
+  `storage.loadBrand / saveBrand / importBrand`. `applyBrand`, `cleanBrand`,
+  `brandedSender`, `isPublicAddress`, `editor.setBrand` and `editor.setMjml`
+  (replace the email in one undoable step) are exported. The live demo keeps
+  the brand in `localStorage`.
 - Drag and drop with pointer events: a line shows where the block lands
   (between two elements of a column, or between two sections — a content block
   then gets a section of its own), the canvas scrolls near its edges, Esc

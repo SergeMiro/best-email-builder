@@ -31,9 +31,16 @@ async function graph(entry) {
 test('block A alone: the library entry reaches neither the editor nor its engine', async () => {
   const { inputs, packages } = await graph('src/library.js');
   assert.ok(inputs.includes('src/ui/library/TemplateLibrary.jsx'));
-  // (The bases reuse a few pure MJML helpers of the blocks; the engine and the canvas stay out.)
+  // (The bases reuse a few pure MJML helpers of the blocks, and the brand
+  // repaints them with the engine's text parser — model.js and mjml.js, no
+  // dependency; the rest of the engine and the canvas stay out.)
+  const PURE_PARSER = new Set(['src/engine/model.js', 'src/engine/mjml.js']);
   const editor = inputs.filter(
-    (f) => f === 'src/ui/EmailBuilder.jsx' || f === 'src/defaultEditor.js' || f.startsWith('src/engine/') || f.startsWith('src/core/EmailEditor'),
+    (f) =>
+      f === 'src/ui/EmailBuilder.jsx' ||
+      f === 'src/defaultEditor.js' ||
+      (f.startsWith('src/engine/') && !PURE_PARSER.has(f)) ||
+      f.startsWith('src/core/EmailEditor'),
   );
   assert.deepEqual(editor, []);
   assert.deepEqual([...packages].filter((p) => p.startsWith('mjml')), [], 'no MJML compiler in the bank');

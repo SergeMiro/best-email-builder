@@ -116,3 +116,41 @@ test('the server refuses what the browser should never send', async ({ request }
   });
   expect(svg.status()).toBe(415);
 });
+
+test('brand: the server reads public websites only, keeps the brand, and the email takes it', async ({ page, request }) => {
+  // Never anything but the public web: loopback, cloud metadata, the server itself.
+  for (const [url, code] of [
+    ['127.0.0.1', 'BRAND_PRIVATE_ADDRESS'],
+    ['http://169.254.169.254/latest/meta-data/', 'BRAND_PRIVATE_ADDRESS'],
+    ['http://[::1]/', 'BRAND_PRIVATE_ADDRESS'],
+    ['http://localhost:5174/', 'BRAND_BAD_URL'],
+    ['https://acme.com:8443/', 'BRAND_BAD_URL'],
+  ]) {
+    const response = await request.post('/api/email-builder/brand/import', { data: { url } });
+    expect(response.status(), url).toBe(400);
+    expect((await response.json()).code, url).toBe(code);
+  }
+
+  try {
+    await openNew(page);
+    await page.getByTestId('eb-brand-button').click();
+    const box = page.getByTestId('eb-brand');
+    await box.getByLabel('Your website').fill('127.0.0.1');
+    await box.getByRole('button', { name: 'Get my brand' }).click();
+    await expect(box.getByRole('alert')).toHaveText('This address is not a public website');
+
+    await box.getByLabel('Company name').fill('Acme Rockets');
+    await box.getByLabel('Main color').fill('#e91e63');
+    await box.getByTestId('eb-brand-save').click();
+    await expect(builder(page).getByText('Brand applied. Ctrl+Z brings back the previous look.')).toBeVisible();
+    // The header names the brand instead of the host's sender.
+    await expect(page.frameLocator('.eb-canvas-frame').getByText('Acme Rockets', { exact: true })).toBeVisible();
+
+    // Kept by the server, cleaned.
+    const saved = await (await request.get('/api/email-builder/brand')).json();
+    expect(saved.data).toEqual({ name: 'Acme Rockets', primary: '#e91e63' });
+  } finally {
+    // The dev server is shared by the other tests: back to no brand.
+    await request.put('/api/email-builder/brand', { data: {} });
+  }
+});

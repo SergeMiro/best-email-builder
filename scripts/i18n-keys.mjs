@@ -8,7 +8,7 @@
  * A key is the first argument of a `t('…')` call, or a user-visible field of
  * the block, variable and feature registries (label, description, group,
  * placeholder, option labels), the purposes of "Generate", the rewrite
- * actions and the error messages.
+ * actions, the error messages and the brand messages.
  */
 
 import fs from 'node:fs';
@@ -59,6 +59,9 @@ export async function collectKeys() {
   for (const action of REWRITE_ACTIONS) keys.add(action.label);
   const { GENERATION_ERRORS } = await import(pathToUrl('src/features/generate/draft.js'));
   for (const error of Object.values(GENERATION_ERRORS)) keys.add(error.message);
+  const { BRAND_IMPORT_ERRORS, BRAND_NOTES } = await import(pathToUrl('src/features/brand/messages.js'));
+  for (const [, message] of Object.values(BRAND_IMPORT_ERRORS)) keys.add(message);
+  for (const message of Object.values(BRAND_NOTES)) keys.add(message);
   return [...keys].sort();
 }
 

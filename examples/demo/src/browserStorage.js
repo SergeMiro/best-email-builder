@@ -28,6 +28,7 @@ import { claudeEmailModel } from '../../../src/features/generate/claude.js';
 
 const TEMPLATES_KEY = 'best-email-builder-demo:templates';
 const VARIABLES_KEY = 'best-email-builder-demo:variables';
+const BRAND_KEY = 'best-email-builder-demo:brand';
 const AI_KEY = 'best-email-builder-demo:anthropic-key';
 
 /** The visitor's Anthropic key, '' when none. */
@@ -94,11 +95,11 @@ export function createBrowserAi({ askKey, onKey, messages }) {
   };
 }
 
-const read = (key) => {
+const read = (key, empty = []) => {
   try {
-    return JSON.parse(localStorage.getItem(key) || '[]');
+    return JSON.parse(localStorage.getItem(key) || 'null') ?? empty;
   } catch {
-    return [];
+    return empty;
   }
 };
 
@@ -133,7 +134,9 @@ export function createDemoStorage({ generate, rewrite } = {}) {
     };
   }
 
-  storage = createMemoryStorage({ render, generate, rewrite });
+  // The brand is kept too; reading it from a website needs a server, so the
+  // demo has no "Get my brand" field.
+  storage = createMemoryStorage({ render, generate, rewrite, brand: read(BRAND_KEY, null) });
   const index = new Map(); // memory id → saved entry
 
   const ready = (async () => {
@@ -180,6 +183,15 @@ export function createDemoStorage({ generate, rewrite } = {}) {
     async listVariables() {
       await ready;
       return storage.listVariables();
+    },
+    async saveBrand(brand) {
+      const saved = await storage.saveBrand(brand);
+      try {
+        localStorage.setItem(BRAND_KEY, JSON.stringify(saved));
+      } catch {
+        // Private window: the brand lives for this page only.
+      }
+      return saved;
     },
     async saveVariable(variable, options) {
       const saved = await storage.saveVariable(variable, options);

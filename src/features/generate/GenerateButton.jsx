@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { chipClassName } from './chip.js';
 import { MAX_DETAILS_LENGTH } from './generator.js';
 import { purposesByCategory } from './purposes.js';
+import { brandTemplate, hasBrand } from '../brand/brand.js';
 
 /**
  * GENERATE — toolbar button and dialog: an email written from scratch.
@@ -30,7 +31,7 @@ const fold = (text) =>
     .toLowerCase();
 
 export default function GenerateButton({ context }) {
-  const { editor, ready, storage, isDirty, markDirty, template, setMeta, variables, sender } = context;
+  const { editor, ready, storage, isDirty, markDirty, template, setMeta, variables, sender, brand } = context;
   const { t, locale, notify } = useUi();
   const [open, setOpen] = useState(false);
   const [purpose, setPurpose] = useState(/** @type {string|null} */ (null));
@@ -89,12 +90,15 @@ export default function GenerateButton({ context }) {
           details: details.trim(),
           language: String(locale || 'en').slice(0, 2),
           sender: sender || {},
+          ...(hasBrand(brand) ? { brand: { primary: brand.primary, heading: brand.heading, font: brand.font } } : {}),
           variables: (variables || []).map((variable) => ({ key: variable.key, label: variable.label })),
         },
         { signal: controller.signal }
       );
       if (controller.signal.aborted) return;
-      editor.loadMjml(email.mjml);
+      // The brand's logo where the model wrote the name (an uploaded logo
+      // is not an https address the model may be given).
+      editor.loadMjml(hasBrand(brand) ? brandTemplate(email.mjml, brand, { sender, t }) : email.mjml);
       setMeta((meta) => ({
         ...meta,
         name: meta.name || email.name,

@@ -29,6 +29,7 @@ import { createDocument, readDocument } from './document.js';
 import { LONGHAND_SPACING, toAttributes, toValues } from './mjmlAttributes.js';
 import { MJML_DEFAULTS } from './mjmlDefaults.js';
 import { identity } from '../i18n/index.js';
+import { applyBrandToFragment } from '../features/brand/brand.js';
 
 /**
  * @typedef {import('./constants.js').EmailDevice} EmailDevice
@@ -172,6 +173,7 @@ import { identity } from '../i18n/index.js';
  *   getProject: () => object,
  *   loadProject: (project: object) => void,
  *   loadMjml: (mjml: string) => void,
+ *   setMjml?: (mjml: string) => void,
  *   exportMjml: () => string,
  *   exportHtml: (mjml?: string|null) => Promise<HtmlExport>,
  *   setDevice: (device: EmailDevice) => void,
@@ -234,8 +236,10 @@ import { identity } from '../i18n/index.js';
  *   getDocument: () => EmailDocument,
  *   loadDocument: (document: unknown, options?: {mjml?: string|null}) => void,
  *   loadMjml: (mjml: string) => void,
+ *   setMjml: (mjml: string) => void,
  *   exportMjml: () => string,
  *   exportHtml: (mjml?: string|null) => Promise<HtmlExport>,
+ *   setBrand: (brand: import('../features/brand/brand.js').Brand|null) => void,
  *   setDevice: (device: EmailDevice) => void,
  *   getDevice: () => EmailDevice,
  *   startBlockDrag: (blockId: string, event: Event) => void,
@@ -351,8 +355,20 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
     };
   }
 
+  /** The brand new blocks are painted in (setBrand). */
+  /** @type {import('../features/brand/brand.js').Brand|null} */
+  let brand = null;
+
   /** @param {EmailBlock} block */
-  const resolved = (block) => resolveBlock(block, t);
+  const resolved = (block) => {
+    const result = resolveBlock(block, t);
+    if (!brand) return result;
+    return {
+      ...result,
+      mjml: result.mjml && applyBrandToFragment(result.mjml, brand),
+      sectionMjml: result.sectionMjml && applyBrandToFragment(result.sectionMjml, brand),
+    };
+  };
 
   function startFeatures() {
     if (!features) return;
@@ -548,6 +564,18 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
       requireReady('loadMjml');
       adapter.loadMjml(String(mjml || ''));
       adapter.clearHistory();
+    },
+
+    /** Replaces the whole email as ONE step: Ctrl+Z brings the previous one back. */
+    setMjml(mjml) {
+      requireReady('setMjml');
+      if (adapter.setMjml) adapter.setMjml(String(mjml || ''));
+      else adapter.loadMjml(String(mjml || ''));
+    },
+
+    /** Blocks inserted from now on take the brand's colors and font (null: the builder's own). */
+    setBrand(value) {
+      brand = value && Object.keys(value).length ? { ...value } : null;
     },
 
     exportMjml() {

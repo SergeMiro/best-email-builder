@@ -15,6 +15,8 @@ import {
   X,
 } from 'lucide-react';
 import { TEMPLATE_GALLERY, buildGallery, withPlaceholderImages } from '../../features/templates/gallery.js';
+import { brandTemplate, brandedSender } from '../../features/brand/brand.js';
+import { useBrand } from '../../features/brand/useBrand.js';
 import { EmailPreview } from '../../features/preview/PreviewButton.jsx';
 import { createHttpStorage } from '../../storage/client.js';
 import { NoticeArea, UiProvider, useUi } from '../context.jsx';
@@ -169,9 +171,14 @@ function Library({
 }) {
   const { t, locale, notify, confirm } = useUi();
   const storage = useMemo(() => injectedStorage || createHttpStorage(), [injectedStorage]);
+  const { brand } = useBrand(storage);
   const bases = useMemo(
-    () => buildGallery({ templates: galleryProp ?? TEMPLATE_GALLERY, sender: sender || {}, t }),
-    [galleryProp, sender, t]
+    () =>
+      buildGallery({ templates: galleryProp ?? TEMPLATE_GALLERY, sender: brandedSender(sender, brand), t }).map((base) => ({
+        ...base,
+        mjml: brandTemplate(base.mjml, brand, { sender, t }),
+      })),
+    [galleryProp, sender, brand, t]
   );
   const dateFormat = useMemo(() => new Intl.DateTimeFormat(locale, DATE_FORMAT), [locale]);
   const formatDate = useCallback((at) => (at ? dateFormat.format(new Date(at)) : ''), [dateFormat]);

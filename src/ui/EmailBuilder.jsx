@@ -5,6 +5,8 @@ import { emailBuilderFeatures, isFeatureEnabled } from '../features/index.js';
 import { DEFAULT_VARIABLES, defineVariables, mergeVariables } from '../features/variables/catalog.js';
 import { createStarterMjml } from '../features/templates/starter.js';
 import { TEMPLATE_GALLERY, buildGallery } from '../features/templates/gallery.js';
+import { brandTemplate, brandedSender, hasBrand } from '../features/brand/brand.js';
+import { brandOf, useBrand } from '../features/brand/useBrand.js';
 import { createAutosaveScheduler } from '../features/autosave/scheduler.js';
 import { clearLocalDraft, readLocalDraft, saveLocalDraft } from '../features/autosave/localDraft.js';
 import { createHttpStorage } from '../storage/client.js';
@@ -108,11 +110,25 @@ function Builder({
   useEffect(() => {
     reloadVariables();
   }, [reloadVariables]);
-  const starter = useMemo(() => starterMjml || createStarterMjml({ sender, t }), [starterMjml, sender, t]);
-  const templates = useMemo(
-    () => buildGallery({ templates: galleryProp ?? TEMPLATE_GALLERY, sender: sender || {}, t }),
-    [galleryProp, sender, t]
+  // The brand (if any) over the host's sender: new emails, templates and
+  // blocks take its name, logo, colors and font.
+  const { brand, setBrand } = useBrand(storage);
+  const brandSender = useMemo(() => brandedSender(sender, brand), [sender, brand]);
+  const starter = useMemo(
+    () => brandTemplate(starterMjml || createStarterMjml({ sender: brandSender, t }), brand, { sender, t }),
+    [starterMjml, brandSender, brand, sender, t]
   );
+  const templates = useMemo(
+    () =>
+      buildGallery({ templates: galleryProp ?? TEMPLATE_GALLERY, sender: brandSender, t }).map((template) => ({
+        ...template,
+        mjml: brandTemplate(template.mjml, brand, { sender, t }),
+      })),
+    [galleryProp, brandSender, brand, sender, t]
+  );
+  useEffect(() => {
+    editor.setBrand?.(hasBrand(brand) ? brand : null);
+  }, [editor, brand]);
   const services = useMemo(
     () => ({
       uploadImage: (file) => storage.uploadImage(file),
@@ -166,6 +182,8 @@ function Builder({
     if (booted.current) return;
     booted.current = true;
     (async () => {
+      // A new email starts in the brand's look: it is known first.
+      await brandOf(storage).loaded;
       if (initialTemplateId) {
         try {
           const loaded = await storage.load(initialTemplateId);
@@ -443,7 +461,12 @@ function Builder({
     canManageVariables,
     reloadVariables,
     testRecipients,
-    sender,
+    // What emails are signed with (the brand over the host's sender), and the
+    // host's own sender (the name a branded email may still show).
+    sender: brandSender,
+    hostSender: sender,
+    brand,
+    setBrand,
   };
   const toolbarFeatures = emailBuilderFeatures.list(
     (f) => f.enabled !== false && Boolean(f.toolbar) && (f.isAvailable ? f.isAvailable(featureContext) : true)

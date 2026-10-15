@@ -21,6 +21,9 @@ export { SYSTEM_PROMPT, EMAIL_DRAFT_SCHEMA, buildUserPrompt } from '../features/
 export { REWRITE_ACTIONS, REWRITE_LANGUAGES, REWRITE_SYSTEM_PROMPT, createRewriter, reviewRewrite } from '../features/generate/rewrite.js';
 
 export { createVariableService, createMemoryVariableRepository } from './variables.js';
+export { createBrandService, createMemoryBrandRepository } from './brand.js';
+export { createBrandImporter, isPublicAddress, BrandImportError, BRAND_IMPORT_LIMITS } from './brandImport.js';
+export { applyBrand, cleanBrand } from '../features/brand/brand.js';
 export {
   DEFAULT_VARIABLES,
   defineVariables,
