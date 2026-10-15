@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-10-15
+
 ### Added
 - **The user chooses the provider.** `createAi({ provider: [...], askKey: true })`
   takes a list: the Connect dialog shows the providers as cards (name, model,
