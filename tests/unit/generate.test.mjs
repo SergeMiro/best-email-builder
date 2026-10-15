@@ -9,25 +9,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  compileMjml,
+  createEmailBuilderHandler,
+  createMemoryAssetRepository,
+  createMemoryTemplateRepository,
+  createMemoryVariableRepository,
+  qualityReport,
+  validateMjml,
+} from '../../src/server/index.js';
+import {
   EMAIL_PURPOSES,
   PURPOSE_CATEGORIES,
   SYSTEM_PROMPT,
   buildUserPrompt,
   claudeEmailModel,
   cleanGenerateInput,
-  compileMjml,
-  createEmailBuilderHandler,
   createEmailGenerator,
-  createMemoryAssetRepository,
-  createMemoryTemplateRepository,
-  createMemoryVariableRepository,
   normalizeGeneratedMjml,
   parseDraft,
   purposeById,
-  qualityReport,
-  validateMjml,
-} from '../../src/server/index.js';
-import { createHttpStorage, createMemoryStorage } from '../../src/storage/client.js';
+} from '../../src/ai/server.js';
 import { parseMjml } from '../../src/engine/mjml.js';
 
 const GOOD_MJML =
@@ -118,6 +119,19 @@ test('parseDraft: JSON in fences or prose, bare MJML, plain one-line texts; anyt
   assert.equal(parseDraft(GOOD_MJML).mjml, GOOD_MJML);
   assert.throws(() => parseDraft('Sorry, I cannot.'), (error) => error.code === 'INVALID_ANSWER');
   assert.throws(() => parseDraft('{"subject": "no mjml"}'), (error) => error.code === 'INVALID_ANSWER');
+});
+
+test('parseDraft: markup a model escaped twice is decoded once more; real quotes are left alone', () => {
+  // Seen from a free model: the MJML still JSON-escaped once the answer is read.
+  const twice = JSON.stringify(GOOD_MJML).slice(1, -1);
+  assert.match(twice, /=\\"/);
+  assert.equal(parseDraft(answer(twice)).mjml, GOOD_MJML);
+  // Quotes only, a raw line break inside (not a JSON string body).
+  const quotesOnly = '<mjml><mj-body width=\\"600px\\">\n<mj-section><mj-column><mj-text>Hi</mj-text></mj-column></mj-section></mj-body></mjml>';
+  assert.equal(parseDraft(answer(quotesOnly)).mjml, '<mjml><mj-body width="600px">\n<mj-section><mj-column><mj-text>Hi</mj-text></mj-column></mj-section></mj-body></mjml>');
+  // A text that quotes a backslash among real attributes stays as written.
+  const real = '<mjml><mj-body width="600px"><mj-section><mj-column><mj-text>Use a=\\"b\\" here</mj-text></mj-column></mj-section></mj-body></mjml>';
+  assert.equal(parseDraft(answer(real)).mjml, real);
 });
 
 test('normalize: longhand padding, content put in columns and sections, hero and wrapper flattened', () => {
@@ -326,25 +340,4 @@ test('route POST /generate: 501 without generator, the server catalog as variabl
   const empty = await postEmpty({});
   assert.equal(empty.status, 400);
   assert.match((await empty.json()).error, /Choisissez/);
-});
-
-test('storages: HTTP generate only when asked for, memory generate when given', async () => {
-  assert.equal(createHttpStorage().generate, undefined);
-  const seen = [];
-  const storage = createHttpStorage({
-    generate: true,
-    fetch: async (url, init) => {
-      seen.push({ url, init });
-      return new Response(JSON.stringify({ data: { mjml: GOOD_MJML } }), { status: 200 });
-    },
-  });
-  const signal = new AbortController().signal;
-  const email = await storage.generate({ purpose: 'sale' }, { signal });
-  assert.equal(email.mjml, GOOD_MJML);
-  assert.equal(seen[0].url, '/api/email-builder/generate');
-  assert.equal(seen[0].init.method, 'POST');
-  assert.equal(seen[0].init.signal, signal);
-  assert.equal(createMemoryStorage().generate, undefined);
-  const generate = async () => ({ mjml: GOOD_MJML });
-  assert.equal(createMemoryStorage({ generate }).generate, generate);
 });

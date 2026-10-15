@@ -2,14 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pencil, Plus, Search } from 'lucide-react';
 import { useT } from '../../ui/context.jsx';
 import { cn } from '../../ui/primitives/cn.js';
+import { SEARCH_KEYS, SearchKeyHint, useSearchShortcut } from '../../ui/primitives/searchShortcut.jsx';
 import { tokenOf } from './catalog.js';
 
 /**
  * List of variables with a search field — shared by the toolbar menu and the
  * buttons next to the subject and preview text fields.
  *
- * Keyboard: type to filter, ↑/↓ to move, Enter to insert. A search with no
- * result offers to create the variable under that name.
+ * Keyboard: type to filter, ↑/↓ to move, Enter to insert, Ctrl+K (⌘K) back
+ * to the search. A search with no result offers to create the variable under
+ * that name.
  *
  * @param {{
  *   variables: import('./catalog.js').EmailVariable[],
@@ -24,6 +26,8 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listRef = useRef(null);
+  const searchRef = useRef(/** @type {HTMLInputElement|null} */ (null));
+  useSearchShortcut(searchRef);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -65,14 +69,17 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
       <div className="eb:relative eb:border-b eb:border-border eb:p-2">
         <Search className="eb:pointer-events-none eb:absolute eb:top-1/2 eb:left-4 eb:size-3.5 eb:-translate-y-1/2 eb:text-foreground-muted" />
         <input
+          ref={searchRef}
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={t('Search variables…')}
           aria-label={t('Search variables…')}
-          className="eb:h-8 eb:w-full eb:rounded-md eb:bg-surface-75 eb:pr-2 eb:pl-7 eb:text-[13px] eb:text-foreground eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:ring-2 eb:focus-visible:ring-ring/40"
+          aria-keyshortcuts={SEARCH_KEYS}
+          className="eb:h-8 eb:w-full eb:rounded-md eb:bg-surface-75 eb:pr-14 eb:pl-7 eb:text-[13px] eb:text-foreground eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:ring-2 eb:focus-visible:ring-ring/40"
         />
+        <SearchKeyHint className="eb:absolute eb:top-1/2 eb:right-4 eb:-translate-y-1/2" />
       </div>
       <div ref={listRef} role="listbox" aria-label={t('Variables')} className="eb:min-h-0 eb:flex-1 eb:overflow-y-auto eb:p-1">
         {ordered.length === 0 && (

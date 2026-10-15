@@ -3,6 +3,10 @@
  * best-email-builder/server — rendering, storage rules and HTTP routes (Node >= 20).
  *
  * Never import this entry from browser code: it compiles MJML with `mjml`.
+ *
+ * The AI (`createEmailGenerator`, `claudeEmailModel`…) is a module of its
+ * own: `best-email-builder/ai/server`. The handler takes what it makes as
+ * `generator`; without it, the AI routes answer 501.
  */
 
 export { createEmailBuilderHandler } from './handler.js';
@@ -13,13 +17,6 @@ export { createAssetService, createMemoryAssetRepository, inspectAsset } from '.
 export { compileMjml } from './compileMjml.js';
 export { compileTemplate, personalize, renderEmail, htmlToText } from './render.js';
 export { sendTestEmail, MAX_TEST_RECIPIENTS } from './sendTest.js';
-export { createEmailGenerator, cleanGenerateInput, MAX_DETAILS_LENGTH } from '../features/generate/generator.js';
-export { claudeEmailModel, DEFAULT_CLAUDE_MODEL } from '../features/generate/claude.js';
-export { EmailGenerationError, GENERATION_ERRORS, normalizeGeneratedMjml, parseDraft, reviewDraft } from '../features/generate/draft.js';
-export { EMAIL_PURPOSES, PURPOSE_CATEGORIES, purposeById, purposesByCategory } from '../features/generate/purposes.js';
-export { SYSTEM_PROMPT, EMAIL_DRAFT_SCHEMA, buildUserPrompt } from '../features/generate/prompt.js';
-export { REWRITE_ACTIONS, REWRITE_LANGUAGES, REWRITE_SYSTEM_PROMPT, createRewriter, reviewRewrite } from '../features/generate/rewrite.js';
-export { SUBJECTS_SYSTEM_PROMPT, createSubjectSuggester, emailWords, reviewSubjects } from '../features/generate/subjects.js';
 export { simulateDarkMode } from '../features/preview/darkMode.js';
 
 export { createVariableService, createMemoryVariableRepository } from './variables.js';
@@ -49,4 +46,4 @@ export { validateProject, assertValidProject } from '../validation/projectValida
 export { qualityReport, GMAIL_CLIP_BYTES } from '../validation/quality.js';
 export { readDocument, createDocument, serializeDocument, EmailDocumentError } from '../core/document.js';
 export { EMAIL_BUILDER_VERSION, EMAIL_DOCUMENT_SCHEMA_VERSION } from '../core/constants.js';
-export { createTranslator, translatorFor, LOCALES } from '../i18n/index.js';
+export { createTranslator, translatorFor, messagesOf, LOCALES } from '../i18n/index.js';

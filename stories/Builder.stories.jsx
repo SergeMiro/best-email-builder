@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { createEmailEditor, emailBlocks, emailBuilderFeatures, EmailBuilder, createMemoryStorage } from '../src/index.js';
 import { createNativeAdapter } from '../src/engine/NativeAdapter.js';
 import { translatorFor } from '../src/i18n/index.js';
-import { createEmailGenerator } from '../src/features/generate/generator.js';
+import { createAi } from '../src/ai/createAi.js';
+import { createEmailGenerator } from '../src/ai/generator.js';
 
 /**
  * The complete builder screen, without network or session (memory storage).
@@ -25,12 +26,17 @@ import { createEmailGenerator } from '../src/features/generate/generator.js';
  *   window.__subjectAsks   what "Suggest subjects" asked (subject, text, avoid…);
  *                          the fake model answers `__subjectAnswers` in turn
  *                          (an array of subjects each), else three fixed ones;
- *                          `__subjectDelay`, `__subjectFail` as above
+ *                          `__subjectDelay`, `__subjectFail` as above;
+ *                          `__subjectLate` answers even after a cancel;
+ *                          `__subjectAborted` is set when a request is cancelled
  *   window.__brandImports  the addresses "Get my brand" was asked to read; the
  *                          fake answers `__brandResult` ({brand, notes}) or the
  *                          Acme Rockets brand; `__brandDelay`, `__brandFail` as above
  *
- * `?lang=fr` in the story URL switches the interface to French.
+ * `?lang=fr` in the story URL switches the interface to French. The AI module
+ * (`createAi`) is given by default; `?ai=off` opens the builder without it, as
+ * an application that does not install it, and `?ai=rewrite` with only
+ * "Rewrite with AI" (`createAi({ rewrite })`).
  */
 export default {
   title: 'Builder',
@@ -94,7 +100,8 @@ const fakeGenerator = createEmailGenerator({
       return JSON.stringify({ text: window.__rewriteAnswers?.length ? window.__rewriteAnswers.shift() : `Rewritten: ${asked}` });
     }
     if (task === 'subjects') {
-      await wait(window.__subjectDelay ?? 300, signal);
+      // `__subjectLate`: a model that settles after it was cancelled.
+      await wait(window.__subjectDelay ?? 300, window.__subjectLate ? undefined : signal);
       if (window.__subjectFail) throw new Error(window.__subjectFail);
       const subjects = window.__subjectAnswers?.length
         ? window.__subjectAnswers.shift()
@@ -114,6 +121,7 @@ function fakeGenerate(input, options) {
 
 function fakeSuggestSubjects(input, options) {
   window.__subjectAsks = [...(window.__subjectAsks || []), input];
+  options?.signal?.addEventListener('abort', () => (window.__subjectAborted = true));
   return fakeGenerator.suggestSubjects(input, options);
 }
 
@@ -135,7 +143,14 @@ async function fakeImportBrand(url, { signal } = {}) {
   return window.__brandResult || ACME;
 }
 
-function Session({ storage, templateId, initial, onClose, locale }) {
+/** The AI module of the bench, from `?ai=`: all of it (the fake model), only the rewriting, or none. */
+function benchAi(mode) {
+  if (mode === 'off') return null;
+  if (mode === 'rewrite') return createAi({ rewrite: fakeRewrite });
+  return createAi({ generate: fakeGenerate, rewrite: fakeRewrite, suggestSubjects: fakeSuggestSubjects });
+}
+
+function Session({ storage, templateId, initial, onClose, locale, ai }) {
   const adapter = useMemo(() => createNativeAdapter(), []);
   const editor = useMemo(
     () => createEmailEditor({ adapter, blocks: emailBlocks, features: emailBuilderFeatures, t: translatorFor(locale) }),
@@ -154,23 +169,19 @@ function Session({ storage, templateId, initial, onClose, locale }) {
       initialMeta={initial?.meta}
       onClose={onClose}
       locale={locale}
+      ai={ai}
       sender={{ name: 'Example Inc.', address: '1 Main Street, Springfield' }}
     />
   );
 }
 
 function Bench() {
-  const locale = new URLSearchParams(window.location.search).get('lang') || 'en';
+  const params = new URLSearchParams(window.location.search);
+  const locale = params.get('lang') || 'en';
+  const aiMode = params.get('ai');
+  const ai = useMemo(() => benchAi(aiMode), [aiMode]);
   const storage = useMemo(
-    () =>
-      createMemoryStorage({
-        render: fakeRender,
-        sendTest: fakeSendTest,
-        generate: fakeGenerate,
-        rewrite: fakeRewrite,
-        suggestSubjects: fakeSuggestSubjects,
-        importBrand: fakeImportBrand,
-      }),
+    () => createMemoryStorage({ render: fakeRender, sendTest: fakeSendTest, importBrand: fakeImportBrand }),
     []
   );
   const [session, setSession] = useState({ key: 0, templateId: null, open: true });
@@ -188,6 +199,7 @@ function Bench() {
           templateId={session.templateId}
           initial={session.initial}
           locale={locale}
+          ai={ai}
           onClose={() => {
             setClosed((n) => n + 1);
             setSession((s) => ({ ...s, open: false }));

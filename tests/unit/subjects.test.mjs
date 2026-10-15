@@ -8,16 +8,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  claudeEmailModel,
   createEmailBuilderHandler,
-  createEmailGenerator,
   createMemoryAssetRepository,
   createMemoryTemplateRepository,
+} from '../../src/server/index.js';
+import {
+  claudeEmailModel,
+  createEmailGenerator,
   emailWords,
   reviewSubjects,
-} from '../../src/server/index.js';
-import { buildSubjectsPrompt, cleanSubjectsInput, parseSubjects } from '../../src/features/generate/subjects.js';
-import { createHttpStorage, createMemoryStorage } from '../../src/storage/client.js';
+} from '../../src/ai/server.js';
+import { buildSubjectsPrompt, cleanSubjectsInput, parseSubjects } from '../../src/ai/subjects.js';
 
 const EMAIL =
   '<mjml><mj-head><mj-title>Hidden</mj-title><mj-style>.x{color:red}</mj-style></mj-head><mj-body><mj-section><mj-column>' +
@@ -62,7 +63,11 @@ test('buildSubjectsPrompt: the inbox, the ideas to avoid, the merge tags, the wo
   assert.ok(prompt.endsWith('<email>\nOur sale\n</email>'));
   assert.doesNotMatch(prompt, /no words yet/);
   // No words yet: the interface language says which language to write in.
-  assert.match(buildSubjectsPrompt(cleanSubjectsInput({ subject: 'Soldes', language: 'fr' })), /no words yet: write in French/);
+  // No words yet: the subject's language, the interface's when the subject does not tell.
+  assert.match(
+    buildSubjectsPrompt(cleanSubjectsInput({ subject: 'Soldes', language: 'FR' })),
+    /no words yet: write in the language of its subject \(French if the subject does not tell\)/
+  );
 });
 
 test('parseSubjects: the JSON field, fenced; else one per line, list marks and quotes removed', () => {
@@ -84,7 +89,7 @@ test('reviewSubjects: repeats and unknown merge tags are left out and explained'
   assert.deepEqual(usable, ['A']);
   assert.equal(problems.length, 4);
   assert.match(problems.join('\n'), /\{\{coupon\}\}, which is not in the list/);
-  assert.deepEqual(reviewSubjects(['A'], request).problems, ['Give exactly 3 subjects.']);
+  assert.deepEqual(reviewSubjects(['A'], request).problems, ['Give exactly 3 subjects, in the JSON field "subjects".']);
 });
 
 test('suggester: one call when fine (task "subjects"); one repair turn; fewer than three still shown; refusal', async () => {
@@ -161,21 +166,153 @@ test('route POST /subjects: 501 without a suggester, the server catalog, rate li
   assert.equal((await post({ text: 'Hi' })).status, 429);
 });
 
-test('storages: HTTP suggestSubjects with generate, memory when given', async () => {
-  assert.equal(createHttpStorage().suggestSubjects, undefined);
-  const seen = [];
-  const storage = createHttpStorage({
-    generate: true,
-    fetch: async (url, init) => {
-      seen.push({ url, init });
-      return new Response(JSON.stringify({ data: { subjects: ['A', 'B', 'C'] } }), { status: 200 });
+test('parseSubjects: what a model answers instead — an introduction, a wrong key, pretty JSON, things that are not strings', () => {
+  // An introduction before the list is not a subject.
+  assert.deepEqual(parseSubjects('Sure! Here are three subject lines for your email:\n1. Spring is here\n2. New season\n3. Fresh picks'), [
+    'Spring is here',
+    'New season',
+    'Fresh picks',
+  ]);
+  // JSON with another key, pretty-printed or not: nothing (the model is asked again), never its punctuation.
+  assert.deepEqual(parseSubjects('{\n  "subject_lines": [\n    "A",\n    "B"\n  ]\n}'), []);
+  assert.deepEqual(parseSubjects('{"subjects": "A, B, C"}'), []);
+  assert.deepEqual(parseSubjects('{"subjects": [ "A",'), [], 'cut JSON');
+  // Only strings: no "[object Object]", no "2".
+  assert.deepEqual(parseSubjects('{"subjects":[{"t":1},2,null,"Real one"]}'), ['Real one']);
+  // Lines with no words, or JSON punctuation, are not subjects.
+  assert.deepEqual(parseSubjects('---\n["A",\n42\nGood one'), ['Good one']);
+  // The capital letter: after ¿ or «, never inside a merge tag, in the email's language.
+  assert.deepEqual(parseSubjects('{"subjects":["¿listo para el verano?","« soldes » ici","{{contact.firstname}}, hi","istanbul calling"]}', 'tr'), [
+    '¿Listo para el verano?',
+    '« Soldes » ici',
+    '{{contact.firstname}}, hi',
+    'İstanbul calling',
+  ]);
+});
+
+test('a subject keeps its own quotes, apostrophes and signs; only one pair around the whole line goes', () => {
+  const subject = (text) => cleanSubjectsInput({ subject: text }).subject;
+  assert.equal(subject('Our new book "Spring"'), 'Our new book "Spring"');
+  assert.equal(subject('« Soldes » : -20 %'), '« Soldes » : -20 %');
+  assert.equal(subject("'Tis the season"), "'Tis the season");
+  assert.equal(subject('Save when a < b and c > d'), 'Save when a < b and c > d');
+  assert.equal(subject('Q&A <live> "today"'), 'Q&A <live> "today"', 'a word in angle brackets is not a tag');
+  assert.equal(subject('<b>Spring</b> news'), 'Spring news');
+  assert.equal(subject('"Spring news"'), 'Spring news');
+  assert.equal(subject('«Spring news»'), 'Spring news');
+  assert.equal(subject('"Spring" and "Summer"'), '"Spring" and "Summer"', 'two quoted words are not one wrapped line');
+});
+
+test('emailWords: entities decoded once, hex and named ones too; an impossible one stays as written', () => {
+  const words = (html) => emailWords(`<mjml><mj-body><mj-text>${html}</mj-text></mj-body></mjml>`);
+  assert.equal(words('It&rsquo;s &eacute;t&eacute; &#x2019; &#8364; &euro;'), 'It’s été ’ € €');
+  assert.equal(words('&amp;#65; &amp;amp;'), '&#65; &amp;', 'decoded once, not twice');
+  assert.equal(words('&#99999999; &#xD800; &unknown;'), '&#99999999; &#xD800; &unknown;');
+});
+
+test('reviewSubjects: capitals the email does not have, two "!", too long, the preview text, merge tags of other tools', () => {
+  const request = cleanSubjectsInput({ subject: 'Spring news', preheader: 'Up to 30% off', text: 'Our IKEA partner sale' });
+  const { usable, problems } = reviewSubjects(
+    [
+      'HUGE sale today',
+      'Hurry!! Last days',
+      'x'.repeat(91),
+      'up to 30% off',
+      'Hi *|FNAME|*',
+      'Hi %FIRSTNAME%',
+      'Hi {contact.firstname}',
+      'Our IKEA picks',
+      '{{contact.firstname}}, your spring',
+      'Save 30% this week!',
+    ],
+    request
+  );
+  assert.deepEqual(usable, ['Our IKEA picks', '{{contact.firstname}}, your spring', 'Save 30% this week!']);
+  assert.equal(problems.length, 0, 'three good ones: no repair turn');
+  const flagged = reviewSubjects(['HUGE sale today', 'Hurry!! Last days', 'x'.repeat(91), 'up to 30% off', 'Hi *|FNAME|*', 'Hi {contact.firstname}'], request).problems;
+  assert.match(flagged.join('\n'), /HUGE in capitals/);
+  assert.match(flagged.join('\n'), /more than one "!"/);
+  assert.match(flagged.join('\n'), /91 characters long/);
+  assert.match(flagged.join('\n'), /repeats the current subject, the preview text/);
+  assert.match(flagged.join('\n'), /writes \*\|FNAME\|\*: merge tags are written \{\{key\}\}/);
+  assert.match(flagged.join('\n'), /writes \{contact\.firstname\}/);
+  // A percent sign in words is not a merge tag.
+  assert.deepEqual(reviewSubjects(['20% off, 30% on Sunday', 'B', 'C'], request).usable, ['20% off, 30% on Sunday', 'B', 'C']);
+});
+
+test('suggester: an abort between attempts stops; a model error goes through; a worse second answer keeps the first', async () => {
+  const controller = new AbortController();
+  let calls = 0;
+  const aborting = createEmailGenerator({
+    model: async () => {
+      calls += 1;
+      controller.abort();
+      return JSON.stringify({ subjects: ['Only one'] });
     },
   });
-  const signal = new AbortController().signal;
-  assert.deepEqual(await storage.suggestSubjects({ text: 'Hi' }, { signal }), { subjects: ['A', 'B', 'C'] });
-  assert.equal(seen[0].url, '/api/email-builder/subjects');
-  assert.equal(seen[0].init.signal, signal);
-  assert.equal(createMemoryStorage().suggestSubjects, undefined);
-  const suggestSubjects = async () => ({ subjects: ['A'] });
-  assert.equal(createMemoryStorage({ suggestSubjects }).suggestSubjects, suggestSubjects);
+  await assert.rejects(aborting.suggestSubjects({ text: 'Hi' }, { signal: controller.signal }), { name: 'AbortError' });
+  assert.equal(calls, 1, 'no second call after the abort');
+
+  const down = createEmailGenerator({ model: async () => Promise.reject(Object.assign(new Error('socket hang up'), { status: 503 })) });
+  await assert.rejects(down.suggestSubjects({ text: 'Hi' }), (error) => error.message === 'socket hang up' && error.status === 503);
+
+  const worse = fakeModel([['A', 'B'], ['C']]);
+  assert.deepEqual(await createEmailGenerator({ model: worse.model }).suggestSubjects({ text: 'Hi' }), { subjects: ['A', 'B'], attempts: 2 });
+  // The repair turn says what was wrong, and the model's own answer is in the conversation.
+  assert.equal(worse.requests[1].messages[1].role, 'assistant');
+  assert.match(worse.requests[1].messages[2].content, /Give exactly 3 subjects/);
+});
+
+test('route POST /subjects: cancelled → 499, bad JSON → 400, the server language when the browser sends none or a wrong one, link variables never offered', async () => {
+  const seen = [];
+  const handler = createEmailBuilderHandler({
+    templates: createMemoryTemplateRepository(),
+    assets: createMemoryAssetRepository(),
+    authorize: () => ({ id: 1 }),
+    onError: () => {},
+    lang: 'de',
+    variables: [{ key: 'offer.url', label: 'Offer link', kind: 'link' }, { key: 'offer.code', label: 'Code' }],
+    generator: {
+      suggestSubjects: async (input, { signal } = {}) => {
+        seen.push(input);
+        if (input.text === 'slow') {
+          await new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))));
+        }
+        return createEmailGenerator({
+          model: async ({ messages }) => {
+            seen.push(messages[0].content);
+            return JSON.stringify({ subjects: ['A', 'B', 'C'] });
+          },
+        }).suggestSubjects(input);
+      },
+    },
+  });
+  const post = (body, init = {}) =>
+    handler(
+      new Request('https://app.example.com/api/email-builder/subjects', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: typeof body === 'string' ? body : JSON.stringify(body),
+        ...init,
+      })
+    );
+  assert.equal((await post('{not json')).status, 400);
+
+  assert.equal((await post({ subject: 'Frühling' })).status, 200);
+  assert.equal(seen[0].language, 'de', 'no language sent: the server’s');
+  assert.equal((await post({ subject: 'Frühling', language: 'fr!!' })).status, 200);
+  assert.equal(seen.at(-2).language, 'de', 'a wrong one: the server’s');
+  assert.equal((await post({ subject: 'Spring', language: 'en' })).status, 200);
+  assert.equal(seen.at(-2).language, 'en');
+  const prompt = seen.at(-1);
+  assert.match(prompt, /\{\{offer\.code\}\} \(Code\)/);
+  assert.doesNotMatch(prompt, /offer\.url|unsubscribe/, 'link variables are not subject material');
+
+  const controller = new AbortController();
+  const pending = post({ text: 'slow' }, { signal: controller.signal });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  controller.abort();
+  const cancelled = await pending;
+  assert.equal(cancelled.status, 499);
+  assert.equal((await cancelled.json()).code, 'CANCELLED');
 });

@@ -16,14 +16,12 @@ import { variablesFeature } from './variables/index.js';
 import { previewFeature } from './preview/index.js';
 import { testEmailFeature } from './test-email/index.js';
 import { templatesFeature } from './templates/index.js';
-import { generateFeature } from './generate/index.js';
 import { brandFeature } from './brand/index.js';
 
 /** @typedef {import('../core/EmailEditor.js').EmailBuilderFeature} EmailBuilderFeature */
 
 /** @type {EmailBuilderFeature[]} */
 const FEATURES = [
-  generateFeature,
   templatesFeature,
   brandFeature,
   variablesFeature,

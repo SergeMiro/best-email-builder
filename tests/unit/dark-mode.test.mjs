@@ -81,3 +81,108 @@ test('simulateDarkMode on a compiled email: the page darkens, the text lightens,
   // White text on the button is still white.
   assert.match(dark, /color:#ffffff/i);
 });
+
+/** The colors `simulateDarkMode` gave the first element matching `selector`-ish text: its style attribute. */
+const styleOf = (html, marker) => new RegExp(`<[^>]*${marker}[^>]*>`).exec(html)?.[0] ?? '';
+const colorIn = (tag, property) => new RegExp(`(?:^|[;"\\s])${property}\\s*:\\s*([^;"]+)`).exec(tag)?.[1]?.trim();
+const ratio = (a, b) => {
+  const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+  return (x + 0.05) / (y + 0.05);
+};
+
+test('text is decided against the background it sits on: dark text on a mid-tone button or banner stays readable', () => {
+  for (const [background, text] of [
+    ['#ff9800', '#1a1a1a'],
+    ['#4caf50', '#000000'],
+    ['#00bcd4', '#000000'],
+    ['#aaaaaa', '#000000'],
+    ['#ffd400', '#222222'],
+  ]) {
+    // On the element itself (an MJML button's link carries both)…
+    const own = simulateDarkMode(`<a data-x style="background:${background};color:${text}">Go</a>`);
+    const tag = styleOf(own, 'data-x');
+    const [bg, fg] = [colorIn(tag, 'background'), colorIn(tag, 'color')];
+    assert.ok(ratio(bg, fg) >= 4.5, `${text} on ${background}: ${fg} on ${bg} (${ratio(bg, fg).toFixed(2)})`);
+    // …and on an ancestor (a section's color, the text's own in a nested block).
+    const nested = simulateDarkMode(
+      `<table bgcolor="${background}"><tr><td><div><p data-y style="color:${text}">Hi</p></div></td></tr></table>`
+    );
+    const behind = /bgcolor="([^"]+)"/.exec(nested)[1];
+    const front = colorIn(styleOf(nested, 'data-y'), 'color');
+    assert.ok(ratio(behind, front) >= 4.5, `${text} under ${background}: ${front} on ${behind}`);
+  }
+  // Dark text on what turned dark still turns light; light text on a dark brand color stays.
+  const page = simulateDarkMode('<table bgcolor="#ffffff"><tr><td style="color:#2B3038">Hi</td></tr></table>');
+  assert.ok(lum(colorIn(styleOf(page, 'td'), 'color')) > 0.7, 'uppercase hex read too');
+  assert.match(simulateDarkMode('<a style="background:#212e5a;color:#ffffff">Go</a>'), /color:#ffffff/);
+  // A sibling does not inherit the background of the cell before it (implied end tags too).
+  const cells = simulateDarkMode('<table><tr><td bgcolor="#ff9800"><p>A<td><p data-z style="color:#000000">B</table>');
+  assert.ok(lum(colorIn(styleOf(cells, 'data-z'), 'color')) > 0.7, 'the second cell sits on the dark page');
+});
+
+test('lines: a light border darkens, a dark divider on the dark page turns light', async () => {
+  assert.equal(darkColor('#eeeeee', 'line'), darkColor('#eeeeee', 'surface'));
+  assert.ok(lum(darkColor('#000000', 'line')) > 0.7);
+  assert.equal(darkColor('#000000', 'line', '#ff9800'), '#000000', 'a dark line on a light enough surface stays');
+  const { html } = await compileMjml('<mjml><mj-body><mj-section background-color="#ffffff"><mj-column><mj-divider /></mj-column></mj-section></mj-body></mjml>');
+  assert.match(html, /border-top:\s*solid 4px #000000/);
+  const dark = simulateDarkMode(html);
+  const divider = /border-top:\s*solid 4px (#[0-9a-f]{6})/.exec(dark)?.[1];
+  assert.ok(divider && ratio(divider, DARK_PAGE) > 4.5, `divider ${divider}`);
+});
+
+test('legacy attributes: <font color>, <body text>, bgcolor without # or with spaces', () => {
+  const dark = simulateDarkMode(
+    '<body text="#000" link="#000080"><font color="#000000">Hi</font><table bgcolor="FFFFFF"><tr><td bgcolor=" #ffffff ">x</td><td bgcolor=#fff>y</td></tr></table></body>'
+  );
+  assert.doesNotMatch(dark, /color="#000000"|text="#000"|link="#000080"/);
+  assert.ok(lum(/<font color="([^"]+)"/.exec(dark)[1]) > 0.7);
+  assert.ok(lum(/text="([^"]+)"/.exec(dark)[1]) > 0.7);
+  assert.equal(dark.match(new RegExp(`bgcolor="${DARK_PAGE}"`, 'g'))?.length, 2);
+  assert.match(dark, new RegExp(`bgcolor=${DARK_PAGE}>`), 'an unquoted value stays unquoted');
+  // An alpha color in an unquoted attribute gets no space that would cut it.
+  assert.match(simulateDarkMode('<td bgcolor=#ffffff80>x</td>'), /bgcolor=rgba\(\d+,\d+,\d+,0\.5\)>/);
+  // Not a color: as it is.
+  assert.equal(simulateDarkMode('<td bgcolor="brand">x</td>').replace(/<style data-eb-dark>.*?<\/style>/, ''), '<td bgcolor="brand">x</td>');
+});
+
+test('css: hsl(), !important, url(data:…) and named colors in words', () => {
+  assert.ok(lum(darkCss('color:hsl(220, 20%, 15%)').split(':')[1]) > 0.7);
+  assert.equal(darkCss('background-color:hsla(0, 0%, 100%, 1)'), `background-color:${DARK_PAGE}`);
+  assert.equal(darkCss('color:#000 !important'), 'color:#e8e8e8 !important');
+  const data = 'background:url(data:image/png;base64,iVBORw0KGgo=) no-repeat';
+  assert.equal(darkCss(data), data);
+  assert.equal(darkCss('font-family:"Black Han Sans", sans-serif'), 'font-family:"Black Han Sans", sans-serif');
+});
+
+test('where the apps’ sheet goes: in the real <head>, else after <html> or the doctype; comments left alone', () => {
+  const doctype = simulateDarkMode('<!doctype html><body style="color:#000">x</body>');
+  assert.ok(doctype.startsWith('<!doctype html><style data-eb-dark>'), 'never before the doctype (quirks mode)');
+  const html = simulateDarkMode('<html lang="en"><body>x</body></html>');
+  assert.ok(html.startsWith('<html lang="en"><style data-eb-dark>'));
+  const commented = simulateDarkMode('<!-- <head> --><html><head><title>t</title></head><body>x</body></html>');
+  assert.ok(commented.startsWith('<!-- <head> --><html><head><style data-eb-dark>'), commented.slice(0, 80));
+  const mso = '<!--[if mso]><table bgcolor="#ffffff" style="color:#000"><tr><td><![endif]-->';
+  assert.ok(simulateDarkMode(`<html><head></head><body>${mso}</body></html>`).includes(mso));
+});
+
+test('safety: only colors change — same tags, same attributes, no quote added, one sheet — on every gallery template', async () => {
+  const { buildGallery } = await import('../../src/features/templates/gallery.js');
+  const tags = (html) => [...html.matchAll(/<(\/?[a-z][\w:-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/gi)].map((m) => [m[1].toLowerCase(), [...m[2].matchAll(/\s([^\s=/>"']+)\s*=/g)].map((a) => a[1]).join(' ')].join(' '));
+  const quotes = (html) => (html.match(/["']/g) || []).length;
+  const gallery = buildGallery({ sender: { name: 'Example Inc.', address: '1 Main Street' } });
+  assert.ok(gallery.length >= 5);
+  for (const template of gallery) {
+    const { html } = await compileMjml(template.mjml);
+    const dark = simulateDarkMode(html);
+    const sheet = /<style data-eb-dark>[^<]*<\/style>/.exec(dark)[0];
+    assert.equal(dark.split('data-eb-dark').length, 2, template.id);
+    const without = dark.replace(sheet, '');
+    assert.deepEqual(tags(without), tags(html), template.id);
+    assert.equal(quotes(without), quotes(html), template.id);
+    assert.ok(without.length > html.length * 0.95 && without.length < html.length * 1.05, template.id);
+    // The words the reader reads are the same.
+    const words = (s) => s.replace(/<style[\s\S]*?<\/style>|<[^>]*>/gi, ' ').replace(/\s+/g, ' ');
+    assert.equal(words(without), words(html), template.id);
+  }
+});

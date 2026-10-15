@@ -6,7 +6,8 @@
  * wrong in a way that can be fixed without asking it again is fixed here:
  *
  *   the answer        JSON found inside code fences or prose; a bare MJML
- *                     document is accepted too;
+ *                     document is accepted too; markup escaped twice
+ *                     (`width=\\"600px\\"`, some models do it) is decoded once more;
  *   padding="..."     rewritten as the four longhand attributes the panel and
  *                     the canvas read (see core/mjmlAttributes);
  *   structure         content outside a column is put in one, a column outside
@@ -28,14 +29,14 @@
  * on the server and in unit tests.
  */
 
-import { parseMjml, serializeMjml } from '../../engine/mjml.js';
-import { createNode } from '../../engine/model.js';
-import { LONGHAND_SPACING, SIDES, parseSpacing } from '../../core/mjmlAttributes.js';
-import { PALETTE } from '../../blocks/shared.js';
-import { validateMjml } from '../../validation/mjmlValidator.js';
+import { parseMjml, serializeMjml } from '../engine/mjml.js';
+import { createNode } from '../engine/model.js';
+import { LONGHAND_SPACING, SIDES, parseSpacing } from '../core/mjmlAttributes.js';
+import { PALETTE } from '../blocks/shared.js';
+import { validateMjml } from '../validation/mjmlValidator.js';
 
 /**
- * @typedef {import('../../engine/model.js').EmailNode} EmailNode
+ * @typedef {import('../engine/model.js').EmailNode} EmailNode
  * @typedef {{name: string, subject: string, preheader: string, mjml: string}} EmailDraft
  */
 
@@ -55,6 +56,12 @@ export const GENERATION_ERRORS = {
   NOTHING_TO_SUGGEST: { status: 400, message: 'Write the email or a subject first: the ideas are drawn from it.' },
   SUBJECTS_REFUSED: { status: 422, message: 'The AI declined to suggest subjects for this email.' },
   SUBJECTS_UNUSABLE: { status: 502, message: 'No usable subject came back. Try again.' },
+  // The provider's side (providers.js). Never 401 to the browser: the key is the AI's, not the user's session.
+  KEY_MISSING: { status: 502, message: 'Connect an AI provider first: it needs a key.' },
+  KEY_REFUSED: { status: 502, message: 'The AI provider refused the key. Check it, or use another one.' },
+  MODEL_CREDITS: { status: 502, message: 'The AI provider account has no credits left.' },
+  MODEL_BUSY: { status: 503, message: 'The AI is busy right now. Try again in a minute.' },
+  MODEL_ERROR: { status: 502, message: 'The AI provider could not answer. Try again.' },
 };
 
 export class EmailGenerationError extends Error {
@@ -90,6 +97,22 @@ function plainLine(value, max) {
  * @param {string} text
  * @returns {EmailDraft}
  */
+/**
+ * Markup a model escaped twice — `<mj-text align=\\"center\\">` once the JSON
+ * is read — decoded once more. Markup with real quotes is left as it is.
+ * @param {string} markup
+ */
+export function unescapedTwice(markup) {
+  if (!/=\\"/.test(markup) || /=\s*"/.test(markup.replace(/=\\"/g, ''))) return markup;
+  try {
+    const decoded = JSON.parse(`"${markup}"`);
+    if (typeof decoded === 'string') return decoded;
+  } catch {
+    // Not a JSON string body (a raw line break…): the quotes alone.
+  }
+  return markup.replace(/\\"/g, '"').replace(/\\n/g, '\n');
+}
+
 export function parseDraft(text) {
   const source = String(text ?? '').trim();
   const unfenced = source.replace(/^```[a-z]*\s*\n?/i, '').replace(/\n?```\s*$/, '').trim();
@@ -112,7 +135,7 @@ export function parseDraft(text) {
     name: plainLine(data.name, LIMITS.name),
     subject: plainLine(data.subject, LIMITS.subject),
     preheader: plainLine(data.preheader, LIMITS.preheader),
-    mjml: data.mjml.trim(),
+    mjml: unescapedTwice(data.mjml.trim()),
   };
 }
 

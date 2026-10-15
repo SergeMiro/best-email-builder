@@ -59,7 +59,9 @@ Best Email Builder is the second option done once, properly, and given away:
   shipped…), adds a line of details if they want, and a complete email opens in
   the editor, subject and preview text included, ready to edit and save. The
   model's MJML is cleaned and checked like any template before it gets there.
-  Claude out of the box; any other model in a few lines.
+  OpenRouter, Gemini, Groq, Mistral, OpenAI, DeepSeek, Cerebras, Ollama or any
+  OpenAI-compatible API by its key — free tiers included — and Claude through
+  its SDK; on your server, or in the page with each user's own key.
 - **Any text rewritten in one click** — select a text or a button: *Shorter*,
   *Longer*, *Fix mistakes*, *Friendlier*, *More formal*, *Translate* into 13
   languages, or say what to change in your own words. The text changes in
@@ -67,6 +69,8 @@ Best Email Builder is the second option done once, properly, and given away:
 - **Three subject lines on demand** — drawn from the words of the email, each
   from its own angle; a click puts one in the subject, your own stays in the
   list to come back to.
+- **The AI is optional** — a module of its own (`best-email-builder/ai`):
+  without it, no AI button, and none of its code in your bundle.
 - **Your brand in every email** — give your website: the logo, colors and
   font are read from it (or set by hand), and new emails, templates and
   blocks start in them.
@@ -78,7 +82,8 @@ Best Email Builder is the second option done once, properly, and given away:
   uploads, server preview with quality checks (missing alt text, missing
   unsubscribe link, unknown variables, Gmail clipping…) and a dark-mode view
   (as the Gmail and Outlook apps repaint emails), test sends.
-- **Merge-tag variables your users create themselves** — searchable menu,
+- **Merge-tag variables your users create themselves** — searchable menu
+  (Ctrl K, like every search of the builder),
   insertion at the caret, in the subject line too, sample values for the
   preview and fallbacks for recipients without a value.
 - **Framework-agnostic server**: one Fetch-API handler for Next.js, Hono, Bun,
@@ -298,29 +303,43 @@ const subject = applyVariablesToText(template.subject, values, variables);
 With an email provider that does its own merge, map the tags instead:
 `mapVariables(html, { 'contact.firstname': '{{ contact.FIRSTNAME }}' })`.
 
-### 4. Generating emails with AI (optional)
+### 4. AI (an optional module)
 
-The *Generate* button asks one thing: what the email is for (a badge among
-68, grouped: sales, holidays, events, news, account, orders, relationship,
-organization), with an optional line of details. The email is written in the
-interface's language, with the builder's sender and variables, and replaces
-the one being edited — the dialog says so before, not after.
+The AI is a module of its own, `best-email-builder/ai`. An application that
+does not import it has no AI button anywhere, and none of the AI's code or
+texts in its bundle. Given to the builder, it brings three things:
 
-The model runs on the server, where its key is:
+- **Generate** (toolbar) — asks one thing: what the email is for (a badge
+  among 68, grouped: sales, holidays, events, news, account, orders,
+  relationship, organization), with an optional line of details. The email is
+  written in the interface's language, with the builder's sender and
+  variables, and replaces the one being edited — the dialog says so before,
+  not after.
+- **Rewrite with AI** (properties of a text or a button) and **Suggest
+  subjects** (under the subject), below.
+
+```jsx
+import { createAi } from 'best-email-builder/ai';
+
+<EmailBuilder storage={storage} ai={createAi(/* where the model runs, below */)} />
+```
+
+Pass `generate: false`, `rewrite: false` or `suggestSubjects: false` to leave
+a part out (its button with it), or functions of your own for any of them.
+
+#### Where the model runs
+
+**On your server** — the key stays there; the right choice for production:
 
 ```js
-import Anthropic from '@anthropic-ai/sdk';   // npm install @anthropic-ai/sdk
-import {
-  createEmailBuilderHandler,
-  createEmailGenerator,
-  claudeEmailModel,
-  compileMjml,
-} from 'best-email-builder/server';
+// server
+import { createEmailBuilderHandler, compileMjml } from 'best-email-builder/server';
+import { createEmailGenerator, providerEmailModel } from 'best-email-builder/ai/server';
 
 const handler = createEmailBuilderHandler({
   /* … */
   generator: createEmailGenerator({
-    model: claudeEmailModel({ client: new Anthropic() }), // ANTHROPIC_API_KEY
+    model: providerEmailModel({ provider: 'openrouter', apiKey: process.env.OPENROUTER_API_KEY }),
     compile: compileMjml, // MJML's own warnings go back to the model
   }),
   rateLimits: { generatePerHour: 30, rewritePerHour: 200, subjectsPerHour: 100 }, // per user (defaults)
@@ -328,24 +347,83 @@ const handler = createEmailBuilderHandler({
 ```
 
 ```jsx
-<EmailBuilder storage={createHttpStorage({ generate: true })} />
+// browser: the handler's /generate, /rewrite and /subjects routes
+<EmailBuilder storage={createHttpStorage()} ai={createAi()} />
 ```
 
-- `claudeEmailModel({ client, model, effort, maxTokens })` — `claude-opus-5-5`
-  by default, `effort: 'medium'`; the answer is structured output (a JSON
-  schema: name, subject, preheader, MJML) and is streamed, so a long email does
-  not hit a request timeout. A generation takes from 20 seconds to a minute or
-  two: give the route that long (`maxDuration` on Vercel, the proxy's timeout).
-- **Another provider** is a function `({ system, messages, schema, signal, task }) =>
-  Promise<string>` returning the JSON text — pass it as `model`.
-- What comes out is never trusted as is: shorthand padding is expanded,
-  elements the builder does not edit (`mj-hero`, `mj-wrapper`, `mj-head`…)
-  are turned into sections and columns, stock photos are removed (the user
-  picks real images; the alt text stays), unknown variables become visible
-  `[placeholders]`, and the result must pass the same validation as a saved
-  template. When a problem remains, the model gets one more turn with the list.
-- The prompt (`SYSTEM_PROMPT`, `buildUserPrompt`) and the purposes
-  (`EMAIL_PURPOSES`) are exported, to read or to build on.
+`createAi({ baseUrl, headers })` points at the same routes elsewhere, or with
+the user's credentials. Without a `generator`, those routes answer 501.
+
+**In the page, with each user's own key** — no server needed: the first AI
+action opens a *Connect* dialog (the provider, a link to get a key, what is
+free), the key is kept in that browser and sent only to the provider. A key
+the provider refuses is forgotten and asked again. Off by default:
+
+```jsx
+const ai = createAi({ provider: 'openrouter', askKey: true });
+```
+
+`ai.key` reads and changes it: `get()`, `set(key)`, `forget()`,
+`request()`, `subscribe(fn)`, `state()` (`{ asking, refused, connected }`).
+This is what the live demo does.
+
+**In the page, with one key for everyone** — prototypes and internal tools
+only, the key is in the page's code: `createAi({ provider: 'groq', apiKey })`.
+
+#### Providers
+
+Every provider here speaks the OpenAI *chat completions* API; nothing to
+install. `provider` is an id below, or `{ id, model, baseUrl, headers }` to
+change the model or reach an endpoint of your own. `AI_PROVIDERS` lists them
+(name, address, default model, where to get a key, what is free).
+
+| `provider` | Default model | Free to start | Key |
+|---|---|---|---|
+| `'openrouter'` | `openrouter/free` (a router over the free models of the day) | free models, with a free account | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| `'gemini'` | `gemini-3.5-flash-lite` | free tier, rate-limited | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `'groq'` | `openai/gpt-oss-120b` | free tier, rate-limited | [console.groq.com/keys](https://console.groq.com/keys) |
+| `'cerebras'` | `gpt-oss-120b` | free tier, rate-limited | [cloud.cerebras.ai](https://cloud.cerebras.ai/) |
+| `'mistral'` | `mistral-small-latest` | free *Experiment* plan | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) |
+| `'openai'` | `gpt-5-mini` | — | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| `'deepseek'` | `deepseek-chat` | — | [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) |
+| `'ollama'` | — (give `model`) | runs on your machine, no key | — |
+| `'openai-compatible'` | — (give `baseUrl` and `model`) | LM Studio, vLLM, Together, a proxy of your own… | as it needs |
+
+```js
+providerEmailModel({ provider: { id: 'groq', model: 'llama-4-scout' }, apiKey });
+providerEmailModel({ provider: { baseUrl: 'http://localhost:1234/v1', model: 'qwen3' } });
+```
+
+- Model names change often: the defaults were current at this release —
+  pass `model` to be sure of yours.
+- The answer is asked as structured output (a JSON schema); a model that
+  refuses it is asked for a JSON object, then for plain JSON — once, then
+  remembered. A model whose structured output breaks the JSON (some do on the
+  quotes of HTML) can be told to skip it: `provider: { …, format: 'text' }`.
+- The provider's failures become errors the interface explains, in its
+  language: `KEY_MISSING`, `KEY_REFUSED`, `MODEL_CREDITS`, `MODEL_BUSY`,
+  `MODEL_ERROR` (with the provider's own text in `detail`). None is a 401:
+  the key is the AI's, not the user's session.
+- **Claude**: `claudeEmailModel({ client: new Anthropic() })` with the
+  Anthropic SDK (`npm install @anthropic-ai/sdk`) — `claude-opus-5-5` by
+  default, `effort: 'medium'`, structured output, streamed so a long email
+  does not hit a request timeout — or through OpenRouter with an
+  `anthropic/…` model and one key for every model.
+- **Anything else** is a function `({ system, messages, schema, signal, task })
+  => Promise<string>` returning the JSON text — `createEmailGenerator({ model })`
+  on the server, `createAi({ model })` in the page.
+
+A generation takes from 20 seconds to a minute or two: on a server, give the
+route that long (`maxDuration` on Vercel, the proxy's timeout).
+
+What comes out is never trusted as is: shorthand padding is expanded,
+elements the builder does not edit (`mj-hero`, `mj-wrapper`, `mj-head`…) are
+turned into sections and columns, stock photos are removed (the user picks
+real images; the alt text stays), unknown variables become visible
+`[placeholders]`, and the result must pass the same validation as a saved
+template. When a problem remains, the model gets one more turn with the list.
+The prompt (`SYSTEM_PROMPT`, `buildUserPrompt`) and the purposes
+(`EMAIL_PURPOSES`) are exported from `best-email-builder/ai/server`.
 
 **Rewrite with AI.** The same generator rewrites one text: with it, selecting
 a text block or a button shows a *Rewrite with AI* section in its properties —
@@ -356,14 +434,14 @@ the previous text back, so there is nothing to accept or compare. Selecting
 another element cancels a rewrite in progress; if the text was edited
 meanwhile, the user's words win and the answer is dropped.
 
-- It is `POST {base}/rewrite`, enabled with `createHttpStorage({ generate: true })`
-  like generation; a generator without `rewrite` answers 501.
+- On a server it is `POST {base}/rewrite`; a generator without `rewrite`
+  answers 501.
 - Every link (the same `href`, none added) and every variable (the same keys,
   none added; a fallback after `|` may be translated) must survive, and the
   HTML must pass the validator — otherwise the model gets one more turn, then
   nothing is changed. A button label comes back as plain words.
 - `claudeEmailModel` asks a rewrite for `rewriteEffort: 'low'` (a few seconds);
-  another provider gets `task: 'rewrite'` in its request to tell the two apart.
+  a model of your own gets `task: 'rewrite'` in its request to tell the two apart.
 - `REWRITE_ACTIONS`, `REWRITE_LANGUAGES` and `REWRITE_SYSTEM_PROMPT` are
   exported.
 
@@ -374,8 +452,8 @@ pick from, with the user's own subject first: a click puts one in the field,
 another click another one, the first row brings the user's subject back.
 *More ideas* asks for three new ones, *Done* closes the list.
 
-- It is `POST {base}/subjects` (`generator.suggestSubjects`), enabled with
-  `createHttpStorage({ generate: true })` too; 100 per user per hour.
+- On a server it is `POST {base}/subjects` (`generator.suggestSubjects`);
+  100 per user per hour.
 - The subjects are plain lines, different from the current subject and from
   each other, in the language of the email; a merge tag is allowed only from
   the server's catalog. Otherwise the model gets one more turn; fewer than
@@ -384,9 +462,8 @@ another click another one, the first row brings the user's subject back.
   `emailWords(mjml)` (the words a reader sees) and `SUBJECTS_SYSTEM_PROMPT`
   are exported.
 
-The live demo has no server: there, *Generate*, *Rewrite with AI* and
-*Suggest subjects* ask for the visitor's own Anthropic key, keep it in the
-browser and call Anthropic directly.
+The live demo has no server: there, the AI runs in the page with the
+visitor's own OpenRouter key (`createAi({ provider: 'openrouter', askKey: true })`).
 
 ### 5. Your brand (optional)
 
@@ -461,6 +538,7 @@ The live demo keeps the brand in `localStorage` and has no website field
 | `onSaved` | — | Called with the saved template. |
 | `onDirtyChange` | — | Called when the unsaved state changes. |
 | `dirtyCheckRef` | — | Ref receiving a function `() => boolean` (synchronous dirty check). |
+| `ai` | — | The AI module, `createAi()` from `best-email-builder/ai` (see *AI*). Without it, no AI button and no AI code. |
 
 ## Storage
 
@@ -479,9 +557,6 @@ interface TemplateStorage {
   getVersion(id, versionId): Promise<Version & { document; mjml }>;
   uploadImage(file): Promise<{ path }>;
   render?(input): Promise<{ html; warnings; quality }>;   // enables Preview
-  generate?(input, { signal }): Promise<{ name; subject; preheader; mjml; warnings }>; // enables Generate
-  rewrite?(input, { signal }): Promise<{ text }>;        // enables Rewrite with AI
-  suggestSubjects?(input, { signal }): Promise<{ subjects }>; // enables Suggest subjects
   sendTest?(input): Promise<{ sent; failed; invalid; results }>; // enables Send test
   listVariables?(): Promise<Variable[]>;                 // enable user-created variables
   saveVariable?(variable, { create }): Promise<Variable>;

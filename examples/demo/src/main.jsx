@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 // The two blocks through their own entries, as an application using them apart would.
 import { EmailBuilder, TEMPLATE_GALLERY, buildGallery, translatorFor } from 'best-email-builder/builder';
@@ -22,7 +22,7 @@ import {
   Smartphone,
   Sparkles,
 } from 'lucide-react';
-import { createBrowserAi, createDemoStorage, readAiKey, writeAiKey } from './browserStorage.js';
+import { createBrowserAi, createDemoStorage } from './browserStorage.js';
 import { COMPETITORS } from './competitors.js';
 
 const REPOSITORY_URL = import.meta.env.VITE_REPOSITORY_URL || 'https://github.com/SergeMiro/best-email-builder';
@@ -48,20 +48,14 @@ const TEXT = {
     demo: 'Demo',
     home: 'Home',
     codeTitle: 'How to install it',
-    codeTabs: { both: 'Library + editor', builder: 'Editor only', library: 'Library only' },
+    codeTabs: { both: 'Library + editor', builder: 'Editor only', library: 'Library only', ai: 'With AI' },
     stepBank: 'Template library',
     stepEditor: 'Editor',
     expand: 'Full screen',
     shrink: 'Exit full screen',
     note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
-    aiNote: '“Generate” writes a whole email, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with Claude and your own Anthropic API key: it stays in this browser and goes only to Anthropic.',
+    aiNote: '“Generate” writes a whole email, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with your own OpenRouter key — its free models need only a free account. The key stays in this browser and goes only to OpenRouter.',
     aiForget: 'Forget my key',
-    ai: {
-      keyPrompt: 'Paste your Anthropic API key (sk-ant-…). It stays in this browser and is sent only to Anthropic.',
-      keyNeeded: 'This demo needs your Anthropic API key for AI. Try again to enter it.',
-      keyRefused: 'Anthropic refused this API key. Try again to enter another one.',
-      busy: 'Claude is busy right now. Try again in a minute.',
-    },
     copy: 'Copy the install command',
     copied: 'Copied',
     source: 'Source code',
@@ -83,20 +77,14 @@ const TEXT = {
     demo: 'Démo',
     home: 'Accueil',
     codeTitle: 'Comment l’installer',
-    codeTabs: { both: 'Bibliothèque + éditeur', builder: 'Éditeur seul', library: 'Bibliothèque seule' },
+    codeTabs: { both: 'Bibliothèque + éditeur', builder: 'Éditeur seul', library: 'Bibliothèque seule', ai: 'Avec l’IA' },
     stepBank: 'Bibliothèque de modèles',
     stepEditor: 'Éditeur',
     expand: 'Plein écran',
     shrink: 'Réduire',
     note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
-    aiNote: '« Générer » écrit un e-mail complet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec Claude et votre propre clé API Anthropic : elle reste dans ce navigateur et n’est envoyée qu’à Anthropic.',
+    aiNote: '« Générer » écrit un e-mail complet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec votre propre clé OpenRouter — ses modèles gratuits ne demandent qu’un compte gratuit. La clé reste dans ce navigateur et n’est envoyée qu’à OpenRouter.',
     aiForget: 'Oublier ma clé',
-    ai: {
-      keyPrompt: 'Collez votre clé API Anthropic (sk-ant-…). Elle reste dans ce navigateur et n’est envoyée qu’à Anthropic.',
-      keyNeeded: 'Cette démo a besoin de votre clé API Anthropic pour l’IA. Réessayez pour la saisir.',
-      keyRefused: 'Anthropic a refusé cette clé API. Réessayez pour en saisir une autre.',
-      busy: 'Claude est très sollicité. Réessayez dans une minute.',
-    },
     copy: 'Copier la commande d’installation',
     copied: 'Copié',
     source: 'Code source',
@@ -229,6 +217,15 @@ const CODE_SAMPLES = [
   onEdit={(template) => openMyEditor(template.id)}
   onCreate={(start) => openMyEditor(start)}
 />`,
+  },
+  {
+    id: 'ai',
+    code: `import { createAi } from 'best-email-builder/ai';
+
+// Optional: without \`ai\`, no AI button and no AI code.
+const ai = createAi({ provider: 'openrouter', apiKey }); // 'gemini', 'groq', 'openai'…
+
+<EmailStudio storage={storage} ai={ai} />`,
   },
 ];
 
@@ -571,21 +568,10 @@ function DemoWindow({ text, step, expanded, setExpanded, children }) {
 function App() {
   const [locale, setLocale] = useState(initialLocale);
   const text = TEXT[locale];
-  // The storage lives as long as the page; its AI reads the current language.
-  const textRef = useRef(text);
-  textRef.current = text;
-  const [aiKey, setAiKey] = useState(readAiKey);
-  const storage = useMemo(
-    () =>
-      createDemoStorage(
-        createBrowserAi({
-          askKey: () => window.prompt(textRef.current.ai.keyPrompt) || '',
-          onKey: setAiKey,
-          messages: () => textRef.current.ai,
-        })
-      ),
-    []
-  );
+  // The storage and the AI module live as long as the page.
+  const storage = useMemo(() => createDemoStorage(), []);
+  const ai = useMemo(() => createBrowserAi(), []);
+  const aiConnected = useSyncExternalStore(ai.key.subscribe, () => ai.key.state().connected);
   const [route, navigate] = useHashRoute();
   /** The template to select when coming back to the bank. */
   const [lastId, setLastId] = useState(null);
@@ -628,6 +614,7 @@ function App() {
               <EmailBuilder
                 key={`${editorKey}-${locale}`}
                 storage={storage}
+                ai={ai}
                 templateId={savedId ?? route.templateId ?? null}
                 initialMjml={base?.mjml}
                 initialMeta={base ? { subject: base.subject, preheader: base.preheader } : undefined}
@@ -671,17 +658,10 @@ function App() {
             <Sparkles aria-hidden="true" />
             <span>
               {text.aiNote}
-              {aiKey && (
+              {aiConnected && (
                 <>
                   {' '}
-                  <button
-                    type="button"
-                    className="note-link"
-                    onClick={() => {
-                      writeAiKey('');
-                      setAiKey('');
-                    }}
-                  >
+                  <button type="button" className="note-link" onClick={() => ai.key.forget()}>
                     {text.aiForget}
                   </button>
                 </>

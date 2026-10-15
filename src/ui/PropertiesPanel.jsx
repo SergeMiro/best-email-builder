@@ -10,8 +10,6 @@ import { GROUPS } from '../blocks/shared.js';
 import { PropertyField } from './fields.jsx';
 import { useT } from './context.jsx';
 import VariableInsertButton from '../features/variables/VariableInsertButton.jsx';
-import RewriteText from '../features/generate/RewriteText.jsx';
-import SubjectIdeas from '../features/generate/SubjectIdeas.jsx';
 
 /**
  * Properties panel, right of the canvas.
@@ -22,9 +20,9 @@ import SubjectIdeas from '../features/generate/SubjectIdeas.jsx';
  *     the page (background, width), i.e. the email body.
  *
  * `actions`: the element action bar (move, duplicate, delete), provided by
- * the host screen. `services.rewrite`: a text or a button also gets
- * "Rewrite with AI"; `services.suggestSubjects`: the subject gets "Suggest
- * subjects". `onDismiss`: the panel is shown in a drawer — its header
+ * the host screen. `ai` (the AI module, `createAi`): with its `rewrite`, a
+ * text or a button also gets "Rewrite with AI"; with its `suggestSubjects`,
+ * the subject gets "Suggest subjects". `onDismiss`: the panel is shown in a drawer — its header
  * button closes the drawer rather than deselecting.
  */
 
@@ -85,7 +83,7 @@ function PanelHeader({ title, onClose, closeLabel = 'Deselect' }) {
 }
 
 /** Nothing selected: the template and the page. */
-function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, variables = null, services = null, onDismiss = null }) {
+function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, variables = null, ai = null, onDismiss = null }) {
   const t = useT();
   const subjectRef = useRef(null);
   const preheaderRef = useRef(null);
@@ -132,12 +130,12 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
               )}
             </div>
             <Input ref={subjectRef} id="eb-meta-subject" maxLength={250} value={meta.subject} onChange={field('subject')} />
-            {services?.suggestSubjects && (
-              <SubjectIdeas
+            {ai?.suggestSubjects && (
+              <ai.components.Subjects
                 editor={editor}
                 meta={meta}
                 onSubject={(subject) => onMetaChange({ ...meta, subject })}
-                suggest={services.suggestSubjects}
+                suggest={ai.suggestSubjects}
                 variables={variables}
               />
             )}
@@ -183,6 +181,7 @@ export default function PropertiesPanel({
   actions = null,
   showErrors = false,
   services = null,
+  ai = null,
   variables = null,
   onDismiss = null,
 }) {
@@ -199,7 +198,7 @@ export default function PropertiesPanel({
           changes={changes}
           showErrors={showErrors}
           variables={variables}
-          services={services}
+          ai={ai}
           onDismiss={onDismiss}
         />
       ) : (
@@ -233,8 +232,8 @@ export default function PropertiesPanel({
             {selection.tagName === 'mj-text' && (
               <p className="eb:text-[12px] eb:text-foreground-muted">{t('Double-click the text to edit it.')}</p>
             )}
-            {services?.rewrite && REWRITABLE_TAGS.has(selection.tagName) && (
-              <RewriteText key={selection.id} editor={editor} selection={selection} rewrite={services.rewrite} />
+            {ai?.rewrite && REWRITABLE_TAGS.has(selection.tagName) && (
+              <ai.components.Rewrite key={selection.id} editor={editor} selection={selection} rewrite={ai.rewrite} />
             )}
             <PropertyGroups editor={editor} element={selection} block={block} idPrefix="eb-prop" services={services} />
           </div>

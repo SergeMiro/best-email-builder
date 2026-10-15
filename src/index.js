@@ -11,6 +11,8 @@
  *     storage/     reading/writing templates (client and server)
  *     renderer/    MJML → final HTML (server compilation, variables, links)
  *     validation/  what a template is allowed to contain
+ *     ai/          the AI module — its own entry, best-email-builder/ai; nothing
+ *                  above imports it
  *
  * See `docs/ARCHITECTURE.md`.
  */
@@ -53,15 +55,9 @@ export { createStarterMjml, STARTER_MJML } from './features/templates/starter.js
 export { TEMPLATE_GALLERY, buildGallery, withPlaceholderImages } from './features/templates/gallery.js';
 export { isAssetPath, absoluteAssetUrls, DEFAULT_ASSETS_PATH } from './renderer/links.js';
 
-/* ── Generation (AI) — the model runs where its key is: usually the server ── */
-export { createEmailGenerator } from './features/generate/generator.js';
-export { claudeEmailModel, DEFAULT_CLAUDE_MODEL } from './features/generate/claude.js';
-export { EmailGenerationError } from './features/generate/draft.js';
-export { EMAIL_PURPOSES, PURPOSE_CATEGORIES } from './features/generate/purposes.js';
-export { REWRITE_ACTIONS, REWRITE_LANGUAGES } from './features/generate/rewrite.js';
-export { emailWords } from './features/generate/subjects.js';
+/* The AI is a module of its own: best-email-builder/ai (createAi). */
 export { simulateDarkMode } from './features/preview/darkMode.js';
 export { applyBrand, cleanBrand, brandedSender } from './features/brand/brand.js';
 
 /* ── Translations ────────────────────────────────────────────────────────── */
-export { createTranslator, translatorFor, LOCALES } from './i18n/index.js';
+export { createTranslator, translatorFor, messagesOf, LOCALES } from './i18n/index.js';

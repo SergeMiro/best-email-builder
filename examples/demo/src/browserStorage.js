@@ -6,9 +6,9 @@
  * be trusted with the HTML that gets stored or sent.
  *
  * "Generate", "Rewrite with AI" and "Suggest subjects" run in the browser too, with the VISITOR's
- * own Anthropic key (asked once, kept in this browser's localStorage, sent only
- * to Anthropic). A real application calls the model on its server, where its
- * key stays (`createEmailGenerator` + `claudeEmailModel`, see the README).
+ * own OpenRouter key (asked once, kept in this browser's localStorage, sent only
+ * to OpenRouter). An application can do the same, or call the model on its
+ * server, where its own key stays (`best-email-builder/ai/server`, see the README).
  */
 
 import { createMemoryStorage } from 'best-email-builder/builder';
@@ -23,33 +23,11 @@ import {
 } from '../../../src/features/variables/service.js';
 import { qualityReport } from '../../../src/validation/quality.js';
 import { validateMjml } from '../../../src/validation/mjmlValidator.js';
-import { createEmailGenerator } from '../../../src/features/generate/generator.js';
-import { claudeEmailModel } from '../../../src/features/generate/claude.js';
+import { createAi } from 'best-email-builder/ai';
 
 const TEMPLATES_KEY = 'best-email-builder-demo:templates';
 const VARIABLES_KEY = 'best-email-builder-demo:variables';
 const BRAND_KEY = 'best-email-builder-demo:brand';
-const AI_KEY = 'best-email-builder-demo:anthropic-key';
-
-/** The visitor's Anthropic key, '' when none. */
-export function readAiKey() {
-  try {
-    return localStorage.getItem(AI_KEY) || '';
-  } catch {
-    return '';
-  }
-}
-
-/** Stores the key, or forgets it with ''. */
-export function writeAiKey(key) {
-  try {
-    if (key) localStorage.setItem(AI_KEY, key);
-    else localStorage.removeItem(AI_KEY);
-  } catch {
-    // Private window: the key lives for this page only.
-  }
-}
-
 /** MJML's own warnings, read back to the model so it fixes them. */
 async function compileWarnings(mjml) {
   const { default: mjml2html } = await import('mjml-browser');
@@ -58,43 +36,18 @@ async function compileWarnings(mjml) {
 }
 
 /**
- * `generate`, `rewrite` and `suggestSubjects` of the demo storage: one key,
- * one client.
- * @param {{askKey: () => string, onKey: (key: string) => void, messages: () => Record<string, string>}} options
- *   `askKey`: asks the visitor for a key ('' when they decline);
- *   `messages`: the demo's own error texts, in the page's current language.
+ * The demo's AI module: OpenRouter with the visitor's own key. The builder asks
+ * for it in its Connect dialog (`askKey: true`), keeps it in this browser and
+ * sends it only to OpenRouter; its free models need nothing but a free account.
  */
-export function createBrowserAi({ askKey, onKey, messages }) {
-  /** @param {(generator: ReturnType<typeof createEmailGenerator>) => Promise<any>} call */
-  const withClaude = async (call) => {
-    let apiKey = readAiKey();
-    if (!apiKey) {
-      apiKey = askKey().trim();
-      if (!apiKey) throw new Error(messages().keyNeeded);
-      writeAiKey(apiKey);
-      onKey(apiKey);
-    }
-    const { default: Anthropic } = await import('@anthropic-ai/sdk');
-    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true, maxRetries: 1 });
-    // `low`: a visitor waits less; a server would keep the default.
-    const generator = createEmailGenerator({ model: claudeEmailModel({ client, effort: 'low' }), compile: compileWarnings });
-    try {
-      return await call(generator);
-    } catch (error) {
-      if (error?.status === 401 || error?.status === 403) {
-        writeAiKey('');
-        onKey('');
-        throw new Error(messages().keyRefused, { cause: error });
-      }
-      if (error?.status === 429 || error?.status === 529 || error?.status >= 500) throw new Error(messages().busy, { cause: error });
-      throw error;
-    }
-  };
-  return {
-    generate: (input, { signal } = {}) => withClaude((generator) => generator.generate(input, { signal })),
-    rewrite: (input, { signal } = {}) => withClaude((generator) => generator.rewrite(input, { signal })),
-    suggestSubjects: (input, { signal } = {}) => withClaude((generator) => generator.suggestSubjects(input, { signal })),
-  };
+export function createBrowserAi() {
+  try {
+    // The Anthropic key an earlier version of the demo kept: no longer used.
+    localStorage.removeItem('best-email-builder-demo:anthropic-key');
+  } catch {
+    // Private window.
+  }
+  return createAi({ provider: 'openrouter', askKey: true, compile: compileWarnings });
 }
 
 const read = (key, empty = []) => {
@@ -105,8 +58,8 @@ const read = (key, empty = []) => {
   }
 };
 
-/** Memory storage + localStorage persistence + in-browser preview (and AI, when given). */
-export function createDemoStorage({ generate, rewrite, suggestSubjects } = {}) {
+/** Memory storage + localStorage persistence + in-browser preview. */
+export function createDemoStorage() {
   let storage;
 
   async function render({ mjml, subject, preheader }) {
@@ -138,7 +91,7 @@ export function createDemoStorage({ generate, rewrite, suggestSubjects } = {}) {
 
   // The brand is kept too; reading it from a website needs a server, so the
   // demo has no "Get my brand" field.
-  storage = createMemoryStorage({ render, generate, rewrite, suggestSubjects, brand: read(BRAND_KEY, null) });
+  storage = createMemoryStorage({ render, brand: read(BRAND_KEY, null) });
   const index = new Map(); // memory id → saved entry
 
   const ready = (async () => {

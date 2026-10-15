@@ -10,6 +10,7 @@ import { brandOf, useBrand } from '../features/brand/useBrand.js';
 import { createAutosaveScheduler } from '../features/autosave/scheduler.js';
 import { clearLocalDraft, readLocalDraft, saveLocalDraft } from '../features/autosave/localDraft.js';
 import { createHttpStorage } from '../storage/client.js';
+import { messagesOf } from '../i18n/index.js';
 import { NoticeArea, UiProvider, useUi } from './context.jsx';
 import { Button } from './primitives/button.jsx';
 import { cn } from './primitives/cn.js';
@@ -53,6 +54,13 @@ import { useLayoutWidth } from './useLayoutWidth.js';
  * ── AUTOSAVE (feature `autosave`) ───────────────────────────────────────────
  * Template already saved: server save without a version. New template: local
  * draft, offered again at the next opening.
+ *
+ * ── AI (`ai`, a module of its own) ──────────────────────────────────────────
+ * `createAi()` from `best-email-builder/ai` brings its buttons, their logic
+ * and their texts: Generate in the toolbar, "Rewrite with AI" in the
+ * properties of a text or a button, "Suggest subjects" under the subject —
+ * and, when each user connects their own key, the dialog that asks for it.
+ * Nothing here imports it: without `ai`, there is no AI in the bundle.
  */
 
 const EMPTY_META = { name: '', subject: '', preheader: '', description: '' };
@@ -83,6 +91,7 @@ function Builder({
   onSaved,
   onDirtyChange,
   dirtyCheckRef,
+  ai,
   className,
 }) {
   const { t, locale, notify, confirm } = useUi();
@@ -129,15 +138,7 @@ function Builder({
   useEffect(() => {
     editor.setBrand?.(hasBrand(brand) ? brand : null);
   }, [editor, brand]);
-  const services = useMemo(
-    () => ({
-      uploadImage: (file) => storage.uploadImage(file),
-      rewrite: typeof storage.rewrite === 'function' ? (input, options) => storage.rewrite(input, options) : null,
-      suggestSubjects:
-        typeof storage.suggestSubjects === 'function' ? (input, options) => storage.suggestSubjects(input, options) : null,
-    }),
-    [storage]
-  );
+  const services = useMemo(() => ({ uploadImage: (file) => storage.uploadImage(file) }), [storage]);
   const state = useEmailEditorState(editor);
   const autosaveOn = isFeatureEnabled('autosave');
   const autosaveOptions = emailBuilderFeatures.get('autosave')?.options || {};
@@ -469,6 +470,7 @@ function Builder({
     hostSender: sender,
     brand,
     setBrand,
+    ai,
   };
   const toolbarFeatures = emailBuilderFeatures.list(
     (f) => f.enabled !== false && Boolean(f.toolbar) && (f.isAvailable ? f.isAvailable(featureContext) : true)
@@ -485,6 +487,7 @@ function Builder({
       showErrors={showErrors}
       actions={<ElementActions editor={editor} selection={state.selection} />}
       services={services}
+      ai={ai}
       variables={variables}
     />
   );
@@ -510,10 +513,14 @@ function Builder({
         onDeviceChange={(device) => editor.setDevice(device)}
         onBack={onClose ? back : undefined}
         compact={compact}
-        actions={toolbarFeatures.map((feature) => {
-          const Action = feature.toolbar;
-          return <Action key={feature.id} context={featureContext} />;
-        })}
+        actions={[
+          // The AI module's button first, when the host gave the module.
+          ai?.generate && <ai.components.Generate key="ai-generate" context={featureContext} generate={ai.generate} />,
+          ...toolbarFeatures.map((feature) => {
+            const Action = feature.toolbar;
+            return <Action key={feature.id} context={featureContext} />;
+          }),
+        ].filter(Boolean)}
         primary={
           <Button size="sm-compact" onClick={() => save()} disabled={!ready || saving !== null}>
             {saving === 'manual' ? <Loader2 className="eb:animate-spin" /> : <Save />}
@@ -613,6 +620,7 @@ function Builder({
         </div>
       )}
       <NoticeArea />
+      {ai?.key && ai.components.Connect && <ai.components.Connect aiKey={ai.key} />}
     </div>
   );
 }
@@ -636,13 +644,38 @@ function Builder({
  *   onSaved?: (template: object) => void,
  *   onDirtyChange?: (dirty: boolean) => void,
  *   dirtyCheckRef?: {current: null | (() => boolean)},
+ *   ai?: import('../ai/createAi.js').EmailBuilderAi|null,
  *   className?: string,
  * }} props
+ *   `ai`: the AI module, `createAi()` from `best-email-builder/ai`. Without
+ *   it, no AI button and no AI code.
  */
-export default function EmailBuilder({ locale = 'en', messages, onNotify, ...props }) {
+export default function EmailBuilder({ locale = 'en', messages, onNotify, ai: aiProp = null, ...props }) {
+  const ai = useAiModule(aiProp);
+  // The module's texts under the host's own.
+  const allMessages = useMemo(
+    () => (ai ? { ...messagesOf(ai.messages, locale), ...messages } : messages),
+    [ai, locale, messages]
+  );
   return (
-    <UiProvider locale={locale} messages={messages} onNotify={onNotify}>
-      <Builder {...props} templateId={props.templateId ?? null} />
+    <UiProvider locale={locale} messages={allMessages} onNotify={onNotify}>
+      <Builder {...props} ai={ai} templateId={props.templateId ?? null} />
     </UiProvider>
   );
+}
+
+/**
+ * The AI module as `createAi` made it, or none. Anything else (a storage, a
+ * bare `{generate}`) is refused once, out loud: the core cannot build the
+ * module's buttons itself.
+ * @param {unknown} value
+ */
+function useAiModule(value) {
+  const valid = Boolean(value && typeof value === 'object' && /** @type {any} */ (value).components);
+  useEffect(() => {
+    if (value && !valid) {
+      console.warn('EmailBuilder: `ai` must be made by createAi() from best-email-builder/ai — the AI stays off.');
+    }
+  }, [value, valid]);
+  return valid ? /** @type {import('../ai/createAi.js').EmailBuilderAi} */ (value) : null;
 }

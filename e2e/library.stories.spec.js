@@ -152,3 +152,37 @@ test('preview: the editor’s device switch, and the frame narrows and widens sm
   await preview.getByRole('tab', { name: 'Desktop' }).click();
   await expect.poll(async () => Math.round((await box.boundingBox()).width)).toBe(Math.round(wide));
 });
+
+test('preview: dark mode as mail apps show it, the hint with it; light mode brings the email back as it is', async ({ page }) => {
+  await page.goto(STANDALONE);
+  const preview = page.getByTestId('eb-library-preview');
+  const frame = preview.frameLocator('iframe');
+  await expect(frame.locator('h1')).toHaveText('Welcome aboard!');
+  const looks = () =>
+    frame.locator('body').evaluate((body) => ({
+      sheet: body.ownerDocument.querySelectorAll('style[data-eb-dark]').length,
+      background: getComputedStyle(body).backgroundColor,
+      heading: getComputedStyle(body.querySelector('h1')).color,
+    }));
+  expect((await looks()).sheet).toBe(0);
+  await expect(page.getByTestId('eb-dark-hint')).toHaveCount(0);
+
+  await preview.getByRole('tab', { name: 'Dark mode' }).click();
+  await expect(preview.getByRole('tab', { name: 'Dark mode' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('eb-dark-hint')).toBeVisible();
+  await expect.poll(async () => (await looks()).sheet).toBe(1);
+  const dark = await looks();
+  expect(dark.background).toBe('rgb(18, 18, 18)');
+  // Dark text turned light: readable on the dark page.
+  const [r, g, b] = dark.heading.match(/\d+/g).map(Number);
+  expect(Math.min(r, g, b)).toBeGreaterThan(150);
+
+  // Another template keeps the scheme chosen.
+  await page.getByTestId('eb-library-templates').getByTestId('eb-library-template').filter({ hasText: 'October newsletter' }).click();
+  await expect.poll(async () => (await looks()).sheet).toBe(1);
+
+  await preview.getByRole('tab', { name: 'Light mode' }).click();
+  await expect(page.getByTestId('eb-dark-hint')).toHaveCount(0);
+  await expect.poll(async () => (await looks()).sheet).toBe(0);
+  expect((await looks()).background).not.toBe('rgb(18, 18, 18)');
+});

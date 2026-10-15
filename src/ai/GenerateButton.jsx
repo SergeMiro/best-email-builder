@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Loader2, Search, Sparkles, TriangleAlert } from 'lucide-react';
-import { useUi } from '../../ui/context.jsx';
-import { Button } from '../../ui/primitives/button.jsx';
-import { Input, Textarea } from '../../ui/primitives/fields.jsx';
-import { SectionLabel } from '../../ui/primitives/misc.jsx';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
+import { SEARCH_KEYS, SearchKeyHint, useSearchShortcut } from '../ui/primitives/searchShortcut.jsx';
+import { useUi } from '../ui/context.jsx';
+import { Button } from '../ui/primitives/button.jsx';
+import { Input, Textarea } from '../ui/primitives/fields.jsx';
+import { SectionLabel } from '../ui/primitives/misc.jsx';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/primitives/overlays.jsx';
 import { chipClassName } from './chip.js';
 import { MAX_DETAILS_LENGTH } from './generator.js';
 import { purposesByCategory } from './purposes.js';
-import { brandTemplate, hasBrand } from '../brand/brand.js';
+import { brandTemplate, hasBrand } from '../features/brand/brand.js';
 
 /**
  * GENERATE — toolbar button and dialog: an email written from scratch.
@@ -30,8 +31,8 @@ const fold = (text) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
 
-export default function GenerateButton({ context }) {
-  const { editor, ready, storage, isDirty, markDirty, template, setMeta, variables, sender, brand } = context;
+export default function GenerateButton({ context, generate: generateEmail }) {
+  const { editor, ready, isDirty, markDirty, template, setMeta, variables, sender, brand } = context;
   const { t, locale, notify } = useUi();
   const [open, setOpen] = useState(false);
   const [purpose, setPurpose] = useState(/** @type {string|null} */ (null));
@@ -43,6 +44,7 @@ export default function GenerateButton({ context }) {
   const [dirty, setDirty] = useState(false);
   const abortRef = useRef(/** @type {AbortController|null} */ (null));
   const searchRef = useRef(/** @type {HTMLInputElement|null} */ (null));
+  useSearchShortcut(searchRef);
 
   useEffect(() => () => abortRef.current?.abort(), []);
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function GenerateButton({ context }) {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      const email = await storage.generate(
+      const email = await generateEmail(
         {
           purpose,
           details: details.trim(),
@@ -109,7 +111,7 @@ export default function GenerateButton({ context }) {
       setOpen(false);
       notify('success', t('Your email is ready. Edit anything, then save.'));
     } catch (err) {
-      if (!controller.signal.aborted) setError(t(err?.message || 'The email could not be generated.'));
+      if (!controller.signal.aborted) setError(err?.message ? t(err.message) : t('The email could not be generated.'));
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
       setBusy(false);
@@ -154,9 +156,11 @@ export default function GenerateButton({ context }) {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t('Search: sale, password, birthday…')}
                 aria-label={t('Search')}
-                className="eb:pl-8"
+                aria-keyshortcuts={SEARCH_KEYS}
+                className="eb:pr-16 eb:pl-8 eb:[&::-webkit-search-cancel-button]:hidden"
                 disabled={busy}
               />
+              <SearchKeyHint className="eb:absolute eb:top-1/2 eb:right-2 eb:-translate-y-1/2" />
             </div>
           </div>
 

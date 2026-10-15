@@ -42,8 +42,21 @@ export function createTranslator(messages = {}) {
  * @returns {Translate}
  */
 export function translatorFor(locale = 'en', overrides = {}) {
-  const base = LOCALES[String(locale).toLowerCase()] || LOCALES[String(locale).slice(0, 2).toLowerCase()] || {};
-  return createTranslator({ ...base, ...overrides });
+  return createTranslator({ ...messagesOf(LOCALES, locale), ...overrides });
+}
+
+/**
+ * The dictionary of a locale among several (`'fr-FR'` finds `fr`); an empty
+ * one when there is none.
+ * @param {Record<string, Messages>|null|undefined} dictionaries
+ * @param {string} [locale]
+ * @returns {Messages}
+ */
+export function messagesOf(dictionaries, locale = 'en') {
+  if (!dictionaries) return {};
+  const code = String(locale).toLowerCase();
+  const own = (/** @type {string} */ key) => (Object.prototype.hasOwnProperty.call(dictionaries, key) ? dictionaries[key] : null);
+  return own(code) || own(code.slice(0, 2)) || {};
 }
 
 /** English, untouched: the default everywhere a translator is optional. */

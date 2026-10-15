@@ -15,7 +15,7 @@
  * by block, and the canvas shows what will be sent.
  */
 
-import { FONT_OPTIONS, PALETTE } from '../../blocks/shared.js';
+import { FONT_OPTIONS, PALETTE } from '../blocks/shared.js';
 
 /**
  * @typedef {import('./purposes.js').EmailPurpose} EmailPurpose

@@ -36,6 +36,12 @@
       ],
       "server": [
         "./dist/types/server/index.d.ts"
+      ],
+      "ai": [
+        "./dist/types/ai/index.d.ts"
+      ],
+      "ai/server": [
+        "./dist/types/ai/server.d.ts"
       ]
     }
   },
@@ -55,6 +61,14 @@
     "./server": {
       "types": "./dist/types/server/index.d.ts",
       "import": "./dist/server.js"
+    },
+    "./ai": {
+      "types": "./dist/types/ai/index.d.ts",
+      "import": "./dist/ai.js"
+    },
+    "./ai/server": {
+      "types": "./dist/types/ai/server.d.ts",
+      "import": "./dist/ai-server.js"
     },
     "./styles.css": "./dist/styles.css",
     "./package.json": "./package.json"

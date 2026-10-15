@@ -39,15 +39,14 @@ import {
   createBrandImporter,
   createBrandService,
   createEmailBuilderHandler,
-  createEmailGenerator,
   createMemoryAssetRepository,
   createMemoryBrandRepository,
   createMemoryTemplateRepository,
   isPublicAddress,
   validateMjml,
   compileMjml,
-  buildUserPrompt,
 } from '../../src/server/index.js';
+import { createEmailGenerator, buildUserPrompt } from '../../src/ai/server.js';
 import { siteUrl } from '../../src/server/brandImport.js';
 import { createHttpStorage, createMemoryStorage } from '../../src/storage/client.js';
 import { createStarterMjml } from '../../src/features/templates/starter.js';

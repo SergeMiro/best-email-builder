@@ -21,7 +21,8 @@ component knows the model or the canvas: everything goes through the
 | `core/` | `EmailEditor` contract, versioned document envelope (`document.js`), registries, events |
 | `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
-| `features/` | one folder per feature + the `emailBuilderFeatures` registry (generate, brand, variables, autosave, versions, preview, test send) and the starter template |
+| `features/` | one folder per feature + the `emailBuilderFeatures` registry (brand, variables, autosave, versions, preview, test send) and the starter template |
+| `ai/` | the AI module, an entry of its own (`best-email-builder/ai`, `/ai/server`): generation, rewriting, subject ideas, the providers, their buttons and texts — see *AI* |
 | `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template library (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |
 | `renderer/` | MJML preparation, service links, uploaded image URLs (shared browser/server) |
@@ -106,9 +107,24 @@ the HTML **compiled by the server**.
 - Every write carries the `revision` read at load time. The repository refuses
   the write when it changed (409): the user can save a copy instead.
 
-## Generation
+## AI
 
-`features/generate/` writes an email from a purpose, in four separate steps:
+`src/ai/` is a module the core never imports: `tests/unit/entries.test.mjs`
+checks that no entry of the core (`.`, `/builder`, `/library`, `/server`)
+bundles a file of it, nor its texts (`src/ai/i18n/`, checked apart by
+`npm run check:i18n`). The builder takes what `createAi()` makes as its `ai`
+prop and renders the module's own components; without it, there is nothing of
+the AI on screen.
+
+| File | Role |
+|---|---|
+| `createAi.js` | the module given to the builder: where the model runs (the handler's routes, a provider in the page, a model or functions of one's own), which parts are on, its components and texts |
+| `providers.js` | `providerEmailModel`: any OpenAI-compatible API by its key (`AI_PROVIDERS`: OpenRouter, Gemini, Groq, Cerebras, Mistral, OpenAI, DeepSeek, Ollama…), the answer format stepped down when refused, the provider's failures as `EmailGenerationError` codes |
+| `keys.js`, `ConnectAi.jsx` | the user's own key (`askKey`): kept per provider in localStorage, asked by the *Connect* dialog, forgotten when refused |
+| `server.js`, `index.js` | the two entries |
+| `i18n/` | the module's texts, merged under the host's when it is given |
+
+Generation writes an email from a purpose, in four separate steps:
 
 | File | Role |
 |---|---|
@@ -124,11 +140,11 @@ the HTML **compiled by the server**.
 | `SubjectIdeas.jsx` | *Suggest subjects* under the subject field: the list to pick from, the user's subject first |
 | `chip.js` | the badge button they use |
 
-The model is a plain function, so the browser (the demo), the server (the
-handler's `POST /generate`, `POST /rewrite` and `POST /subjects`) and the
-tests (a fake model) run the same generator. The interface only calls
-`storage.generate`, `storage.rewrite` and `storage.suggestSubjects`; each
-control is shown when the storage has the function.
+The model is a plain function, so the browser (the demo, `createAi({ provider })`),
+the server (the handler's `POST /generate`, `POST /rewrite` and
+`POST /subjects`) and the tests (a fake model) run the same generator. The
+interface only calls `ai.generate`, `ai.rewrite` and `ai.suggestSubjects`;
+each control is shown when the module has the function.
 
 A rewrite replaces the text through `editor.setContent` — one step of the
 history, so Ctrl+Z is the undo — and the section is keyed by the selected

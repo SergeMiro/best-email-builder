@@ -16,7 +16,8 @@
  *   POST   {base}/render                          read    preview (server rendering)
  *   POST   {base}/test                            write   test send (needs `transport`)
  *   POST   {base}/assets                          write   image upload (multipart, field `file`)
- *   POST   {base}/generate                        write   write an email from a purpose (needs `generator`)
+ *   POST   {base}/generate                        write   write an email from a purpose (needs `generator`,
+ *                                                         the AI module: best-email-builder/ai/server)
  *   POST   {base}/rewrite                         write   rewrite one text of an email (needs `generator`)
  *   POST   {base}/subjects                        write   three other subject lines (needs `generator`)
  *   GET    {base}/variables                       read    custom variables
@@ -37,7 +38,7 @@
  * Throw an `HttpError(403, …)` to refuse with another status.
  */
 
-import { translatorFor } from '../i18n/index.js';
+import { messagesOf, translatorFor } from '../i18n/index.js';
 import { DEFAULT_VARIABLES, defineVariables } from '../features/variables/catalog.js';
 import { applyVariablesToText, sampleValues } from '../features/variables/service.js';
 import { MAX_IMAGE_BYTES } from '../validation/images.js';
@@ -50,7 +51,6 @@ import { createVariableService } from './variables.js';
 import { createBrandService } from './brand.js';
 import { BrandImportError } from './brandImport.js';
 import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
-import { EmailGenerationError } from '../features/generate/draft.js';
 
 /**
  * @typedef {'read'|'write'} Action
@@ -65,9 +65,10 @@ import { EmailGenerationError } from '../features/generate/draft.js';
  *   publicUrl?: string|null,
  *   transport?: import('./sendTest.js').EmailTransport|null,
  *   generator?: {
- *     generate: (input: import('../features/generate/generator.js').GenerateInput, options?: {signal?: AbortSignal}) => Promise<import('../features/generate/generator.js').GeneratedEmail>,
- *     rewrite?: (input: import('../features/generate/rewrite.js').RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
- *     suggestSubjects?: (input: import('../features/generate/subjects.js').SubjectsInput, options?: {signal?: AbortSignal}) => Promise<{subjects: string[]}>,
+ *     generate?: (input: import('../ai/generator.js').GenerateInput, options?: {signal?: AbortSignal}) => Promise<import('../ai/generator.js').GeneratedEmail>,
+ *     rewrite?: (input: import('../ai/rewrite.js').RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
+ *     suggestSubjects?: (input: import('../ai/subjects.js').SubjectsInput, options?: {signal?: AbortSignal}) => Promise<{subjects: string[]}>,
+ *     messages?: Record<string, Record<string, string>>,
  *   }|null,
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
  *   variableStore?: import('./variables.js').VariableRepository|null,
@@ -88,6 +89,15 @@ import { EmailGenerationError } from '../features/generate/draft.js';
 const MAX_JSON_BYTES = 3 * 1024 * 1024;
 
 const HOUR = 60 * 60 * 1000;
+
+/**
+ * An error of the AI module, recognised without importing it (a server
+ * without AI does not load it).
+ * @param {any} error
+ * @returns {error is {name: 'EmailGenerationError', status: number, message: string, code: string}}
+ */
+const isGenerationError = (error) =>
+  error?.name === 'EmailGenerationError' && Number.isInteger(error.status) && typeof error.code === 'string';
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -147,7 +157,8 @@ export function createEmailBuilderHandler(options) {
   const base = basePath.replace(/\/+$/, '');
   const assetsPath = (options.assetsPath || `${base}/assets/`).replace(/\/*$/, '/');
   const variables = defineVariables(options.variables || DEFAULT_VARIABLES);
-  const t = translatorFor(locale, messages);
+  // The AI module's texts (its errors) under the host's own.
+  const t = translatorFor(locale, { ...messagesOf(generator?.messages, locale), ...messages });
   const templates = createTemplateService({ repository: templateRepository, t, lang, maxVersions });
   const assets = createAssetService({ repository: assetRepository, publicPath: assetsPath, t });
   const customVariables = createVariableService({ repository: options.variableStore || null, system: variables, t });
@@ -169,6 +180,9 @@ export function createEmailBuilderHandler(options) {
   const userKey = (/** @type {User} */ user) => String(user.id ?? user.name ?? 'anonymous');
 
   /** @param {Request} request */
+  /** The browser's language when it is one (`fr`, `pt-BR`), else the server's. @param {unknown} value */
+  const languageOr = (value) => (typeof value === 'string' && /^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i.test(value) ? value : lang);
+
   async function readJson(request) {
     const length = Number(request.headers.get('content-length') || 0);
     if (length > MAX_JSON_BYTES) throw new HttpError(413, t('Request too large'), 'TOO_LARGE');
@@ -191,7 +205,8 @@ export function createEmailBuilderHandler(options) {
       return json({ data: await call() });
     } catch (error) {
       if (request.signal?.aborted) return json({ error: t('Cancelled'), code: 'CANCELLED' }, 499);
-      if (error instanceof EmailGenerationError) throw new HttpError(error.status, t(error.message), error.code);
+      // The generator's own errors (EmailGenerationError, best-email-builder/ai/server) say what to show.
+      if (isGenerationError(error)) throw new HttpError(error.status, t(error.message), error.code);
       onError(error, request);
       throw new HttpError(502, t('The AI service did not answer — try again in a moment.'), 'MODEL_ERROR');
     }
@@ -304,7 +319,8 @@ export function createEmailBuilderHandler(options) {
 
     if (section === 'generate' && !id && method === 'POST') {
       const user = await userFor(request, 'write');
-      if (!generator) throw new HttpError(501, t('Email generation is not configured'), 'NO_GENERATOR');
+      const generate = generator?.generate;
+      if (typeof generate !== 'function') throw new HttpError(501, t('Email generation is not configured'), 'NO_GENERATOR');
       if (!generateLimiter(userKey(user))) {
         throw new HttpError(429, t('Too many generated emails — try again later'), 'RATE_LIMITED');
       }
@@ -312,7 +328,7 @@ export function createEmailBuilderHandler(options) {
       // The variables are the server's catalog, whatever the browser sent.
       const catalog = await customVariables.catalog();
       return askModel(request, () =>
-        generator.generate({ ...body, language: body?.language || lang, variables: catalog }, { signal: request.signal })
+        generate.call(generator, { ...body, language: languageOr(body?.language), variables: catalog }, { signal: request.signal })
       );
     }
 
@@ -334,7 +350,7 @@ export function createEmailBuilderHandler(options) {
       // The merge tags are the server's catalog, whatever the browser sent.
       const catalog = await customVariables.catalog();
       return askModel(request, () =>
-        suggestSubjects({ ...body, language: body?.language || lang, variables: catalog }, { signal: request.signal })
+        suggestSubjects({ ...body, language: languageOr(body?.language), variables: catalog }, { signal: request.signal })
       );
     }
 

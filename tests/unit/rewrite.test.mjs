@@ -8,17 +8,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  createEmailBuilderHandler,
+  createMemoryAssetRepository,
+  createMemoryTemplateRepository,
+} from '../../src/server/index.js';
+import {
   REWRITE_ACTIONS,
   REWRITE_LANGUAGES,
   claudeEmailModel,
-  createEmailBuilderHandler,
   createEmailGenerator,
-  createMemoryAssetRepository,
-  createMemoryTemplateRepository,
   reviewRewrite,
-} from '../../src/server/index.js';
-import { buildRewritePrompt, cleanRewriteInput, parseRewrite } from '../../src/features/generate/rewrite.js';
-import { createHttpStorage, createMemoryStorage } from '../../src/storage/client.js';
+} from '../../src/ai/server.js';
+import { buildRewritePrompt, cleanRewriteInput, parseRewrite } from '../../src/ai/rewrite.js';
 
 const GREETING = 'Hello {{contact.firstname|there}}, see <a href="https://example.com/news">the news</a>.';
 
@@ -66,6 +67,8 @@ test('parseRewrite: the JSON field, fenced or bare; a bare answer is the text it
   assert.equal(parseRewrite('```json\n{"text":" Hi "}\n```'), 'Hi');
   assert.equal(parseRewrite('<text>\nHi <b>you</b>\n</text>'), 'Hi <b>you</b>');
   assert.equal(parseRewrite('{not json'), '{not json');
+  // Escaped twice by the model: decoded once more, so the link is found again.
+  assert.equal(parseRewrite(JSON.stringify({ text: 'Hi <a href=\\"https://example.com\\">you</a>' })), 'Hi <a href="https://example.com">you</a>');
 });
 
 test('reviewRewrite: variables and links kept, none added, markup a text block accepts', () => {
@@ -117,7 +120,7 @@ test('rewriter: a button label comes back as plain words; refusal and aborts go 
 
   const refused = createEmailGenerator({
     model: async () => {
-      const { EmailGenerationError } = await import('../../src/features/generate/draft.js');
+      const { EmailGenerationError } = await import('../../src/ai/draft.js');
       throw new EmailGenerationError('REFUSED');
     },
   });
@@ -182,24 +185,4 @@ test('route POST /rewrite: 501 without a rewriter, rate limit, errors translated
   const body = await failed.json();
   assert.equal(body.code, 'REWRITE_UNUSABLE');
   assert.match(body.error, /rien n'a été modifié/);
-});
-
-test('storages: HTTP rewrite with generate, memory rewrite when given', async () => {
-  assert.equal(createHttpStorage().rewrite, undefined);
-  const seen = [];
-  const storage = createHttpStorage({
-    generate: true,
-    fetch: async (url, init) => {
-      seen.push({ url, init });
-      return new Response(JSON.stringify({ data: { text: 'Hello' } }), { status: 200 });
-    },
-  });
-  const signal = new AbortController().signal;
-  assert.deepEqual(await storage.rewrite({ action: 'fix', text: 'Hi' }, { signal }), { text: 'Hello' });
-  assert.equal(seen[0].url, '/api/email-builder/rewrite');
-  assert.equal(seen[0].init.signal, signal);
-  assert.deepEqual(JSON.parse(seen[0].init.body), { action: 'fix', text: 'Hi' });
-  assert.equal(createMemoryStorage().rewrite, undefined);
-  const rewrite = async () => ({ text: 'Hello' });
-  assert.equal(createMemoryStorage({ rewrite }).rewrite, rewrite);
 });

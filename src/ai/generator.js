@@ -20,14 +20,15 @@
  * three other subject lines (`suggestSubjects`, see subjects.js).
  */
 
-import { DEFAULT_VARIABLES } from '../variables/catalog.js';
-import { isSafeUrl } from '../../validation/urls.js';
+import { DEFAULT_VARIABLES } from '../features/variables/catalog.js';
+import { isSafeUrl } from '../validation/urls.js';
 import { EmailGenerationError, normalizeGeneratedMjml, parseDraft, reviewDraft } from './draft.js';
-import { applyBrand, cleanBrand } from '../brand/brand.js';
+import { applyBrand, cleanBrand } from '../features/brand/brand.js';
 import { EMAIL_DRAFT_SCHEMA, SYSTEM_PROMPT, buildRepairPrompt, buildUserPrompt } from './prompt.js';
 import { purposeById } from './purposes.js';
 import { createRewriter } from './rewrite.js';
 import { createSubjectSuggester } from './subjects.js';
+import { AI_MESSAGES } from './i18n/index.js';
 
 /**
  * @typedef {{role: 'user'|'assistant', content: string}} ModelMessage
@@ -46,6 +47,8 @@ import { createSubjectSuggester } from './subjects.js';
  *   `brand`: the colors and font the email is written in (features/brand).
  *
  * @typedef {import('./draft.js').EmailDraft & {warnings: string[], attempts: number}} GeneratedEmail
+ * @typedef {import('./rewrite.js').RewriteInput} RewriteInput
+ * @typedef {import('./subjects.js').SubjectsInput} SubjectsInput
  */
 
 export const MAX_DETAILS_LENGTH = 2000;
@@ -149,5 +152,7 @@ export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @
     generate,
     rewrite: createRewriter({ model, maxAttempts }),
     suggestSubjects: createSubjectSuggester({ model, maxAttempts }),
+    // Its error messages in the server's language (the handler merges them).
+    messages: AI_MESSAGES,
   };
 }

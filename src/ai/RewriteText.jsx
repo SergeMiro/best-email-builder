@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Languages, Loader2, Sparkles, TriangleAlert } from 'lucide-react';
-import { useUi } from '../../ui/context.jsx';
-import { Button } from '../../ui/primitives/button.jsx';
-import { Input } from '../../ui/primitives/fields.jsx';
-import { SectionLabel } from '../../ui/primitives/misc.jsx';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../ui/primitives/overlays.jsx';
-import { cleanRichText } from '../../engine/richText.js';
+import { useUi } from '../ui/context.jsx';
+import { Button } from '../ui/primitives/button.jsx';
+import { Input } from '../ui/primitives/fields.jsx';
+import { SectionLabel } from '../ui/primitives/misc.jsx';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/primitives/overlays.jsx';
+import { cleanRichText } from '../engine/richText.js';
 import { chipClassName } from './chip.js';
 import { MAX_REWRITE_INSTRUCTION, REWRITE_ACTIONS, REWRITE_LANGUAGES } from './rewrite.js';
 
@@ -66,7 +66,7 @@ export default function RewriteText({ editor, selection, rewrite }) {
       if (action === 'custom') setInstruction('');
       notify('success', t('Text rewritten. Ctrl+Z brings back the previous one.'));
     } catch (err) {
-      if (!controller.signal.aborted) setError(t(err?.message || 'The text could not be rewritten.'));
+      if (!controller.signal.aborted) setError(err?.message ? t(err.message) : t('The text could not be rewritten.'));
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
       setRunning(null);

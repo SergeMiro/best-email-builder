@@ -17,8 +17,8 @@
  * Dependency-free: runs in the browser, on the server and in unit tests.
  */
 
-import { validateMjml } from '../../validation/mjmlValidator.js';
-import { EmailGenerationError } from './draft.js';
+import { validateMjml } from '../validation/mjmlValidator.js';
+import { EmailGenerationError, unescapedTwice } from './draft.js';
 import { languageName } from './prompt.js';
 
 /**
@@ -131,7 +131,7 @@ export function parseRewrite(answer) {
   if (unfenced.startsWith('{')) {
     try {
       const data = JSON.parse(unfenced);
-      if (typeof data?.text === 'string') return data.text.trim();
+      if (typeof data?.text === 'string') return unescapedTwice(data.text.trim());
     } catch {
       // not JSON after all: the text itself
     }

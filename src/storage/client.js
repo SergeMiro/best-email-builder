@@ -18,11 +18,9 @@
  *   listVariables()             → custom variables            (optional: user-defined
  *   saveVariable(variable)      → saved variable               variables, shared by
  *   deleteVariable(key)         → void                         every template)
- *   generate(input, {signal})   → { name, subject, preheader, mjml, warnings }
- *   rewrite(input, {signal})    → { text }
- *   suggestSubjects(input, {signal}) → { subjects }
- *                                 (optional: "Generate", an email written by AI,
- *                                 "Rewrite with AI", "Suggest subjects")
+ *
+ * The AI is not part of this contract: it is a module of its own
+ * (`createAi`, `best-email-builder/ai`), given to the builder as `ai`.
  *
  * Two implementations: HTTP (talks to `createEmailBuilderHandler` from
  * `best-email-builder/server`, or to any backend with the same routes) and memory
@@ -79,10 +77,6 @@ import { cleanBrand } from '../features/brand/brand.js';
  *
  * @typedef {{mjml: string, subject?: string|null, preheader?: string|null}} RenderInput
  * @typedef {{html: string, warnings: {message: string}[], quality: {code: string, level: string, message: string}[]}} RenderResult
- * @typedef {import('../features/generate/generator.js').GenerateInput} GenerateInput
- * @typedef {import('../features/generate/generator.js').GeneratedEmail} GeneratedEmail
- * @typedef {import('../features/generate/rewrite.js').RewriteInput} RewriteInput
- * @typedef {import('../features/generate/subjects.js').SubjectsInput} SubjectsInput
  * @typedef {import('../features/brand/brand.js').Brand} Brand
  * @typedef {{brand: Brand, notes: string[]}} BrandImportResult
  *   `notes`: what could not be read (`LOGO_NOT_FOUND`, `LOGO_UNSUPPORTED`,
@@ -105,9 +99,6 @@ import { cleanBrand } from '../features/brand/brand.js';
  *   listVariables?: () => Promise<EmailVariable[]>,
  *   saveVariable?: (variable: Partial<EmailVariable>, options?: {create?: boolean}) => Promise<EmailVariable>,
  *   deleteVariable?: (key: string) => Promise<void>,
- *   generate?: (input: GenerateInput, options?: {signal?: AbortSignal}) => Promise<GeneratedEmail>,
- *   rewrite?: (input: RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
- *   suggestSubjects?: (input: SubjectsInput, options?: {signal?: AbortSignal}) => Promise<{subjects: string[]}>,
  *   loadBrand?: () => Promise<Brand>,
  *   saveBrand?: (brand: Brand) => Promise<Brand>,
  *   importBrand?: (url: string, options?: {signal?: AbortSignal}) => Promise<BrandImportResult>,
@@ -137,26 +128,13 @@ function withDocument(template) {
 }
 
 /**
- * Client for the routes of `createEmailBuilderHandler` (`best-email-builder/server`).
+ * The HTTP side of a client: JSON in and out, the host's headers, errors as
+ * `StorageError` (with the server's code). Shared by `createHttpStorage` and
+ * the AI module (`best-email-builder/ai`).
  *
- * `generate: true` turns on "Generate", the AI rewriting of a text and the
- * subject ideas: the server must have a `generator` (otherwise it answers 501). Off by default,
- * as the buttons would only fail.
- *
- * `brand: true` turns on the Brand button: the server must have a
- * `brandStore`, and a `brandImporter` to read a brand from a website
- * (`brand: {import: false}` when it has none).
- *
- * @param {{
- *   baseUrl?: string,
- *   headers?: Record<string, string> | (() => Record<string, string>),
- *   fetch?: typeof fetch,
- *   generate?: boolean,
- *   brand?: boolean|{import?: boolean},
- * }} [options]
- * @returns {TemplateStorage}
+ * @param {{baseUrl?: string, headers?: Record<string, string> | (() => Record<string, string>), fetch?: typeof fetch}} [options]
  */
-export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}, fetch: fetchImpl, generate = false, brand = false } = {}) {
+export function createHttpCaller({ baseUrl = '/api/email-builder', headers = {}, fetch: fetchImpl } = {}) {
   const root = baseUrl.replace(/\/+$/, '');
   const doFetch = fetchImpl || ((input, init) => fetch(input, init));
   const extraHeaders = () => (typeof headers === 'function' ? headers() : headers);
@@ -178,6 +156,28 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
     });
     return unwrap(res);
   }
+
+  return { root, call, unwrap, doFetch, extraHeaders };
+}
+
+/**
+ * Client for the routes of `createEmailBuilderHandler` (`best-email-builder/server`).
+ * The AI is a module of its own: `createAi` (`best-email-builder/ai`).
+ *
+ * `brand: true` turns on the Brand button: the server must have a
+ * `brandStore`, and a `brandImporter` to read a brand from a website
+ * (`brand: {import: false}` when it has none).
+ *
+ * @param {{
+ *   baseUrl?: string,
+ *   headers?: Record<string, string> | (() => Record<string, string>),
+ *   fetch?: typeof fetch,
+ *   brand?: boolean|{import?: boolean},
+ * }} [options]
+ * @returns {TemplateStorage}
+ */
+export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = false } = {}) {
+  const { root, call, unwrap, doFetch, extraHeaders } = createHttpCaller({ baseUrl, headers, fetch: fetchImpl });
 
   /** @param {SavePayload} payload */
   function body(payload) {
@@ -206,15 +206,6 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
     deleteVariable: async (key) => {
       await call(`/variables/${encodeURIComponent(key)}`, { method: 'DELETE' });
     },
-    ...(generate
-      ? {
-          generate: async (input, { signal } = {}) =>
-            call('/generate', { method: 'POST', body: JSON.stringify(input), signal }),
-          rewrite: async (input, { signal } = {}) => call('/rewrite', { method: 'POST', body: JSON.stringify(input), signal }),
-          suggestSubjects: async (input, { signal } = {}) =>
-            call('/subjects', { method: 'POST', body: JSON.stringify(input), signal }),
-        }
-      : {}),
     ...(brand
       ? {
           loadBrand: async () => call('/brand'),
@@ -243,16 +234,12 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
  * In-memory storage, same contract. Documents are kept SERIALIZED.
  * `render` and `sendTest` cannot run in a browser (MJML compiles on the
  * server): pass implementations to enable the preview and test buttons;
- * `generate`, `rewrite` and `suggestSubjects` likewise for the AI, `importBrand` for reading a
- * brand from a website. The brand itself is kept in memory (`brand`: the
+ * `importBrand` likewise for reading a brand from a website. The brand itself is kept in memory (`brand`: the
  * one to start with).
  *
  * @param {{
  *   render?: TemplateStorage['render'],
  *   sendTest?: TemplateStorage['sendTest'],
- *   generate?: TemplateStorage['generate'],
- *   rewrite?: TemplateStorage['rewrite'],
- *   suggestSubjects?: TemplateStorage['suggestSubjects'],
  *   importBrand?: TemplateStorage['importBrand'],
  *   brand?: Brand|null,
  *   assetsPath?: string,
@@ -263,9 +250,6 @@ export function createHttpStorage({ baseUrl = '/api/email-builder', headers = {}
 export function createMemoryStorage({
   render,
   sendTest,
-  generate,
-  rewrite,
-  suggestSubjects,
   importBrand,
   brand = null,
   assetsPath = DEFAULT_ASSETS_PATH,
@@ -438,9 +422,6 @@ export function createMemoryStorage({
     ...(importBrand ? { importBrand } : {}),
     ...(render ? { render } : {}),
     ...(sendTest ? { sendTest } : {}),
-    ...(generate ? { generate } : {}),
-    ...(rewrite ? { rewrite } : {}),
-    ...(suggestSubjects ? { suggestSubjects } : {}),
     dump: () => ({
       rows: [...rows.values()],
       versions: Object.fromEntries(versions),

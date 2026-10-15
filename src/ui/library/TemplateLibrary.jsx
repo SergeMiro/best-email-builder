@@ -24,6 +24,7 @@ import { Button } from '../primitives/button.jsx';
 import { cn } from '../primitives/cn.js';
 import { Input } from '../primitives/fields.jsx';
 import { SectionLabel } from '../primitives/misc.jsx';
+import { SEARCH_KEYS, SearchKeyHint, useSearchShortcut } from '../primitives/searchShortcut.jsx';
 import { useLayoutWidth } from '../useLayoutWidth.js';
 
 /**
@@ -268,16 +269,7 @@ function Library({
   }, [items, selection, bases]);
 
   // Ctrl/Cmd+K focuses the search.
-  useEffect(() => {
-    const onKey = (event) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && rootRef.current?.isConnected) {
-        event.preventDefault();
-        searchRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  useSearchShortcut(searchRef);
 
   const selected =
     templateEntries.find((e) => e.key === selection) || baseEntries.find((e) => e.key === selection) || null;
@@ -417,7 +409,7 @@ function Library({
             }}
             placeholder={t('Search templates')}
             aria-label={t('Search templates')}
-            aria-keyshortcuts="Control+K"
+            aria-keyshortcuts={SEARCH_KEYS}
             className="eb:pr-16 eb:pl-8 eb:[&::-webkit-search-cancel-button]:hidden"
           />
           <div className="eb:absolute eb:top-1/2 eb:right-2 eb:flex eb:-translate-y-1/2 eb:items-center eb:gap-1">
@@ -426,12 +418,7 @@ function Library({
                 <X className="eb:size-3.5 eb:text-foreground-muted eb:hover:text-foreground" />
               </button>
             )}
-            <kbd
-              className="eb:inline-flex eb:h-5 eb:items-center eb:rounded eb:border eb:border-border eb:bg-surface-100 eb:px-1.5 eb:font-mono eb:text-[10px] eb:text-foreground-muted"
-              aria-hidden="true"
-            >
-              {query ? 'Esc' : 'Ctrl K'}
-            </kbd>
+            <SearchKeyHint>{query ? 'Esc' : null}</SearchKeyHint>
           </div>
         </div>
       </div>

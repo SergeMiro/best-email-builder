@@ -6,6 +6,61 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed — the AI is a module (breaking)
+- Everything AI moved to its own entries: `best-email-builder/ai` (the
+  builder's side) and `best-email-builder/ai/server` (the generator, the
+  prompts, `claudeEmailModel`). An application that does not import them has
+  no AI button anywhere, and none of the AI's code or texts in its bundle.
+- The builder takes the module as a prop: `<EmailBuilder ai={createAi()} />`
+  (`EmailStudio` passes it on). `createAi()` calls the handler's routes;
+  `createAi({ baseUrl, headers })` other ones; `generate`, `rewrite` and
+  `suggestSubjects` can each be `false` (no button) or a function of your own.
+- Removed: `createHttpStorage({ generate: true })` and the storage's
+  `generate`, `rewrite` and `suggestSubjects`; `createEmailGenerator`,
+  `claudeEmailModel` and the prompts are no longer exported by
+  `best-email-builder/server` — import them from `best-email-builder/ai/server`.
+  The handler still takes the generator as `generator`.
+
+### Added
+- **AI providers by their key**, nothing to install: `providerEmailModel({ provider, apiKey })`
+  and `createAi({ provider, … })` for OpenRouter (default `openrouter/free`,
+  free models), Google Gemini, Groq, Cerebras, Mistral, OpenAI, DeepSeek,
+  Ollama and any OpenAI-compatible API (`{ baseUrl, model }`). Structured
+  output where the model takes it, stepped down to a JSON object, then plain
+  JSON, once. `AI_PROVIDERS` lists them with their default model, where to get
+  a key and what is free. New errors, translated: `KEY_MISSING`,
+  `KEY_REFUSED`, `MODEL_CREDITS`, `MODEL_BUSY`, `MODEL_ERROR`.
+- **Each user's own key**: `createAi({ provider, askKey: true })` (off by
+  default) — the first AI action opens a *Connect* dialog (the provider, a
+  link to get a key, what is free, the key hidden or shown), the key is kept
+  in that browser and sent only to the provider; a refused key is forgotten
+  and asked again in the same action. `ai.key` reads and changes it.
+- **Ctrl K** (⌘K on Apple) puts the cursor in the search of *Generate* and of
+  the variables menu, as in the template library; each search shows the hint.
+- The live demo runs the AI with the visitor's own OpenRouter key, asked in
+  the *Connect* dialog instead of the browser's prompt; its code samples have
+  a *With AI* tab.
+
+### Fixed
+- Dark-mode preview: text and lines are now decided against the background
+  they really sit on (nested tables, `bgcolor`, CSS), by contrast; legacy
+  attributes (`<font color>`, `<body text link>`, `bgcolor` without `#`),
+  `hsl()` colors and per-rule CSS are handled; comments, Outlook-only blocks
+  and the doctype are left alone; the dark sheet goes in the real `<head>`.
+- *Suggest subjects*: a subject quoting itself, a list introduced by a line of
+  prose, entities in the email's words, a merge tag of another tool
+  (`*|FNAME|*`, `%name%`), more than 90 characters, capitals the email does not
+  use, "!!" or the preheader repeated are no longer offered; the language
+  falls back to the server's. In the list, what the user types becomes
+  "yours", another email loaded closes it, "More ideas" avoids every idea
+  already shown and keeps the chosen one, the arrows move through it, and a
+  cancelled request can no longer end the one after it.
+- MJML a model escaped twice (`\"`, `\n` left in the markup — some free
+  models do) is read as MJML instead of failing the draft or the rewrite.
+- Types: `createEmailGenerator()`'s `rewrite` and `suggestSubjects` named
+  input types the declaration file did not import (a TypeScript error without
+  `skipLibCheck`).
+
 ## [0.4.0] — 2026-10-15
 
 ### Changed — the builder's own engine (breaking)

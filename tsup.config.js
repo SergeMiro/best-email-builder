@@ -6,6 +6,8 @@ export default defineConfig({
     builder: 'src/builder.js',
     library: 'src/library.js',
     server: 'src/server/index.js',
+    ai: 'src/ai/index.js',
+    'ai-server': 'src/ai/server.js',
   },
   format: ['esm'],
   target: 'es2022',

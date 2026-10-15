@@ -20,8 +20,12 @@ import TemplateLibrary from './library/TemplateLibrary.jsx';
  * `libraryProps` / `builderProps` reach only one. Coming back from the editor, the library selects the template that was
  * just edited or created.
  *
+ * `ai` (`createAi()` from `best-email-builder/ai`) goes to the editor only:
+ * without it, the editor has no AI button at all.
+ *
  * @param {{
  *   storage?: import('../storage/client.js').TemplateStorage,
+ *   ai?: import('../ai/createAi.js').EmailBuilderAi|null,
  *   locale?: string,
  *   messages?: Record<string, string>,
  *   onNotify?: (level: 'success'|'info'|'warning'|'error', message: string) => void,
@@ -35,6 +39,7 @@ import TemplateLibrary from './library/TemplateLibrary.jsx';
  */
 export default function EmailStudio({
   storage: injectedStorage,
+  ai,
   locale = 'en',
   messages,
   onNotify,
@@ -56,6 +61,7 @@ export default function EmailStudio({
       <EmailBuilder
         key={session.key}
         {...shared}
+        ai={ai}
         // The bases are picked in the bank: no second gallery in the editor,
         // where picking one would replace the email being edited.
         templates={[]}

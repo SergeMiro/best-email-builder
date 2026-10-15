@@ -1,4 +1,4 @@
-import { cn } from '../../ui/primitives/cn.js';
+import { cn } from '../ui/primitives/cn.js';
 
 /**
  * A rounded badge button: the purposes of "Generate", the rewrite actions.
