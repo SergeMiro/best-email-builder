@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-15
+
 ### Changed — the builder's own engine (breaking)
 - **GrapesJS is gone.** The interface, the canvas, the drag and drop and the
   text editing are the builder's own (`src/engine/`); the email is a tree of
