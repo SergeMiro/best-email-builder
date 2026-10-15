@@ -79,6 +79,8 @@ test.describe('Rewrite with AI', () => {
     expect(await mjml(page)).toContain('Hi {{contact.firstname}}, here is the news.');
     expect((await asked(page))[1]).toMatchObject({ action: 'custom', instruction: 'Say hi, one sentence', format: 'html' });
     await expect(rewrite(page).getByRole('textbox', { name: 'What to change' })).toHaveValue('');
+    // Two rewrites, one notice: the second replaces the first.
+    await expect(page.getByText('Text rewritten. Ctrl+Z brings back the previous one.')).toHaveCount(1);
   });
 
   test('a button label stays plain text', async ({ page }) => {

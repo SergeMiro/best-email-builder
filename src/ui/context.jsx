@@ -117,7 +117,16 @@ export function UiProvider({ locale = 'en', messages, onNotify, children }) {
         return;
       }
       const id = (nextId.current += 1);
-      setNotices((list) => [...list.slice(-3), { id, level, message }]);
+      // The same message again replaces the one shown (three rewrites in a
+      // row: one notice, not a pile). Clearing a timer twice is harmless.
+      setNotices((list) => {
+        const same = list.filter((n) => n.level === level && n.message === message);
+        for (const notice of same) {
+          clearTimeout(timers.current.get(notice.id));
+          timers.current.delete(notice.id);
+        }
+        return [...list.filter((n) => !same.includes(n)).slice(-3), { id, level, message }];
+      });
       timers.current.set(
         id,
         setTimeout(() => dismiss(id), NOTICE_TTL[level] || 4000)
