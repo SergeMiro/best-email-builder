@@ -6,6 +6,29 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **The user chooses the model.** In the Connect dialog, under the key, a
+  field opens the provider's list of models in place: the default first,
+  then the free ones (marked, with a *Free only* filter), then the newest;
+  searchable, and an id the list does not have can be used as typed. The
+  list is asked with the key (OpenRouter's needs none, so it shows before
+  any key); embeddings, speech, pictures and video are left out. The model
+  chosen is remembered for each provider and sent with each request.
+  `ai.key` gains `model(id?)`, `chooseModel(model, id?)` and
+  `listModels(id?, { apiKey, signal })`.
+- **`listProviderModels({ provider, apiKey })`** — the models a provider
+  offers for writing, from `/ai` and `/ai/server`. `claudeProvider` lists
+  Claude's through the application's SDK and takes the model chosen.
+- The live demo says which model is connected, and its link is now *Change
+  provider or model*.
+- **`MODEL_UNAVAILABLE`** — a model the provider does not have, or no longer
+  (a 404 about the model, OpenRouter's "not a valid model ID"): *Choose
+  another one*, instead of *Try again*.
+
+### Changed
+- *Get a key* opens the provider's page in a new tab with `window.open`,
+  also where a link's target is ignored (some embedded browsers).
+
 ## [0.6.0] — 2026-10-15
 
 ### Added

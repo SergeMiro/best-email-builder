@@ -41,7 +41,9 @@ import { EmailGenerationError } from './draft.js';
  *   keyless?: boolean,
  *   headers?: Record<string, string>,
  *   body?: Record<string, unknown>,
- *   createModel?: (options: {apiKey: () => string|Promise<string>, fetch?: typeof fetch}) => import('./generator.js').EmailModel,
+ *   publicModels?: boolean,
+ *   createModel?: (options: {apiKey: () => string|Promise<string>, fetch?: typeof fetch, model?: string}) => import('./generator.js').EmailModel,
+ *   listModels?: (options: {apiKey: string, fetch?: typeof fetch, signal?: AbortSignal}) => Promise<ModelEntry[]>,
  * }} AiProvider
  *   `model`: the default (null: to be given); `keyUrl`: where a user gets a
  *   key; `keyHint`: what a key starts with; `free`: what can be used without
@@ -50,7 +52,13 @@ import { EmailGenerationError } from './draft.js';
  *   `maxTokens`: that limit (an email is about 6 000 tokens, more for a model
  *   that reasons first); `body`: fields of its own added to each request;
  *   `createModel`: a provider that is not an OpenAI-compatible API makes its
- *   own model from the user's key (`claudeProvider` does).
+ *   own model from the user's key (`claudeProvider` does), and `listModels`
+ *   lists its models; `publicModels`: its list of models needs no key.
+ *
+ * @typedef {{id: string, name?: string, free?: boolean, created?: number}} ModelEntry
+ * @typedef {Readonly<{id: string, name: string, free: boolean}>} ModelChoice
+ *   A model a provider offers: the id requests name it by, the name it shows,
+ *   whether it costs nothing (known for OpenRouter only).
  */
 
 /** @param {Omit<AiProvider, 'tokens'|'format'|'maxTokens'> & Partial<Pick<AiProvider, 'tokens'|'format'|'maxTokens'>>} provider @returns {AiProvider} */
@@ -68,6 +76,7 @@ export const AI_PROVIDERS = Object.freeze({
     keyUrl: 'https://openrouter.ai/keys',
     keyHint: 'sk-or-',
     free: 'Free models, with a free account',
+    publicModels: true,
     headers: { 'X-Title': 'Best Email Builder' },
     // Most free models reason before they answer: 5 000 to 12 000 tokens
     // before the email itself, which a limit of 16 000 cut short. Less
@@ -171,6 +180,106 @@ export function resolveProvider(provider) {
   return define({ ...base, ...provider });
 }
 
+/**
+ * Model ids that do not write text: embeddings, speech, pictures, video,
+ * music, live audio, moderation, search and agents' tools.
+ */
+const NOT_A_WRITER =
+  /embed|tts|audio|transcri|whisper|speech|voxtral|image|imagen|dall-e|sora|veo|lyria|music|moderation|realtime|(^|[-_/.])live($|[-_.])|search|computer-use|robotics|\baqa\b|nano-banana|deep-research|antigravity|guard|safety|ocr|rerank|translate|customtools|codex|^(davinci|babbage)|turbo-instruct/i;
+
+/** An entry of a `/models` list that writes text. @param {any} entry */
+function writes(entry) {
+  const id = typeof entry?.id === 'string' ? entry.id : '';
+  if (!id || NOT_A_WRITER.test(id)) return false;
+  // OpenRouter says what comes out; Mistral, whether it chats.
+  const outputs = entry.architecture?.output_modalities;
+  if (Array.isArray(outputs) && !outputs.every((output) => output === 'text')) return false;
+  return entry.capabilities?.completion_chat !== false;
+}
+
+/** @param {any} entry @returns {ModelEntry} */
+const entryOf = (entry) => {
+  const id = String(entry.id).replace(/^models\//, '');
+  const price = entry.pricing;
+  return {
+    id,
+    name: String(entry.display_name || entry.name || id),
+    free: /:free$/.test(id) || (price != null && Number(price.prompt) === 0 && Number(price.completion) === 0),
+    created: Number(entry.created) || (entry.created_at ? Date.parse(entry.created_at) / 1000 : 0) || 0,
+  };
+};
+
+/** The version an id carries (`gemini-3.5-flash` → 3.5), for lists without dates. @param {string} id */
+const versionOf = (id) => Number(/(\d+(?:\.\d+)?)/.exec(id)?.[1] || 0);
+
+/**
+ * The models in the order a user looks for them: the default one first, then
+ * the free ones, then the newest (by date, else by the version in the id).
+ * Each once.
+ * @param {ModelEntry[]} entries @param {string|null} defaultModel
+ * @returns {ModelChoice[]}
+ */
+function orderModels(entries, defaultModel) {
+  const seen = new Set();
+  const models = entries.filter((entry) => entry?.id && !seen.has(entry.id) && seen.add(entry.id));
+  const rank = (/** @type {ModelEntry} */ entry) => (entry.id === defaultModel ? 0 : entry.free ? 1 : 2);
+  const dated = models.some((entry) => entry.created);
+  return models
+    .map((entry, at) => ({ entry, at }))
+    .sort(
+      (a, b) =>
+        rank(a.entry) - rank(b.entry) ||
+        (dated ? (b.entry.created || 0) - (a.entry.created || 0) : versionOf(b.entry.id) - versionOf(a.entry.id)) ||
+        a.at - b.at
+    )
+    .map(({ entry }) => Object.freeze({ id: entry.id, name: entry.name || entry.id, free: Boolean(entry.free) }));
+}
+
+/**
+ * The models a provider offers for writing, from its list of models (the
+ * `/models` of an OpenAI-compatible API — OpenRouter's needs no key — or the
+ * provider's own `listModels`): the default first, then the free ones, then
+ * the newest. Embeddings, speech, pictures and video are left out. Its
+ * failures are the errors of `providerEmailModel` (`KEY_REFUSED`…).
+ *
+ *   listProviderModels({ provider: 'gemini', apiKey })
+ *
+ * @param {{provider?: string|Partial<AiProvider>, apiKey?: string, fetch?: typeof fetch, signal?: AbortSignal}} [options]
+ * @returns {Promise<ModelChoice[]>}
+ */
+export async function listProviderModels(options = {}) {
+  const { apiKey = '', fetch: fetchImpl, signal } = options;
+  const provider = resolveProvider(options.provider ?? 'openai-compatible');
+  if (provider.listModels) return orderModels(await provider.listModels({ apiKey, fetch: fetchImpl, signal }), provider.model);
+  const baseUrl = String(provider.baseUrl).replace(/\/+$/, '');
+  if (!baseUrl) return [];
+  if (!apiKey && !provider.keyless && !provider.publicModels) throw new EmailGenerationError('KEY_MISSING', `${provider.name}: no key`);
+  /** @type {Response} */
+  let response;
+  try {
+    response = await (fetchImpl || globalThis.fetch)(`${baseUrl}/models`, {
+      headers: { ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}), ...provider.headers },
+      signal,
+    });
+  } catch (error) {
+    if (signal?.aborted || /** @type {any} */ (error)?.name === 'AbortError') throw error;
+    throw new EmailGenerationError('MODEL_ERROR', `${provider.name}: ${/** @type {any} */ (error)?.message || error}`);
+  }
+  const text = await response.text();
+  if (!response.ok) {
+    throw new EmailGenerationError(failureCode(response.status, errorMessage(text)), `${provider.name} ${response.status}: ${text.slice(0, 300)}`);
+  }
+  /** @type {any} */
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new EmailGenerationError('MODEL_ERROR', `${provider.name}: not JSON — ${text.slice(0, 200)}`);
+  }
+  const entries = Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : [];
+  return orderModels(entries.filter(writes).map(entryOf), provider.model);
+}
+
 /** The instruction every answer gets: the JSON, nothing else. @param {object} schema */
 const answerInstruction = (schema) =>
   `\n\n# Answer format\nAnswer with ONE JSON object and nothing else — no prose, no code fence — matching this JSON schema:\n${JSON.stringify(schema)}`;
@@ -215,13 +324,25 @@ function refusal(status, message) {
 }
 
 /**
- * The error code of a failed request, from its status and the provider's
- * message: the refusals above, the money (402, a quota, a credit balance too
- * low — Anthropic says it with a 400, OpenAI with a 429), busy, or an error.
+ * A model the provider does not have (any more): a 404 about a model
+ * (Gemini, Anthropic, Groq), or a 400 that says the id is not one
+ * (OpenRouter). The user chose it, so the user must choose another.
  * @param {number} status @param {string} message
- * @returns {'KEY_REFUSED'|'REFUSED'|'MODEL_CREDITS'|'MODEL_BUSY'|'MODEL_ERROR'}
+ */
+const missingModel = (status, message) =>
+  (status === 404 && /\bmodel/i.test(message)) ||
+  ((status === 400 || status === 404) && /not a valid model|(unknown|invalid) model|model\b.*\b(not found|does not exist|no longer available)/i.test(message));
+
+/**
+ * The error code of a failed request, from its status and the provider's
+ * message: the refusals above, a model that is not there, the money (402, a
+ * quota, a credit balance too low — Anthropic says it with a 400, OpenAI with
+ * a 429), busy, or an error.
+ * @param {number} status @param {string} message
+ * @returns {'KEY_REFUSED'|'REFUSED'|'MODEL_UNAVAILABLE'|'MODEL_CREDITS'|'MODEL_BUSY'|'MODEL_ERROR'}
  */
 export function failureCode(status, message) {
+  if (missingModel(status, message)) return 'MODEL_UNAVAILABLE';
   const refused = refusal(status, message);
   if (refused) return refused;
   if (status === 402 || /credit balance|insufficient[ _](quota|credits|balance)|exceeded your current quota/i.test(message)) return 'MODEL_CREDITS';

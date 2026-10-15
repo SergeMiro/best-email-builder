@@ -93,6 +93,67 @@ const providerCard = (page, name) => connect(page).getByRole('radio', { name: ne
 const choose = (page, name) => providerCard(page, name).click();
 const stored = (page, slot) => page.evaluate((slot) => localStorage.getItem(slot), slot);
 
+/** The lists of models the providers give (`GET …/models`), as they shape them. */
+const MODELS = {
+  'https://openrouter.ai/api/v1/models': {
+    data: [
+      { id: 'openai/gpt-5.5', name: 'OpenAI: GPT-5.5', created: 300, pricing: { prompt: '0.000002', completion: '0.00001' }, architecture: { output_modalities: ['text'] } },
+      { id: 'google/lyria-3', name: 'Google: Lyria 3', created: 400, pricing: { prompt: '0', completion: '0' }, architecture: { output_modalities: ['audio'] } },
+      { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'NVIDIA: Nemotron 3 Super (free)', created: 100, pricing: { prompt: '0', completion: '0' }, architecture: { output_modalities: ['text'] } },
+      { id: 'openrouter/free', name: 'Free Models Router', created: 50, pricing: { prompt: '0', completion: '0' }, architecture: { output_modalities: ['text'] } },
+      { id: 'anthropic/claude-sonnet-5.5', name: 'Anthropic: Claude Sonnet 5.5', created: 200, pricing: { prompt: '0.000003', completion: '0.000015' }, architecture: { output_modalities: ['text'] } },
+    ],
+  },
+  'https://generativelanguage.googleapis.com/v1beta/openai/models': {
+    object: 'list',
+    data: [
+      { id: 'models/gemini-2.5-flash', object: 'model', display_name: 'Gemini 2.5 Flash' },
+      { id: 'models/gemini-2.5-pro', object: 'model', display_name: 'Gemini 2.5 Pro' },
+      { id: 'models/gemini-3.5-flash-lite', object: 'model', display_name: 'Gemini 3.5 Flash-Lite' },
+      { id: 'models/gemini-2.5-flash-preview-tts', object: 'model', display_name: 'Gemini 2.5 Flash TTS' },
+      { id: 'models/gemini-embedding-001', object: 'model', display_name: 'Gemini Embedding' },
+    ],
+  },
+  'https://api.mistral.ai/v1/models': {
+    data: [
+      { id: 'mistral-small-latest', created: 1, capabilities: { completion_chat: true } },
+      { id: 'mistral-large-latest', created: 2, capabilities: { completion_chat: true } },
+      { id: 'mistral-embed', created: 3, capabilities: { completion_chat: false } },
+    ],
+  },
+  'https://api.openai.com/v1/models': { data: [{ id: 'gpt-5-mini', created: 1 }, { id: 'gpt-5.5', created: 2 }, { id: 'whisper-1', created: 3 }] },
+  'https://api.anthropic.com/v1/models': {
+    data: [
+      { type: 'model', id: 'claude-opus-5-5', display_name: 'Claude Opus 5.5', created_at: '2026-04-01T00:00:00Z' },
+      { type: 'model', id: 'claude-haiku-5-5', display_name: 'Claude Haiku 5.5', created_at: '2026-05-01T00:00:00Z' },
+    ],
+    has_more: false,
+    first_id: 'claude-opus-5-5',
+    last_id: 'claude-haiku-5-5',
+  },
+};
+
+/**
+ * Every provider's list of models, answered here — the dialog asks for it as
+ * soon as it can (OpenRouter's without a key). Returns the requests seen.
+ */
+async function fakeModels(page) {
+  const seen = [];
+  await page.route(/\/models(\?.*)?$/, async (route) => {
+    const request = route.request();
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { ...CORS, 'access-control-allow-methods': 'GET' } });
+    const url = request.url().replace(/\?.*$/, '');
+    if (!MODELS[url]) return route.continue();
+    seen.push({ url: request.url(), headers: request.headers() });
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(MODELS[url]) });
+  });
+  return seen;
+}
+test.beforeEach(({ page }) => fakeModels(page));
+const modelField = (page) => connect(page).getByTestId('eb-ai-connect-model');
+const modelStatus = (page) => connect(page).getByTestId('eb-ai-connect-models-status');
+const modelList = (page) => connect(page).getByRole('listbox', { name: /^(Model|Modèle)$/ });
+
 test('without a key: the Connect dialog offers five providers and asks for a key; Cancel explains it, nothing is sent', async ({ page }) => {
   const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(DRAFT)));
   // The page only: the canvas frame shares its storage, and would put the key back.
@@ -139,6 +200,13 @@ test('without a key: the Connect dialog offers five providers and asks for a key
   const getKey = dialog.getByRole('link', { name: 'Get a key' });
   await expect(getKey).toHaveAttribute('href', 'https://openrouter.ai/keys');
   await expect(getKey).toHaveAttribute('target', '_blank');
+  // Always a new tab: this page and its dialog stay.
+  await page.context().route('https://openrouter.ai/keys', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Keys</title>' }));
+  const [tab] = await Promise.all([page.context().waitForEvent('page'), getKey.click()]);
+  await tab.waitForURL('https://openrouter.ai/keys');
+  await tab.close();
+  await expect(dialog).toBeVisible();
+  expect(page.url()).toContain('#/editor/new');
 
   // The field: hidden by default, shown on demand; Connect waits for a key.
   const field = dialog.getByLabel('API key');
@@ -187,7 +255,7 @@ test('with a key: OpenRouter is asked from the browser, the email opens in the e
   // Kept for the next generation, with the choice, until the visitor forgets it.
   expect(await stored(page, STORED)).toBe(KEY);
   expect(await stored(page, CHOICE)).toBe('openrouter');
-  await expect(page.getByTestId('demo-ai-note')).toContainText('Connected to OpenRouter.');
+  await expect(page.getByTestId('demo-ai-note')).toContainText('Connected to OpenRouter · openrouter/free.');
   const forget = page.getByTestId('demo-ai-note').getByRole('button', { name: 'Forget my key' });
   await expect(forget).toBeVisible();
   await forget.click();
@@ -279,7 +347,7 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
   expect(await stored(page, 'best-email-builder:ai-key:gemini')).toBe('AIza-test-gemini');
   expect(await stored(page, CHOICE)).toBe('gemini');
   const note = page.getByTestId('demo-ai-note');
-  await expect(note).toContainText('Connected to Google Gemini.');
+  await expect(note).toContainText('Connected to Google Gemini · gemini-3.5-flash-lite.');
 
   // Back later: the same provider, its key, no question.
   await reopenEditor(page);
@@ -288,7 +356,7 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
   expect(gemini).toHaveLength(2);
 
   // "Change provider": Gemini in use, its key saved; Mistral needs its own.
-  await note.getByRole('button', { name: 'Change provider' }).click();
+  await note.getByRole('button', { name: 'Change provider or model' }).click();
   const dialog = connect(page);
   await expect(providerCard(page, 'Google Gemini')).toHaveAttribute('aria-checked', 'true');
   await expect(providerCard(page, 'Google Gemini').getByLabel('Key saved')).toBeAttached();
@@ -300,7 +368,7 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
   await dialog.getByLabel('API key').fill('mistral-test-key');
   await dialog.getByRole('button', { name: 'Connect' }).click();
   await expect(dialog).toBeHidden();
-  await expect(note).toContainText('Connected to Mistral.');
+  await expect(note).toContainText('Connected to Mistral · mistral-small-latest.');
   expect(await stored(page, CHOICE)).toBe('mistral');
   // Gemini's key stays, for coming back to it.
   expect(await stored(page, 'best-email-builder:ai-key:gemini')).toBe('AIza-test-gemini');
@@ -315,11 +383,11 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
   expect(gemini).toHaveLength(2);
 
   // Back to Gemini with the key it keeps: nothing to paste.
-  await note.getByRole('button', { name: 'Change provider' }).click();
+  await note.getByRole('button', { name: 'Change provider or model' }).click();
   await choose(page, 'Google Gemini');
   await dialog.getByRole('button', { name: 'Connect' }).click();
   await expect(dialog).toBeHidden();
-  await expect(note).toContainText('Connected to Google Gemini.');
+  await expect(note).toContainText('Connected to Google Gemini · gemini-3.5-flash-lite.');
   expect(await stored(page, CHOICE)).toBe('gemini');
 });
 
@@ -345,7 +413,7 @@ test('Claude: the Anthropic SDK in the browser; a refused key is asked again; th
   await expect(box).toBeHidden({ timeout: 30_000 });
   await expect(page.frameLocator('.eb-canvas-frame').getByText('Autumn sale', { exact: true })).toBeVisible();
   await expect(page.getByTestId('eb-properties').getByRole('textbox', { name: 'Subject' })).toHaveValue(DRAFT.subject);
-  await expect(page.getByTestId('demo-ai-note')).toContainText('Connected to Claude.');
+  await expect(page.getByTestId('demo-ai-note')).toContainText('Connected to Claude · claude-opus-5-5.');
 
   // Straight to Anthropic, the key in its own header, the answer streamed as structured output.
   expect(seen.map((request) => request.headers['x-api-key'])).toEqual(['sk-ant-wrong', 'sk-ant-good']);
@@ -358,4 +426,145 @@ test('Claude: the Anthropic SDK in the browser; a refused key is asked again; th
   expect(body.output_config.format.schema.required).toEqual(['name', 'subject', 'preheader', 'mjml']);
   expect(body.system).toBeTruthy();
   expect(JSON.stringify(body.messages)).toContain('sale');
+});
+
+test('the model: Gemini lists its models once the key is pasted; the one chosen is sent, remembered, and shown', async ({ page }) => {
+  const lists = await fakeModels(page);
+  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(DRAFT)));
+  await openEditor(page);
+  let box = await generateSale(page);
+  await choose(page, 'Google Gemini');
+  const dialog = connect(page);
+  // No key yet: the provider's own model, and how to see the others.
+  await expect(modelField(page)).toContainText('gemini-3.5-flash-lite');
+  await expect(modelField(page)).toContainText('Default');
+  await expect(modelStatus(page)).toHaveText('Paste the key to see all the models of Google Gemini.');
+  expect(lists.filter((request) => request.url.includes('googleapis'))).toHaveLength(0);
+
+  await dialog.getByLabel('API key').fill('AIza-test-gemini-000000000');
+  await expect(modelStatus(page)).toHaveText('3 models.');
+  const asked = lists.filter((request) => request.url.includes('googleapis'));
+  expect(asked).toHaveLength(1);
+  expect(asked[0].headers.authorization).toBe('Bearer AIza-test-gemini-000000000');
+
+  // The list opens in place: the default first, no speech nor embeddings.
+  await modelField(page).click();
+  await expect(modelField(page)).toHaveAttribute('aria-expanded', 'true');
+  const search = dialog.getByRole('combobox', { name: 'Search the models' });
+  await expect(search).toBeFocused();
+  const options = modelList(page).getByRole('option');
+  await expect(options).toHaveCount(3);
+  await expect(options.first()).toContainText('Gemini 3.5 Flash-Lite');
+  await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+  await expect(modelList(page)).not.toContainText('TTS');
+  await expect(modelList(page)).not.toContainText('Embedding');
+  // Esc closes the list, not the dialog.
+  await page.keyboard.press('Escape');
+  await expect(modelList(page)).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await expect(modelField(page)).toBeFocused();
+
+  // Typed, then Enter: chosen, and the dialog still open.
+  await modelField(page).click();
+  await search.fill('pro');
+  await expect(options).toHaveCount(2);
+  await expect(options.nth(1)).toHaveText('Use “pro”');
+  await page.keyboard.press('Enter');
+  await expect(modelList(page)).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await expect(modelField(page)).toContainText('gemini-2.5-pro');
+  await expect(modelField(page)).not.toContainText('Default');
+  await expect(providerCard(page, 'Google Gemini')).toContainText('gemini-2.5-pro');
+
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await expect(box).toBeHidden({ timeout: 30_000 });
+  expect(gemini).toHaveLength(1);
+  expect(gemini[0].body.model).toBe('gemini-2.5-pro');
+  expect(await stored(page, 'best-email-builder:ai-model:gemini')).toBe('gemini-2.5-pro');
+  const note = page.getByTestId('demo-ai-note');
+  await expect(note).toContainText('Connected to Google Gemini · gemini-2.5-pro.');
+
+  // Back later: the same model. Then a model the list does not have, by its id.
+  await reopenEditor(page);
+  box = await generateSale(page);
+  await expect(box).toBeHidden({ timeout: 30_000 });
+  expect(gemini[1].body.model).toBe('gemini-2.5-pro');
+  await note.getByRole('button', { name: 'Change provider or model' }).click();
+  await expect(modelStatus(page)).toHaveText('3 models.');
+  await expect(modelField(page)).toContainText('gemini-2.5-pro');
+  await modelField(page).click();
+  await search.fill('gemini-9-ultra');
+  await expect(options).toHaveCount(1);
+  await page.keyboard.press('Enter');
+  await expect(modelField(page)).toContainText('gemini-9-ultra');
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(note).toContainText('Connected to Google Gemini · gemini-9-ultra.');
+  expect(await stored(page, 'best-email-builder:ai-model:gemini')).toBe('gemini-9-ultra');
+});
+
+test('the model: OpenRouter lists its models without a key, the free ones first, marked; "Free only"', async ({ page }) => {
+  const lists = await fakeModels(page);
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(DRAFT)));
+  await openEditor(page);
+  await generateSale(page);
+  await choose(page, 'OpenRouter');
+  await expect(modelStatus(page)).toHaveText('4 models, the free ones first.');
+  const asked = lists.filter((request) => request.url.includes('openrouter'));
+  expect(asked.length).toBeGreaterThan(0);
+  expect(asked[0].headers.authorization).toBeUndefined();
+
+  await modelField(page).click();
+  const options = modelList(page).getByRole('option');
+  // The default, the free ones, then the newest; no music.
+  await expect(options).toHaveCount(4);
+  await expect(options.nth(0)).toContainText('Free Models Router');
+  await expect(options.nth(0)).toContainText('Default');
+  await expect(options.nth(1)).toContainText('NVIDIA: Nemotron 3 Super (free)');
+  await expect(options.nth(1)).toContainText('Free');
+  await expect(options.nth(2)).toContainText('OpenAI: GPT-5.5');
+  await expect(options.nth(2)).not.toContainText('Free');
+  await expect(options.nth(3)).toContainText('Anthropic: Claude Sonnet 5.5');
+  await expect(modelList(page)).not.toContainText('Lyria');
+  await connect(page).getByRole('button', { name: 'Free only' }).click();
+  await expect(options).toHaveCount(2);
+  await options.nth(1).click();
+  await expect(modelField(page)).toContainText('nvidia/nemotron-3-super-120b-a12b:free');
+
+  await connect(page).getByLabel('API key').fill(KEY);
+  await connect(page).getByRole('button', { name: 'Connect' }).click();
+  await expect(connect(page)).toBeHidden();
+  await expect.poll(() => seen.length, { timeout: 30_000 }).toBe(1);
+  expect(seen[0].body.model).toBe('nvidia/nemotron-3-super-120b-a12b:free');
+});
+
+test('the model in French; Claude\'s list through the Anthropic SDK', async ({ page }) => {
+  const lists = await fakeModels(page);
+  // Claude's key kept from before; OpenRouter in use, with none: the dialog asks.
+  await page.addInitScript(() => {
+    if (window !== window.top) return;
+    localStorage.setItem('best-email-builder:ai-key:anthropic', 'sk-ant-saved');
+    localStorage.setItem('best-email-builder:ai-provider', 'openrouter');
+  });
+  await openEditor(page, 'fr');
+  const box = await generateSale(page, 'Générer');
+  const dialog = connect(page);
+  await choose(page, 'OpenRouter');
+  await expect(dialog.getByText('Modèle', { exact: true })).toBeVisible();
+  await expect(modelStatus(page)).toHaveText('4 modèles, les gratuits en premier.');
+  await modelField(page).click();
+  await expect(modelList(page).getByRole('option').nth(1)).toContainText('Gratuit');
+  await expect(dialog.getByRole('button', { name: 'Gratuits', exact: true })).toBeVisible();
+  await dialog.getByRole('combobox', { name: 'Rechercher un modèle' }).fill('zz-model');
+  await expect(modelList(page)).toContainText('Utiliser « zz-model »');
+
+  await choose(page, 'Claude');
+  await expect(modelStatus(page)).toHaveText('2 modèles.');
+  const asked = lists.filter((request) => request.url.includes('anthropic'));
+  expect(asked).toHaveLength(1);
+  expect(asked[0].headers['x-api-key']).toBe('sk-ant-saved');
+  await modelField(page).click();
+  await expect(modelList(page).getByRole('option')).toHaveText([/Claude Opus 5.5/, /Claude Haiku 5.5/]);
+  await dialog.getByRole('button', { name: 'Annuler' }).click();
+  await expect(box.getByRole('alert')).toBeVisible();
 });

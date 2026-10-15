@@ -373,10 +373,18 @@ key is kept needs nothing pasted.
 const ai = createAi({ provider: ['openai', 'mistral', 'gemini', 'openrouter'], askKey: true });
 ```
 
+Under the key, the user can choose the model: the field opens the provider's
+own list (asked with the key; OpenRouter's needs none), the default model
+first, then the free ones, marked, then the newest — searchable, with *Free
+only*, and an id the list does not have can be typed. Embeddings, speech,
+pictures and video are left out. The model chosen is remembered for each
+provider; without the list, the default one still works.
+
 `ai.key` reads and changes it: `provider` (the one in use), `providers`,
-`choose(id)`, `get(id?)`, `set(key)`, `forget()`, `request()` (opens the
-dialog — to change provider, for one), `subscribe(fn)`, `state()`
-(`{ asking, refused, connected }`). This is what the live demo does.
+`choose(id)`, `get(id?)`, `set(key)`, `forget()`, `model(id?)`,
+`chooseModel(model, id?)`, `listModels(id?, { apiKey, signal })`, `request()`
+(opens the dialog — to change provider or model, for one), `subscribe(fn)`,
+`state()` (`{ asking, refused, connected }`). This is what the live demo does.
 
 **In the page, with one key for everyone** — prototypes and internal tools
 only, the key is in the page's code: `createAi({ provider: 'groq', apiKey })`.
@@ -413,6 +421,10 @@ providerEmailModel({ provider: { baseUrl: 'http://localhost:1234/v1', model: 'qw
   (`reasoning: { effort: 'low' }`) and given room for it (`maxTokens: 32000`;
   16 000 elsewhere). For drafts in seconds, use a free tier with a key of its
   own (Gemini, Groq, Cerebras) or a paid model.
+- `listProviderModels({ provider, apiKey })` lists the models a provider
+  offers for writing, as the dialog does (`{ id, name, free }`, the default
+  first): its `/models`, or the provider's own `listModels` (`claudeProvider`
+  has one).
 - `body` adds fields of your own to each request — OpenRouter's fallback list,
   for one: `providerEmailModel({ provider: 'openrouter', apiKey, body: { models: [...] } })`.
   It cannot change the model, the messages or the output limit.
@@ -421,7 +433,8 @@ providerEmailModel({ provider: { baseUrl: 'http://localhost:1234/v1', model: 'qw
   remembered. A model whose structured output breaks the JSON (some do on the
   quotes of HTML) can be told to skip it: `provider: { …, format: 'text' }`.
 - The provider's failures become errors the interface explains, in its
-  language: `KEY_MISSING`, `KEY_REFUSED`, `MODEL_CREDITS`, `MODEL_BUSY`,
+  language: `KEY_MISSING`, `KEY_REFUSED`, `MODEL_UNAVAILABLE` (the provider
+  does not have that model, or no longer), `MODEL_CREDITS`, `MODEL_BUSY`,
   `MODEL_ERROR` (with the provider's own text in `detail`). An exhausted
   quota is `MODEL_CREDITS`, not `MODEL_BUSY`, even when it comes as a 429
   (OpenAI's `insufficient_quota`) or a 400 (Anthropic's credit balance);

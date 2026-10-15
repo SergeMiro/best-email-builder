@@ -69,14 +69,7 @@ export function claudeEmailModel({
         )
         .finalMessage();
     } catch (error) {
-      // The SDK's errors, as the errors the interface explains (a refused key
-      // is asked again); an abort goes through as it is.
-      const { status, name } = /** @type {any} */ (error) || {};
-      if (signal?.aborted || name === 'AbortError' || name === 'APIUserAbortError' || error instanceof EmailGenerationError) throw error;
-      const text = String(/** @type {any} */ (error)?.error?.error?.message || /** @type {any} */ (error)?.message || error);
-      // No status: the request did not get through (network, CORS).
-      if (typeof status !== 'number') throw new EmailGenerationError('MODEL_ERROR', `Claude: ${text.slice(0, 300)}`);
-      throw new EmailGenerationError(failureCode(status, text), `Claude ${status}: ${text.slice(0, 300)}`);
+      throw sdkFailure(error, signal);
     }
     if (message.stop_reason === 'refusal') {
       throw new EmailGenerationError('REFUSED');
@@ -92,6 +85,20 @@ export function claudeEmailModel({
 }
 
 /**
+ * The SDK's errors, as the errors the interface explains (a refused key is
+ * asked again); an abort goes through as it is.
+ * @param {unknown} error @param {AbortSignal} [signal]
+ */
+function sdkFailure(error, signal) {
+  const { status, name } = /** @type {any} */ (error) || {};
+  if (signal?.aborted || name === 'AbortError' || name === 'APIUserAbortError' || error instanceof EmailGenerationError) return error;
+  const text = String(/** @type {any} */ (error)?.error?.error?.message || /** @type {any} */ (error)?.message || error);
+  // No status: the request did not get through (network, CORS).
+  if (typeof status !== 'number') return new EmailGenerationError('MODEL_ERROR', `Claude: ${text.slice(0, 300)}`);
+  return new EmailGenerationError(failureCode(status, text), `Claude ${status}: ${text.slice(0, 300)}`);
+}
+
+/**
  * Claude as a provider of `createAi({ provider, askKey: true })`: each user
  * connects their own Anthropic key, like the other providers. `client` makes
  * the Anthropic client from that key — the application's own SDK, loaded when
@@ -104,7 +111,8 @@ export function claudeEmailModel({
  *     },
  *   })
  *
- * The other options are claudeEmailModel's (`model`, `effort`…).
+ * The other options are claudeEmailModel's (`model`, `effort`…). The user can
+ * choose another of the models their key opens, in the Connect dialog.
  *
  * @param {{client: (apiKey: string) => any} & ClaudeOptions} options
  * @returns {import('./providers.js').AiProvider}
@@ -125,16 +133,32 @@ export function claudeProvider(options) {
     format: /** @type {const} */ ('json_schema'),
     tokens: /** @type {const} */ ('max_tokens'),
     maxTokens: rest.maxTokens ?? 32000,
-    createModel: ({ apiKey }) => {
+    createModel: ({ apiKey, model }) => {
       // One client per key: a new key (the last one refused) makes a new one.
       /** @type {{key: string, model: import('./generator.js').EmailModel}|null} */
       let current = null;
       return async (request) => {
         const key = String((await apiKey()) || '').trim();
         if (!key) throw new EmailGenerationError('KEY_MISSING', 'Claude: no key');
-        if (!current || current.key !== key) current = { key, model: claudeEmailModel({ ...rest, client: await client(key) }) };
+        if (!current || current.key !== key) {
+          current = { key, model: claudeEmailModel({ ...rest, ...(model ? { model } : {}), client: await client(key) }) };
+        }
         return current.model(request);
       };
+    },
+    listModels: async ({ apiKey, signal }) => {
+      const key = String(apiKey || '').trim();
+      if (!key) throw new EmailGenerationError('KEY_MISSING', 'Claude: no key');
+      try {
+        const page = await (await client(key)).models.list({ limit: 100 }, { signal });
+        return (page?.data || []).map((/** @type {any} */ entry) => ({
+          id: String(entry.id),
+          name: String(entry.display_name || entry.id),
+          created: entry.created_at ? Date.parse(entry.created_at) / 1000 : 0,
+        }));
+      } catch (error) {
+        throw sdkFailure(error, signal);
+      }
     },
   });
 }

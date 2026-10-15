@@ -55,8 +55,8 @@ const TEXT = {
     shrink: 'Exit full screen',
     note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
     aiNote: '“Generate” writes a whole email, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with your own key: OpenAI, Claude, Mistral, Gemini or OpenRouter. Gemini and Mistral are free and answer in seconds; OpenRouter’s free models take minutes. The key stays in this browser and goes only to the provider you choose.',
-    aiConnected: 'Connected to {provider}.',
-    aiChange: 'Change provider',
+    aiConnected: 'Connected to {provider} · {model}.',
+    aiChange: 'Change provider or model',
     aiForget: 'Forget my key',
     copy: 'Copy the install command',
     copied: 'Copied',
@@ -86,8 +86,8 @@ const TEXT = {
     shrink: 'Réduire',
     note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
     aiNote: '« Générer » écrit un e-mail complet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec votre propre clé : OpenAI, Claude, Mistral, Gemini ou OpenRouter. Gemini et Mistral sont gratuits et répondent en quelques secondes ; les modèles gratuits d’OpenRouter prennent plusieurs minutes. La clé reste dans ce navigateur et n’est envoyée qu’au fournisseur choisi.',
-    aiConnected: 'Connecté à {provider}.',
-    aiChange: 'Changer de fournisseur',
+    aiConnected: 'Connecté à {provider} · {model}.',
+    aiChange: 'Changer de fournisseur ou de modèle',
     aiForget: 'Oublier ma clé',
     copy: 'Copier la commande d’installation',
     copied: 'Copié',
@@ -593,6 +593,7 @@ function App() {
   const ai = useMemo(() => createBrowserAi(), []);
   const aiConnected = useSyncExternalStore(ai.key.subscribe, () => ai.key.state().connected);
   const aiProvider = useSyncExternalStore(ai.key.subscribe, () => ai.key.provider.name);
+  const aiModel = useSyncExternalStore(ai.key.subscribe, () => ai.key.model());
   const [route, navigate] = useHashRoute();
   /** The template to select when coming back to the bank. */
   const [lastId, setLastId] = useState(null);
@@ -679,7 +680,7 @@ function App() {
             <Sparkles aria-hidden="true" />
             <span>
               {text.aiNote}
-              {aiConnected && <> {text.aiConnected.replace('{provider}', aiProvider)}</>}
+              {aiConnected && <> {text.aiConnected.replace('{provider}', aiProvider).replace('{model}', aiModel)}</>}
               {/* The Connect dialog belongs to the editor: changing is offered there. */}
               {route.page === 'editor' && (
                 <>

@@ -22,7 +22,8 @@
  *                                       the builder asks for it once (the Connect dialog)
  *   createAi({ provider: [...], askKey: true })
  *                                       the same, the user choosing the provider in that
- *                                       dialog (Claude too: claudeProvider in claude.js)
+ *                                       dialog (Claude too: claudeProvider in claude.js),
+ *                                       and the model among those the provider lists
  *   createAi({ provider, apiKey })      the same with one key for all (prototypes: the key
  *                                       is then in the page)
  *   createAi({ model })                 the generator runs in the page with this model
@@ -136,23 +137,25 @@ export function createAi(options = {}) {
   const ownOnly = !model && !http && PARTS.some((part) => typeof options[part] === 'function');
   /** @type {Partial<Record<typeof PARTS[number], Function>>} */
   let transport = {};
-  const key = provider && askKey ? createKeyStore(providers) : null;
+  const key = provider && askKey ? createKeyStore(providers, { fetch: fetchImpl }) : null;
   if (provider) {
     /** @type {Map<string, import('./generator.js').EmailModel>} */
     const models = new Map();
     const keyFor = () => (key ? key.get() : apiKey || '');
-    /** The model of the provider in use, made once. @param {string} id */
+    /** The model the user chose of the provider in use, made once. @param {string} id */
     const modelOf = (id) => {
-      if (!models.has(id)) {
-        const chosen = /** @type {import('./providers.js').AiProvider} */ (providers.find((item) => item.id === id));
+      const chosen = /** @type {import('./providers.js').AiProvider} */ (providers.find((item) => item.id === id));
+      const name = key ? key.model(id) : chosen.model;
+      const slot = `${id}\n${name}`;
+      if (!models.has(slot)) {
         models.set(
-          id,
+          slot,
           chosen.createModel
-            ? chosen.createModel({ apiKey: keyFor, fetch: fetchImpl })
-            : providerEmailModel({ provider: chosen, fetch: fetchImpl, apiKey: keyFor })
+            ? chosen.createModel({ apiKey: keyFor, fetch: fetchImpl, ...(name ? { model: name } : {}) })
+            : providerEmailModel({ provider: chosen, fetch: fetchImpl, apiKey: keyFor, ...(name ? { model: name } : {}) })
         );
       }
-      return /** @type {import('./generator.js').EmailModel} */ (models.get(id));
+      return /** @type {import('./generator.js').EmailModel} */ (models.get(slot));
     };
     /** @type {import('./generator.js').EmailModel} */
     const model = async (request) => {

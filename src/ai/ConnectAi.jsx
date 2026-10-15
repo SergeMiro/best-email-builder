@@ -5,6 +5,10 @@ import { cn } from '../ui/primitives/cn.js';
 import { Button } from '../ui/primitives/button.jsx';
 import { Input, Label } from '../ui/primitives/fields.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/primitives/overlays.jsx';
+import ModelPicker from './ModelPicker.jsx';
+
+/** A key this long is complete enough to ask the provider for its models. */
+const LISTABLE_KEY = 20;
 
 /**
  * CONNECT — the dialog that asks the user for their provider key, when the AI
@@ -17,7 +21,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
  *
  * Given several providers (`createAi({ provider: [...] })`), the user chooses
  * one at the top; a provider whose key this browser already keeps needs no
- * new one.
+ * new one. Under the key, the model: the provider's own, or another of its
+ * list (ModelPicker.jsx).
  */
 export default function ConnectAi({ aiKey }) {
   const { t } = useUi();
@@ -25,6 +30,9 @@ export default function ConnectAi({ aiKey }) {
   const [value, setValue] = useState('');
   const [shown, setShown] = useState(false);
   const [chosenId, setChosenId] = useState(aiKey.provider.id);
+  /** The models chosen in the dialog, by provider, until Connect. */
+  const [picks, setPicks] = useState(/** @type {Record<string, string>} */ ({}));
+  const [modelsOpen, setModelsOpen] = useState(false);
   const inputRef = useRef(/** @type {HTMLInputElement|null} */ (null));
   const choicesRef = useRef(/** @type {HTMLDivElement|null} */ (null));
   const inputId = useId();
@@ -39,6 +47,8 @@ export default function ConnectAi({ aiKey }) {
     setChosenId(aiKey.provider.id);
     setValue('');
     setShown(false);
+    setPicks({});
+    setModelsOpen(false);
   }, [state.asking, aiKey]);
 
   const key = value.trim();
@@ -47,12 +57,15 @@ export default function ConnectAi({ aiKey }) {
   // A key from elsewhere (another provider's) is the usual mistake: said, not blocked.
   const unusual = Boolean(key && keyHint && !key.startsWith(keyHint));
   const refused = state.refused && chosen.id === aiKey.provider.id;
+  /** @param {string} id */
+  const modelFor = (id) => picks[id] ?? aiKey.model(id);
 
   const submit = (/** @type {React.FormEvent} */ event) => {
     event.preventDefault();
     const answer = key || saved;
     if (!answer) return;
     if (chosen.id !== aiKey.provider.id) aiKey.choose(chosen.id);
+    if (picks[chosen.id] && picks[chosen.id] !== aiKey.model(chosen.id)) aiKey.chooseModel(picks[chosen.id], chosen.id);
     aiKey.answer(answer);
   };
 
@@ -60,6 +73,7 @@ export default function ConnectAi({ aiKey }) {
   const choose = (id) => {
     setChosenId(id);
     setValue('');
+    setModelsOpen(false);
   };
 
   /** Arrows move through the providers and choose, as in any radio group. */
@@ -76,14 +90,22 @@ export default function ConnectAi({ aiKey }) {
   return (
     <Dialog open={state.asking} onOpenChange={(open) => !open && aiKey.answer(null)}>
       <DialogContent
-        className={cn('eb:gap-0 eb:overflow-hidden eb:p-0', choices.length > 1 ? 'eb:sm:max-w-xl' : 'eb:sm:max-w-md')}
+        className={cn('eb:max-h-[calc(100dvh-2rem)] eb:gap-0 eb:overflow-y-auto eb:p-0', choices.length > 1 ? 'eb:sm:max-w-xl' : 'eb:sm:max-w-md')}
         data-testid="eb-ai-connect"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           inputRef.current?.focus();
         }}
+        // Esc closes the list of models first, then the dialog. From inside
+        // the list, the list closes itself (and gives the focus back to its field).
+        onEscapeKeyDown={(event) => {
+          if (!modelsOpen) return;
+          event.preventDefault();
+          if (!(event.target instanceof Element && event.target.closest('[data-eb-models]'))) setModelsOpen(false);
+        }}
       >
-        <form onSubmit={submit}>
+        {/* min-w-0: the long names of the list of models do not widen the dialog. */}
+        <form onSubmit={submit} className="eb:min-w-0">
           <div className="eb:flex eb:flex-col eb:gap-5 eb:px-6 eb:pt-6 eb:pb-5">
             <DialogHeader className="eb:flex-row eb:items-start eb:gap-3.5 eb:pr-6">
               <span className="eb:flex eb:size-10 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-full eb:bg-primary/10 eb:text-primary">
@@ -128,9 +150,9 @@ export default function ConnectAi({ aiKey }) {
                           <span className="eb:ml-auto eb:size-1.5 eb:shrink-0 eb:rounded-full eb:bg-success" title={t('Key saved')} aria-label={t('Key saved')} />
                         )}
                       </span>
-                      {provider.model && (
-                        <span className="eb:truncate eb:font-mono eb:text-[10.5px] eb:text-foreground-muted" title={provider.model}>
-                          {provider.model}
+                      {modelFor(provider.id) && (
+                        <span className="eb:truncate eb:font-mono eb:text-[10.5px] eb:text-foreground-muted" title={modelFor(provider.id)}>
+                          {modelFor(provider.id)}
                         </span>
                       )}
                     </button>
@@ -150,7 +172,17 @@ export default function ConnectAi({ aiKey }) {
               <div className="eb:flex eb:flex-wrap eb:items-center eb:gap-x-3 eb:gap-y-2">
                 {keyUrl && (
                   <Button asChild variant="outline" size="sm-compact">
-                    <a href={keyUrl} target="_blank" rel="noopener noreferrer" data-testid="eb-ai-connect-get-key">
+                    <a
+                      href={keyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      // A new tab, always — even where a link's target is ignored (webviews).
+                      onClick={(event) => {
+                        event.preventDefault();
+                        window.open(keyUrl, '_blank', 'noopener,noreferrer');
+                      }}
+                      data-testid="eb-ai-connect-get-key"
+                    >
                       {t('Get a key')}
                       <ArrowUpRight aria-hidden="true" />
                     </a>
@@ -203,6 +235,17 @@ export default function ConnectAi({ aiKey }) {
                 ) : null}
               </p>
             </div>
+
+            <ModelPicker
+              aiKey={aiKey}
+              provider={chosen}
+              apiKey={key.length >= LISTABLE_KEY ? key : saved}
+              delay={key.length >= LISTABLE_KEY ? 350 : 0}
+              value={modelFor(chosen.id)}
+              onChange={(model) => setPicks((current) => ({ ...current, [chosen.id]: model }))}
+              open={modelsOpen}
+              onOpenChange={setModelsOpen}
+            />
           </div>
 
           <div className="eb:flex eb:items-start eb:gap-2 eb:border-t eb:border-border eb:bg-surface-75 eb:px-6 eb:py-3 eb:text-[11.5px] eb:leading-relaxed eb:text-foreground-lighter">

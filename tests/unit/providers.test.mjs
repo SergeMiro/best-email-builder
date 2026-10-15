@@ -12,7 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
-import { AI_PROVIDERS, EmailGenerationError, GENERATION_ERRORS, claudeEmailModel, providerEmailModel, resolveProvider } from '../../src/ai/server.js';
+import { AI_PROVIDERS, EmailGenerationError, GENERATION_ERRORS, claudeEmailModel, listProviderModels, providerEmailModel, resolveProvider } from '../../src/ai/server.js';
 import { fr } from '../../src/ai/i18n/fr.js';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -184,7 +184,7 @@ test('a format the model does not take is stepped down — json_schema, json_obj
 test('another 400 is not about the format: no second try', async () => {
   const { fetch, calls } = fakeProvider({ status: 400, body: { error: { message: 'model not found' } } });
   const model = providerEmailModel({ provider: 'groq', apiKey: 'gsk_x', fetch });
-  await assert.rejects(model(REQUEST), (error) => error.code === 'MODEL_ERROR' && /Groq 400: .*model not found/.test(error.detail));
+  await assert.rejects(model(REQUEST), (error) => error.code === 'MODEL_UNAVAILABLE' && /Groq 400: .*model not found/.test(error.detail));
   assert.equal(calls.length, 1);
 });
 
@@ -200,6 +200,11 @@ test('the provider’s failures, as the errors the interface explains', async ()
     [{ status: 403, body: { error: { message: 'Key limit exceeded' } } }, 'MODEL_CREDITS'],
     // Gemini: a wrong key is a 400.
     [{ status: 400, body: [{ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }] }, 'KEY_REFUSED'],
+    // A model the provider does not have (any more): the user chooses another.
+    [{ status: 404, body: [{ error: { code: 404, message: 'This model models/gemini-2.5-flash is no longer available to new users.', status: 'NOT_FOUND' } }] }, 'MODEL_UNAVAILABLE'],
+    [{ status: 404, body: { type: 'error', error: { type: 'not_found_error', message: 'model: claude-x' } } }, 'MODEL_UNAVAILABLE'],
+    [{ status: 400, body: { error: { message: 'acme/x is not a valid model ID', code: 400 } } }, 'MODEL_UNAVAILABLE'],
+    [{ status: 404, body: 'Not Found' }, 'MODEL_ERROR'],
     [{ status: 402, body: { error: { message: 'Insufficient credits' } } }, 'MODEL_CREDITS'],
     // The money, said with a 429 (OpenAI) or a 400 (Anthropic): not "busy", not "error".
     [{ status: 429, body: { error: { message: 'You exceeded your current quota, please check your plan.', type: 'insufficient_quota' } } }, 'MODEL_CREDITS'],
@@ -595,4 +600,191 @@ test('claudeEmailModel: the SDK\'s errors become the errors the interface explai
   await assert.rejects(claudeEmailModel({ client: failing(abort) })({ ...REQUEST, signal: controller.signal }), (error) => error === abort);
   const network = Object.assign(new Error('Connection error.'), { name: 'APIConnectionError' });
   await assert.rejects(claudeEmailModel({ client: failing(network) })(REQUEST), (error) => error.code === 'MODEL_ERROR' && /Connection error/.test(error.detail));
+});
+
+/** A provider's `/models`, answered with `body` (or `status`), each request recorded. */
+function fakeModels(body, status = 200) {
+  const calls = [];
+  const fetch = async (url, init = {}) => {
+    calls.push({ url, headers: init.headers || {}, method: init.method || 'GET' });
+    return new Response(typeof body === 'string' ? body : JSON.stringify(body), { status });
+  };
+  return { fetch, calls };
+}
+
+const OPENROUTER_MODELS = {
+  data: [
+    { id: 'openai/gpt-5.5', name: 'OpenAI: GPT-5.5', created: 300, pricing: { prompt: '0.000002', completion: '0.00001' }, architecture: { output_modalities: ['text'] } },
+    { id: 'google/lyria-3', name: 'Google: Lyria 3', created: 400, pricing: { prompt: '0', completion: '0' }, architecture: { output_modalities: ['audio'] } },
+    { id: 'nvidia/nemotron-3-super-120b-a12b:free', name: 'NVIDIA: Nemotron 3 Super (free)', created: 100, pricing: { prompt: '0', completion: '0' }, architecture: { output_modalities: ['text'] } },
+    { id: 'qwen/qwen3-coder:free', name: 'Qwen: Qwen3 Coder (free)', created: 200, pricing: { prompt: '0', completion: '0' }, architecture: { output_modalities: ['text'] } },
+    { id: 'openrouter/free', name: 'Free Models Router', created: 50, pricing: { prompt: '0', completion: '0' }, architecture: { output_modalities: ['text'] } },
+    { id: 'openai/gpt-5-image', name: 'OpenAI: GPT-5 Image', created: 500, pricing: { prompt: '0.00001', completion: '0.00001' }, architecture: { output_modalities: ['image', 'text'] } },
+    { id: 'openai/gpt-5.5', name: 'twice', created: 300 },
+  ],
+};
+
+test('listProviderModels: OpenRouter\'s list needs no key — the default first, then the free ones, then the newest; nothing but text', async () => {
+  const { fetch, calls } = fakeModels(OPENROUTER_MODELS);
+  const models = await listProviderModels({ provider: 'openrouter', fetch });
+  assert.equal(calls[0].url, 'https://openrouter.ai/api/v1/models');
+  assert.equal(calls[0].headers.Authorization, undefined, 'no key: none sent');
+  assert.deepEqual(
+    models.map((model) => [model.id, model.free]),
+    [
+      ['openrouter/free', true],
+      ['qwen/qwen3-coder:free', true],
+      ['nvidia/nemotron-3-super-120b-a12b:free', true],
+      ['openai/gpt-5.5', false],
+    ]
+  );
+  assert.equal(models[1].name, 'Qwen: Qwen3 Coder (free)');
+  assert.ok(Object.isFrozen(models[0]));
+  // With a key, it goes along.
+  const withKey = fakeModels(OPENROUTER_MODELS);
+  await listProviderModels({ provider: 'openrouter', apiKey: 'sk-or-mine', fetch: withKey.fetch });
+  assert.equal(withKey.calls[0].headers.Authorization, 'Bearer sk-or-mine');
+});
+
+test('listProviderModels: Gemini\'s ids without "models/", Mistral\'s chat models only; the writers only', async () => {
+  const gemini = fakeModels({
+    object: 'list',
+    data: [
+      { id: 'models/gemini-2.5-flash', display_name: 'Gemini 2.5 Flash' },
+      { id: 'models/gemini-3.5-flash-lite', display_name: 'Gemini 3.5 Flash-Lite' },
+      { id: 'models/gemini-2.5-flash-preview-tts', display_name: 'TTS' },
+      { id: 'models/gemini-embedding-001', display_name: 'Embedding' },
+      { id: 'models/imagen-4.0-generate-001', display_name: 'Imagen' },
+      { id: 'models/veo-3.0-generate-001', display_name: 'Veo' },
+      { id: 'models/gemini-2.5-flash-native-audio-latest', display_name: 'Audio' },
+      { id: 'models/gemini-live-2.5-flash', display_name: 'Live' },
+      { id: 'models/aqa', display_name: 'AQA' },
+    ],
+  });
+  const models = await listProviderModels({ provider: 'gemini', apiKey: 'AIza-mine', fetch: gemini.fetch });
+  assert.equal(gemini.calls[0].url, 'https://generativelanguage.googleapis.com/v1beta/openai/models');
+  assert.equal(gemini.calls[0].headers.Authorization, 'Bearer AIza-mine');
+  assert.deepEqual(
+    models.map((model) => `${model.id} ${model.name}`),
+    ['gemini-3.5-flash-lite Gemini 3.5 Flash-Lite', 'gemini-2.5-flash Gemini 2.5 Flash']
+  );
+  // No dates: the newest by the version in the id.
+  const undated = fakeModels({ data: ['gemini-2.5-pro', 'gemini-flash-latest', 'gemini-4-argon', 'gemini-3.8-flash', 'gemini-2.5-flash'].map((id) => ({ id: `models/${id}` })) });
+  assert.deepEqual(
+    (await listProviderModels({ provider: 'gemini', apiKey: 'AIza-mine', fetch: undated.fetch })).map((model) => model.id),
+    ['gemini-4-argon', 'gemini-3.8-flash', 'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-flash-latest']
+  );
+
+  const mistral = fakeModels({
+    data: [
+      { id: 'mistral-large-latest', created: 2, capabilities: { completion_chat: true } },
+      { id: 'mistral-embed', created: 3, capabilities: { completion_chat: false } },
+      { id: 'codestral-mamba', created: 4, capabilities: { completion_chat: false } },
+      { id: 'mistral-small-latest', created: 1, capabilities: { completion_chat: true } },
+    ],
+  });
+  const listed = await listProviderModels({ provider: 'mistral', apiKey: 'mk', fetch: mistral.fetch });
+  assert.deepEqual(listed.map((model) => model.id), ['mistral-small-latest', 'mistral-large-latest']);
+});
+
+test('listProviderModels: no key is KEY_MISSING with no request; the provider\'s failures are the usual errors', async () => {
+  const silent = fakeModels({ data: [] });
+  assert.equal(await codeOf(listProviderModels({ provider: 'gemini', fetch: silent.fetch })), 'KEY_MISSING');
+  assert.equal(silent.calls.length, 0);
+  assert.equal(await codeOf(listProviderModels({ provider: 'openai', apiKey: 'sk-bad', fetch: fakeModels({ error: { message: 'Incorrect API key provided' } }, 401).fetch })), 'KEY_REFUSED');
+  assert.equal(await codeOf(listProviderModels({ provider: 'openai', apiKey: 'sk', fetch: fakeModels('<html>', 200).fetch })), 'MODEL_ERROR');
+  const down = async () => Promise.reject(new TypeError('Failed to fetch'));
+  assert.equal(await codeOf(listProviderModels({ provider: 'openai', apiKey: 'sk', fetch: down })), 'MODEL_ERROR');
+  // A local model of one's own needs no key.
+  const local = fakeModels({ data: [{ id: 'llama3.2' }] });
+  assert.deepEqual((await listProviderModels({ provider: 'ollama', fetch: local.fetch })).map((model) => model.id), ['llama3.2']);
+  assert.equal(local.calls[0].url, 'http://localhost:11434/v1/models');
+});
+
+test('askKey: the model chosen for each provider is remembered and sent; its own model is no choice', async (t) => {
+  const storage = memoryStorage();
+  globalThis.localStorage = storage;
+  t.after(() => delete globalThis.localStorage);
+  const sent = [];
+  const fetch = async (url, init = {}) => {
+    if (url.endsWith('/models')) return new Response(JSON.stringify({ data: [{ id: 'models/gemini-2.5-flash' }, { id: 'models/gemini-3.5-flash-lite' }] }));
+    sent.push({ url, body: JSON.parse(init.body) });
+    return new Response(JSON.stringify(REWRITTEN.body));
+  };
+  const ai = createAi({ provider: ['openai', 'gemini'], askKey: true, fetch });
+  ai.key.choose('gemini');
+  ai.key.set('AIza-mine');
+  assert.equal(ai.key.model(), 'gemini-3.5-flash-lite', 'the provider\'s own by default');
+  assert.equal(ai.key.model('openai'), 'gpt-5-mini');
+  assert.equal(ai.key.providers.find((provider) => provider.id === 'openrouter'), undefined);
+  assert.equal(ai.key.providers[0].publicModels, false);
+
+  // The list, with the key kept; asked once.
+  const listed = await ai.key.listModels();
+  assert.deepEqual(listed.map((model) => model.id), ['gemini-3.5-flash-lite', 'gemini-2.5-flash']);
+  assert.equal(await ai.key.listModels('gemini'), listed, 'the same key: the list already made');
+
+  let changes = 0;
+  ai.key.subscribe(() => changes++);
+  ai.key.chooseModel('gemini-2.5-flash');
+  assert.equal(changes, 1);
+  assert.equal(ai.key.model(), 'gemini-2.5-flash');
+  assert.equal(storage.map.get('best-email-builder:ai-model:gemini'), 'gemini-2.5-flash');
+  await ai.rewrite(REWRITE);
+  assert.equal(sent.at(-1).body.model, 'gemini-2.5-flash');
+
+  // Another page of this browser: the same model.
+  const later = createAi({ provider: ['openai', 'gemini'], askKey: true, fetch });
+  assert.equal(later.key.model(), 'gemini-2.5-flash');
+  await later.rewrite(REWRITE);
+  assert.equal(sent.at(-1).body.model, 'gemini-2.5-flash');
+
+  // Back to the provider's own: no choice kept.
+  ai.key.chooseModel('gemini-3.5-flash-lite');
+  assert.equal(storage.map.has('best-email-builder:ai-model:gemini'), false);
+  await ai.rewrite(REWRITE);
+  assert.equal(sent.at(-1).body.model, 'gemini-3.5-flash-lite');
+  assert.throws(() => ai.key.chooseModel(''), /a model id/);
+  assert.throws(() => ai.key.model('groq'), /no provider "groq"/);
+});
+
+test('claudeProvider: the models the key opens, through the SDK; the model chosen is the one asked', async (t) => {
+  globalThis.localStorage = memoryStorage();
+  t.after(() => delete globalThis.localStorage);
+  const requests = [];
+  const listings = [];
+  const client = async (apiKey) => ({
+    models: {
+      list: async (params, options) => {
+        listings.push({ apiKey, params, signal: options?.signal });
+        if (apiKey === 'sk-ant-bad') throw Object.assign(new Error('401 invalid x-api-key'), { status: 401 });
+        return {
+          data: [
+            { id: 'claude-haiku-5-5', display_name: 'Claude Haiku 5.5', created_at: '2026-05-01T00:00:00Z' },
+            { id: 'claude-opus-5-5', display_name: 'Claude Opus 5.5', created_at: '2026-04-01T00:00:00Z' },
+            { id: 'claude-sonnet-5-5', display_name: 'Claude Sonnet 5.5', created_at: '2026-06-01T00:00:00Z' },
+          ],
+        };
+      },
+    },
+    messages: {
+      stream: (params) => {
+        requests.push(params);
+        return { finalMessage: async () => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: '{"text":"Welcome to our shop!"}' }] }) };
+      },
+    },
+  });
+  const ai = createAi({ provider: [claudeProvider({ client }), 'gemini'], askKey: true });
+  assert.equal(await codeOf(ai.key.listModels('anthropic')), 'KEY_MISSING');
+  assert.equal(await codeOf(ai.key.listModels('anthropic', { apiKey: 'sk-ant-bad' })), 'KEY_REFUSED');
+  ai.key.set('sk-ant-good');
+  const models = await ai.key.listModels();
+  assert.deepEqual(models.map((model) => `${model.id} ${model.name}`), ['claude-opus-5-5 Claude Opus 5.5', 'claude-sonnet-5-5 Claude Sonnet 5.5', 'claude-haiku-5-5 Claude Haiku 5.5']);
+  assert.deepEqual(listings.at(-1).params, { limit: 100 });
+
+  await ai.rewrite(REWRITE);
+  assert.equal(requests.at(-1).model, 'claude-opus-5-5');
+  ai.key.chooseModel('claude-sonnet-5-5');
+  await ai.rewrite(REWRITE);
+  assert.equal(requests.at(-1).model, 'claude-sonnet-5-5');
 });

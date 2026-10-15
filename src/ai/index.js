@@ -21,4 +21,4 @@ export { EmailGenerationError, GENERATION_ERRORS } from './draft.js';
 export { createEmailGenerator } from './generator.js';
 export { claudeEmailModel, claudeProvider, DEFAULT_CLAUDE_MODEL } from './claude.js';
 // The providers `createAi({ provider })` runs in the page.
-export { AI_PROVIDERS, failureCode, providerEmailModel, resolveProvider } from './providers.js';
+export { AI_PROVIDERS, failureCode, listProviderModels, providerEmailModel, resolveProvider } from './providers.js';

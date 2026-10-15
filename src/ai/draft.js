@@ -69,6 +69,7 @@ export const GENERATION_ERRORS = {
   // The provider's side (providers.js). Never 401 to the browser: the key is the AI's, not the user's session.
   KEY_MISSING: { status: 502, message: 'Connect an AI provider first: it needs a key.' },
   KEY_REFUSED: { status: 502, message: 'The AI provider refused the key. Check it, or use another one.' },
+  MODEL_UNAVAILABLE: { status: 502, message: 'The AI provider does not have this model. Choose another one.' },
   MODEL_CREDITS: { status: 502, message: 'The AI provider account has no credits left.' },
   MODEL_BUSY: { status: 503, message: 'The AI is busy right now. Try again in a minute.' },
   MODEL_ERROR: { status: 502, message: 'The AI provider could not answer. Try again.' },
