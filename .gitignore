@@ -9,3 +9,7 @@ test-results/
 .DS_Store
 examples/*/node_modules/
 examples/*/dist/
+
+# Python (examples/agent/python)
+__pycache__/
+.pytest_cache/

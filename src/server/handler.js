@@ -35,7 +35,9 @@
  *
  * `authorize(request, { action })` is REQUIRED: it returns the user (any
  * object with `id`/`name`, recorded as author) or null to refuse (401).
- * Throw an `HttpError(403, …)` to refuse with another status.
+ * Throw an `HttpError(403, …)` to refuse with another status. The AI routes
+ * hand that user to the generator, down to its model: an agent of your own
+ * (agentEmailModel) forwards who asks.
  */
 
 import { messagesOf, translatorFor } from '../i18n/index.js';
@@ -65,9 +67,9 @@ import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
  *   publicUrl?: string|null,
  *   transport?: import('./sendTest.js').EmailTransport|null,
  *   generator?: {
- *     generate?: (input: import('../ai/generator.js').GenerateInput, options?: {signal?: AbortSignal}) => Promise<import('../ai/generator.js').GeneratedEmail>,
- *     rewrite?: (input: import('../ai/rewrite.js').RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string}>,
- *     suggestSubjects?: (input: import('../ai/subjects.js').SubjectsInput, options?: {signal?: AbortSignal}) => Promise<{subjects: string[]}>,
+ *     generate?: (input: import('../ai/generator.js').GenerateInput, options?: {signal?: AbortSignal, user?: User}) => Promise<import('../ai/generator.js').GeneratedEmail>,
+ *     rewrite?: (input: import('../ai/rewrite.js').RewriteInput, options?: {signal?: AbortSignal, user?: User}) => Promise<{text: string}>,
+ *     suggestSubjects?: (input: import('../ai/subjects.js').SubjectsInput, options?: {signal?: AbortSignal, user?: User}) => Promise<{subjects: string[]}>,
  *     messages?: Record<string, Record<string, string>>,
  *   }|null,
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
@@ -328,7 +330,7 @@ export function createEmailBuilderHandler(options) {
       // The variables are the server's catalog, whatever the browser sent.
       const catalog = await customVariables.catalog();
       return askModel(request, () =>
-        generate.call(generator, { ...body, language: languageOr(body?.language), variables: catalog }, { signal: request.signal })
+        generate.call(generator, { ...body, language: languageOr(body?.language), variables: catalog }, { signal: request.signal, user })
       );
     }
 
@@ -338,7 +340,7 @@ export function createEmailBuilderHandler(options) {
       if (typeof rewrite !== 'function') throw new HttpError(501, t('Text rewriting is not configured'), 'NO_GENERATOR');
       if (!rewriteLimiter(userKey(user))) throw new HttpError(429, t('Too many rewrites — try again later'), 'RATE_LIMITED');
       const body = await readJson(request);
-      return askModel(request, () => rewrite(body, { signal: request.signal }));
+      return askModel(request, () => rewrite(body, { signal: request.signal, user }));
     }
 
     if (section === 'subjects' && !id && method === 'POST') {
@@ -350,7 +352,7 @@ export function createEmailBuilderHandler(options) {
       // The merge tags are the server's catalog, whatever the browser sent.
       const catalog = await customVariables.catalog();
       return askModel(request, () =>
-        suggestSubjects({ ...body, language: languageOr(body?.language), variables: catalog }, { signal: request.signal })
+        suggestSubjects({ ...body, language: languageOr(body?.language), variables: catalog }, { signal: request.signal, user })
       );
     }
 

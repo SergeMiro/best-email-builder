@@ -32,9 +32,10 @@ import { AI_MESSAGES } from './i18n/index.js';
 
 /**
  * @typedef {{role: 'user'|'assistant', content: string}} ModelMessage
- * @typedef {(request: {system: string, messages: ModelMessage[], schema: object, signal?: AbortSignal, task?: 'generate'|'rewrite'|'subjects'}) => Promise<string>} EmailModel
+ * @typedef {(request: {system: string, messages: ModelMessage[], schema: object, signal?: AbortSignal, task?: 'generate'|'rewrite'|'subjects', user?: any}) => Promise<string>} EmailModel
  *   `task`: a whole email, one text rewritten or subject ideas (lighter jobs:
- *   a model may answer them with less effort).
+ *   a model may answer them with less effort). `user`: on the server, the one
+ *   the handler's `authorize` returned (agent.js forwards who asks).
  *
  * @typedef {{
  *   purpose?: string|null,
@@ -102,10 +103,10 @@ export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @
 
   /**
    * @param {GenerateInput} input
-   * @param {{signal?: AbortSignal}} [options]
+   * @param {{signal?: AbortSignal, user?: any}} [options]
    * @returns {Promise<GeneratedEmail>}
    */
-  async function generate(input, { signal } = {}) {
+  async function generate(input, { signal, user } = {}) {
     const request = cleanGenerateInput(input);
     if (!request.purpose && !request.details) {
       throw new EmailGenerationError('NOTHING_TO_GENERATE');
@@ -121,7 +122,7 @@ export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @
 
     for (let attempt = 1; attempt <= Math.max(1, maxAttempts); attempt += 1) {
       signal?.throwIfAborted();
-      const answer = await model({ system: SYSTEM_PROMPT, messages, schema: EMAIL_DRAFT_SCHEMA, signal, task: 'generate' });
+      const answer = await model({ system: SYSTEM_PROMPT, messages, schema: EMAIL_DRAFT_SCHEMA, signal, task: 'generate', user });
       /** @type {string[]} */
       let problems;
       try {

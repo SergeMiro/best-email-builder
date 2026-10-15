@@ -21,6 +21,18 @@ All notable changes are documented here. The format follows
   Claude's through the application's SDK and takes the model chosen.
 - The live demo says which model is connected, and its link is now *Change
   provider or model*.
+- **Your own AI agent as the builder's AI** — `agentEmailModel({ url, headers })`
+  sends each model turn to an agent of the application's own over a small
+  HTTP protocol, `best-email-builder/agent@1` (`{ task, system, messages,
+  schema }` in, `{ text }` out, errors as codes the interface explains).
+  Generate, Rewrite and Subjects then go through the agent (its tools, its
+  knowledge, its users' rights) and its answers are checked like any model's.
+  On the server, `headers({ task, user })` gets the user `authorize` returned,
+  to forward who asks; the handler now hands that user to the generator and
+  its model. The agent's side: `createAgentEndpoint({ complete })` in
+  JavaScript, a FastAPI router to copy in `examples/agent/python`;
+  `checkAgent({ url, headers })` tries an agent with the builder's own checks.
+  See docs/AGENT.md.
 - **`MODEL_UNAVAILABLE`** — a model the provider does not have, or no longer
   (a 404 about the model, OpenRouter's "not a valid model ID"): *Choose
   another one*, instead of *Try again*.

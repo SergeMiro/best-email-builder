@@ -168,10 +168,10 @@ export function reviewRewrite(original, rewritten, format) {
 
 /**
  * @param {{model: import('./generator.js').EmailModel, maxAttempts?: number}} options
- * @returns {(input: RewriteInput, options?: {signal?: AbortSignal}) => Promise<{text: string, attempts: number}>}
+ * @returns {(input: RewriteInput, options?: {signal?: AbortSignal, user?: any}) => Promise<{text: string, attempts: number}>}
  */
 export function createRewriter({ model, maxAttempts = 2 }) {
-  return async function rewrite(input, { signal } = {}) {
+  return async function rewrite(input, { signal, user } = {}) {
     const request = cleanRewriteInput(input);
     /** @type {import('./generator.js').ModelMessage[]} */
     const messages = [{ role: 'user', content: buildRewritePrompt(request) }];
@@ -180,7 +180,7 @@ export function createRewriter({ model, maxAttempts = 2 }) {
       signal?.throwIfAborted();
       let answer;
       try {
-        answer = await model({ system: REWRITE_SYSTEM_PROMPT, messages, schema: REWRITE_SCHEMA, signal, task: 'rewrite' });
+        answer = await model({ system: REWRITE_SYSTEM_PROMPT, messages, schema: REWRITE_SCHEMA, signal, task: 'rewrite', user });
       } catch (error) {
         if (error instanceof EmailGenerationError && error.code === 'REFUSED') throw new EmailGenerationError('REWRITE_REFUSED');
         throw error;

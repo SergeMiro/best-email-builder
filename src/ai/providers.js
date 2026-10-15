@@ -281,7 +281,8 @@ export async function listProviderModels(options = {}) {
 }
 
 /** The instruction every answer gets: the JSON, nothing else. @param {object} schema */
-const answerInstruction = (schema) =>
+/** The answer format, said in words: for a model without structured output. @param {object} schema */
+export const answerInstruction = (schema) =>
   `\n\n# Answer format\nAnswer with ONE JSON object and nothing else — no prose, no code fence — matching this JSON schema:\n${JSON.stringify(schema)}`;
 
 /** @param {AnswerFormat} format @param {object} schema @param {string} task */

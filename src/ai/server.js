@@ -16,6 +16,11 @@
  *
  *   createEmailGenerator({ model: providerEmailModel({ provider: 'openrouter', apiKey: process.env.OPENROUTER_API_KEY }) })
  *
+ * Or an AI agent the application already has, with its tools and its rights
+ * (agent.js — the protocol, the agent's side, and a check):
+ *
+ *   createEmailGenerator({ model: agentEmailModel({ url, headers: ({ user }) => ({ … }) }), compile: compileMjml })
+ *
  * No React here, and nothing of it in `best-email-builder/server`: a server
  * without AI does not load it.
  */
@@ -29,3 +34,5 @@ export { SYSTEM_PROMPT, EMAIL_DRAFT_SCHEMA, buildUserPrompt } from './prompt.js'
 export { REWRITE_ACTIONS, REWRITE_LANGUAGES, REWRITE_SYSTEM_PROMPT, createRewriter, reviewRewrite } from './rewrite.js';
 export { SUBJECTS_SYSTEM_PROMPT, createSubjectSuggester, emailWords, reviewSubjects } from './subjects.js';
 export { AI_MESSAGES } from './i18n/index.js';
+export { agentEmailModel, AGENT_PROTOCOL, AGENT_ERROR_CODES } from './agent.js';
+export { createAgentEndpoint, checkAgent } from './agentEndpoint.js';

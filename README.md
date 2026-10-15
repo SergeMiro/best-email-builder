@@ -389,6 +389,30 @@ provider; without the list, the default one still works.
 **In the page, with one key for everyone** — prototypes and internal tools
 only, the key is in the page's code: `createAi({ provider: 'groq', apiKey })`.
 
+**Your own AI agent** — the assistant your application already has (its
+model, its tools, its knowledge base, its users' rights) becomes the
+builder's AI: Generate, Rewrite and Subjects go through it. It speaks a small
+HTTP protocol, `best-email-builder/agent@1`: one POST per model turn
+(`{ task, system, messages, schema }` in, `{ text }` out). The builder still
+writes the prompts and checks every answer, so the agent needs to know nothing
+of MJML.
+
+```js
+generator: createEmailGenerator({
+  model: agentEmailModel({
+    url: 'http://agent.internal:8800/email-builder',
+    headers: ({ user }) => ({ 'X-Auth-User': signFor(user) }), // who asks: the user authorize returned
+  }),
+  compile: compileMjml,
+}),
+```
+
+The agent's side is one FastAPI file to copy
+([`examples/agent/python`](examples/agent/python)) or `createAgentEndpoint`
+in JavaScript, and `checkAgent({ url, headers })` tries an agent with the
+builder's own checks. The protocol, the errors and both sides:
+[docs/AGENT.md](docs/AGENT.md).
+
 #### Providers
 
 Every provider here speaks the OpenAI *chat completions* API; nothing to

@@ -278,10 +278,10 @@ export function reviewSubjects(subjects, request) {
 
 /**
  * @param {{model: import('./generator.js').EmailModel, maxAttempts?: number}} options
- * @returns {(input: SubjectsInput, options?: {signal?: AbortSignal}) => Promise<{subjects: string[], attempts: number}>}
+ * @returns {(input: SubjectsInput, options?: {signal?: AbortSignal, user?: any}) => Promise<{subjects: string[], attempts: number}>}
  */
 export function createSubjectSuggester({ model, maxAttempts = 2 }) {
-  return async function suggestSubjects(input, { signal } = {}) {
+  return async function suggestSubjects(input, { signal, user } = {}) {
     const request = cleanSubjectsInput(input);
     /** @type {import('./generator.js').ModelMessage[]} */
     const messages = [{ role: 'user', content: buildSubjectsPrompt(request) }];
@@ -291,7 +291,7 @@ export function createSubjectSuggester({ model, maxAttempts = 2 }) {
       signal?.throwIfAborted();
       let answer;
       try {
-        answer = await model({ system: SUBJECTS_SYSTEM_PROMPT, messages, schema: SUBJECTS_SCHEMA, signal, task: 'subjects' });
+        answer = await model({ system: SUBJECTS_SYSTEM_PROMPT, messages, schema: SUBJECTS_SCHEMA, signal, task: 'subjects', user });
       } catch (error) {
         if (error instanceof EmailGenerationError && error.code === 'REFUSED') throw new EmailGenerationError('SUBJECTS_REFUSED');
         throw error;

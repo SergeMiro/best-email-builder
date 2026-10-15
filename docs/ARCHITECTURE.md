@@ -121,6 +121,8 @@ the AI on screen.
 | `createAi.js` | the module given to the builder: where the model runs (the handler's routes, a provider in the page, a model or functions of one's own), which parts are on, its components and texts |
 | `providers.js` | `providerEmailModel`: any OpenAI-compatible API by its key (`AI_PROVIDERS`: OpenRouter, Gemini, Groq, Cerebras, Mistral, OpenAI, DeepSeek, Ollama…), the answer format stepped down when refused, the provider's failures as `EmailGenerationError` codes |
 | `keys.js`, `ConnectAi.jsx` | the user's own key (`askKey`): kept per provider in localStorage, asked by the *Connect* dialog, forgotten when refused |
+| `ModelPicker.jsx` | the model field of the *Connect* dialog: the provider's list, searched in place, the free ones marked |
+| `agent.js`, `agentEndpoint.js` | an AI agent of the application's own as the model (`best-email-builder/agent@1`, see [AGENT.md](AGENT.md)): `agentEmailModel` the builder's side, `createAgentEndpoint` the agent's, `checkAgent` a trial with the builder's own checks |
 | `server.js`, `index.js` | the two entries |
 | `i18n/` | the module's texts, merged under the host's when it is given |
 
