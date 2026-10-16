@@ -31,9 +31,10 @@ All must pass. Add or update tests with every behaviour change.
   `src/features/index.js`). Adding or removing one must not require touching
   the core.
 - **The server compiles.** No route may accept HTML from the browser.
-- **Strings are English in the code** and go through `t()`; add the French
-  translation to `src/i18n/fr.js` (`node scripts/i18n-keys.mjs fr` lists what
-  is missing). Utility classes carry the `eb:` prefix.
+- **Strings are English in the code** and go through `t()`; add the
+  translation to each dictionary of `src/i18n/` (and of `src/ai/i18n/` for a
+  text of the AI module): `npm run check:i18n` lists what is missing in each
+  language. Utility classes carry the `eb:` prefix.
 
 ## Commits
 

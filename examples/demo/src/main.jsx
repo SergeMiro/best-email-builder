@@ -8,6 +8,7 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  ChevronDown,
   ChevronRight,
   Copy,
   Info,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react';
 import { createBrowserAi, createDemoStorage } from './browserStorage.js';
 import { COMPETITORS } from './competitors.js';
+import { initialLocale, rememberLocale } from './locale.js';
 
 const REPOSITORY_URL = import.meta.env.VITE_REPOSITORY_URL || 'https://github.com/SergeMiro/best-email-builder';
 
@@ -35,7 +37,7 @@ const TEXT = {
   en: {
     eyebrow: 'Open source · MIT',
     tagline: 'Drag-and-drop email builder for React — MJML output that renders in Outlook, Gmail and Apple Mail.',
-    chips: ['Outlook, Gmail, Apple Mail', 'Ready-made templates', 'Phone and tablet', 'English and French'],
+    chips: ['Outlook, Gmail, Apple Mail', 'Ready-made templates', 'Phone and tablet', '6 languages'],
     open: 'Open the live demo',
     docs: 'Documentation',
     alternative: 'An open-source alternative to the editors of',
@@ -62,11 +64,17 @@ const TEXT = {
     copied: 'Copied',
     source: 'Source code',
     madeBy: 'Made by',
+    language: 'Language',
+    comments: {
+      opened: 'opened from your own library',
+      optional: 'Optional: without `ai`, no AI button and no AI code.',
+      keys: 'Each user picks a provider and connects their own key:',
+    },
   },
   fr: {
     eyebrow: 'Open source · MIT',
     tagline: 'Constructeur de courriels par glisser-déposer pour React — un rendu MJML fidèle dans Outlook, Gmail et Apple Mail.',
-    chips: ['Outlook, Gmail, Apple Mail', 'Modèles prêts à l’emploi', 'Téléphone et tablette', 'Anglais et français'],
+    chips: ['Outlook, Gmail, Apple Mail', 'Modèles prêts à l’emploi', 'Téléphone et tablette', '6 langues'],
     open: 'Ouvrir la démo',
     docs: 'Documentation',
     alternative: 'Une alternative open source aux éditeurs de',
@@ -93,18 +101,177 @@ const TEXT = {
     copied: 'Copié',
     source: 'Code source',
     madeBy: 'Réalisé par',
+    language: 'Langue',
+    comments: {
+      opened: 'ouvert depuis votre propre bibliothèque',
+      optional: 'Facultatif : sans `ai`, ni bouton IA ni code IA.',
+      keys: 'Chaque utilisateur choisit un fournisseur et connecte sa propre clé :',
+    },
+  },
+  de: {
+    eyebrow: 'Open Source · MIT',
+    tagline: 'Drag-and-drop-E-Mail-Builder für React — MJML, das in Outlook, Gmail und Apple Mail richtig dargestellt wird.',
+    chips: ['Outlook, Gmail, Apple Mail', 'Fertige Vorlagen', 'Smartphone und Tablet', '6 Sprachen'],
+    open: 'Live-Demo öffnen',
+    docs: 'Dokumentation',
+    alternative: 'Eine Open-Source-Alternative zu den Editoren von',
+    alternativeNote: 'Dasselbe Drag-and-drop in Ihrer eigenen App: kein Preis pro Nutzer, und Ihre Vorlagen bleiben auf Ihrem Server.',
+    features: [
+      ['Zwei Ansichten, eine oder beide', 'Eine Vorlagenbibliothek, dann der Editor — oder nur der Editor. Beide lassen sich einzeln installieren.'],
+      ['Überall richtig dargestellt', 'MJML, kompiliert auf Ihrem Server: Tabellen, die Outlook versteht, Layouts, die in Gmail und Apple Mail halten.'],
+      ['Ganz in Ihrer Hand', 'Vorlagen, Versionen und Bilder in Ihrer Datenbank. Eine strenge Positivliste prüft jede Vorlage vor dem Speichern.'],
+    ],
+    demo: 'Demo',
+    home: 'Startseite',
+    codeTitle: 'So installieren Sie es',
+    codeTabs: { both: 'Bibliothek + Editor', builder: 'Nur Editor', library: 'Nur Bibliothek', ai: 'Mit KI' },
+    stepBank: 'Vorlagenbibliothek',
+    stepEditor: 'Editor',
+    expand: 'Vollbild',
+    shrink: 'Vollbild beenden',
+    note: 'Live-Demo: Die Vorlagen bleiben in diesem Browser, die Vorschau wird im Browser kompiliert. Eine echte App kompiliert auf ihrem Server.',
+    aiNote: '„Generieren“ schreibt eine ganze E-Mail, „Mit KI umschreiben“ überarbeitet einen markierten Text und „Betreff vorschlagen“ bietet drei Betreffzeilen an — mit Ihrem eigenen Schlüssel: OpenAI, Claude, Mistral, Gemini oder OpenRouter. Gemini und Mistral sind kostenlos und antworten in Sekunden; die kostenlosen Modelle von OpenRouter brauchen Minuten. Der Schlüssel bleibt in diesem Browser und geht nur an den gewählten Anbieter.',
+    aiConnected: 'Verbunden mit {provider} · {model}.',
+    aiChange: 'Anbieter oder Modell wechseln',
+    aiForget: 'Meinen Schlüssel vergessen',
+    copy: 'Installationsbefehl kopieren',
+    copied: 'Kopiert',
+    source: 'Quellcode',
+    madeBy: 'Erstellt von',
+    language: 'Sprache',
+    comments: {
+      opened: 'aus Ihrer eigenen Bibliothek geöffnet',
+      optional: 'Optional: ohne `ai` weder KI-Schaltfläche noch KI-Code.',
+      keys: 'Jeder Nutzer wählt einen Anbieter und verbindet seinen eigenen Schlüssel:',
+    },
+  },
+  es: {
+    eyebrow: 'Código abierto · MIT',
+    tagline: 'Editor de correos de arrastrar y soltar para React — MJML que se ve bien en Outlook, Gmail y Apple Mail.',
+    chips: ['Outlook, Gmail, Apple Mail', 'Plantillas listas para usar', 'Móvil y tableta', '6 idiomas'],
+    open: 'Abrir la demo',
+    docs: 'Documentación',
+    alternative: 'Una alternativa de código abierto a los editores de',
+    alternativeNote: 'El mismo arrastrar y soltar, dentro de tu propia aplicación: sin precio por usuario, y tus plantillas se quedan en tu servidor.',
+    features: [
+      ['Dos pantallas: una o las dos', 'Una biblioteca de plantillas y luego el editor, o solo el editor. Cada uno se instala por separado.'],
+      ['Se ve bien en todas partes', 'MJML compilado en tu servidor: tablas que Outlook entiende y diseños que aguantan en Gmail y Apple Mail.'],
+      ['Tuyo de principio a fin', 'Plantillas, versiones e imágenes en tu base de datos. Una lista de permitidos estricta revisa cada plantilla antes de guardarla.'],
+    ],
+    demo: 'Demo',
+    home: 'Inicio',
+    codeTitle: 'Cómo instalarlo',
+    codeTabs: { both: 'Biblioteca + editor', builder: 'Solo el editor', library: 'Solo la biblioteca', ai: 'Con IA' },
+    stepBank: 'Biblioteca de plantillas',
+    stepEditor: 'Editor',
+    expand: 'Pantalla completa',
+    shrink: 'Salir de pantalla completa',
+    note: 'Demo en vivo: las plantillas se quedan en este navegador y la vista previa se compila en el navegador. Una aplicación real compila en su servidor.',
+    aiNote: '“Generar” escribe un correo completo, “Reescribir con IA” rehace el texto seleccionado y “Sugerir asuntos” propone tres asuntos, con tu propia clave: OpenAI, Claude, Mistral, Gemini u OpenRouter. Gemini y Mistral son gratuitos y responden en segundos; los modelos gratuitos de OpenRouter tardan minutos. La clave se queda en este navegador y solo se envía al proveedor que elijas.',
+    aiConnected: 'Conectado a {provider} · {model}.',
+    aiChange: 'Cambiar de proveedor o de modelo',
+    aiForget: 'Olvidar mi clave',
+    copy: 'Copiar el comando de instalación',
+    copied: 'Copiado',
+    source: 'Código fuente',
+    madeBy: 'Hecho por',
+    language: 'Idioma',
+    comments: {
+      opened: 'abierta desde tu propia biblioteca',
+      optional: 'Opcional: sin `ai`, ni botón de IA ni código de IA.',
+      keys: 'Cada usuario elige un proveedor y conecta su propia clave:',
+    },
+  },
+  ru: {
+    eyebrow: 'Открытый код · MIT',
+    tagline: 'Конструктор писем с перетаскиванием для React — MJML, который правильно отображается в Outlook, Gmail и Apple Mail.',
+    chips: ['Outlook, Gmail, Apple Mail', 'Готовые шаблоны', 'Телефон и планшет', '6 языков'],
+    open: 'Открыть демо',
+    docs: 'Документация',
+    alternative: 'Альтернатива с открытым кодом редакторам',
+    alternativeNote: 'То же перетаскивание, но внутри вашего приложения: никакой оплаты за пользователя, а шаблоны остаются на вашем сервере.',
+    features: [
+      ['Два экрана — один или оба', 'Библиотека шаблонов, затем редактор — или только редактор. Каждый устанавливается отдельно.'],
+      ['Отображается везде', 'MJML компилируется на вашем сервере: таблицы, которые понимает Outlook, и вёрстка, которая не разваливается в Gmail и Apple Mail.'],
+      ['Всё остаётся у вас', 'Шаблоны, версии и изображения — в вашей базе данных. Строгий белый список проверяет каждый шаблон перед сохранением.'],
+    ],
+    demo: 'Демо',
+    home: 'Главная',
+    codeTitle: 'Как установить',
+    codeTabs: { both: 'Библиотека + редактор', builder: 'Только редактор', library: 'Только библиотека', ai: 'С ИИ' },
+    stepBank: 'Библиотека шаблонов',
+    stepEditor: 'Редактор',
+    expand: 'Во весь экран',
+    shrink: 'Выйти из полноэкранного режима',
+    note: 'Живое демо: шаблоны хранятся в этом браузере, предпросмотр компилируется тоже в браузере. Настоящее приложение компилирует на своём сервере.',
+    aiNote: '«Сгенерировать» пишет письмо целиком, «Переписать с помощью ИИ» перерабатывает выделенный текст, а «Предложить темы» даёт три варианта темы — с вашим собственным ключом: OpenAI, Claude, Mistral, Gemini или OpenRouter. Gemini и Mistral бесплатны и отвечают за секунды; бесплатным моделям OpenRouter нужны минуты. Ключ остаётся в этом браузере и уходит только выбранному провайдеру.',
+    aiConnected: 'Подключено: {provider} · {model}.',
+    aiChange: 'Сменить провайдера или модель',
+    aiForget: 'Забыть мой ключ',
+    copy: 'Скопировать команду установки',
+    copied: 'Скопировано',
+    source: 'Исходный код',
+    madeBy: 'Сделал',
+    language: 'Язык',
+    comments: {
+      opened: 'открыт из вашей библиотеки',
+      optional: 'Необязательно: без `ai` нет ни кнопки ИИ, ни кода ИИ.',
+      keys: 'Каждый пользователь выбирает провайдера и подключает свой ключ:',
+    },
+  },
+  zh: {
+    eyebrow: '开源 · MIT',
+    tagline: '适用于 React 的拖放式邮件编辑器——输出 MJML，在 Outlook、Gmail 和 Apple Mail 中都能正确显示。',
+    chips: ['Outlook、Gmail、Apple Mail', '现成模板', '手机和平板', '6 种语言'],
+    open: '打开在线演示',
+    docs: '文档',
+    alternative: '开源的替代方案，可替代以下编辑器：',
+    alternativeNote: '同样的拖放体验，直接嵌入您自己的应用：不按席位收费，模板始终保存在您的服务器上。',
+    features: [
+      ['两个界面，可单用可合用', '先是模板库，再进入编辑器——或者只用编辑器。两者都可以单独安装。'],
+      ['处处显示正常', 'MJML 在您的服务器上编译：Outlook 能识别的表格，在 Gmail 和 Apple Mail 中也不会走样的布局。'],
+      ['完全由您掌控', '模板、版本和图片都在您的数据库中。保存前，严格的白名单会检查每个模板。'],
+    ],
+    demo: '演示',
+    home: '首页',
+    codeTitle: '如何安装',
+    codeTabs: { both: '模板库 + 编辑器', builder: '仅编辑器', library: '仅模板库', ai: '搭配 AI' },
+    stepBank: '模板库',
+    stepEditor: '编辑器',
+    expand: '全屏',
+    shrink: '退出全屏',
+    note: '在线演示：模板保存在当前浏览器中，预览也在浏览器中编译。真实应用会在自己的服务器上编译。',
+    aiNote: '“生成”写出一封完整的邮件，“AI 改写”重写选中的文字，“推荐主题”给出三个邮件主题——使用您自己的密钥：OpenAI、Claude、Mistral、Gemini 或 OpenRouter。Gemini 和 Mistral 免费，几秒内即可回复；OpenRouter 的免费模型需要几分钟。密钥只保存在当前浏览器中，且只发送给您选择的服务商。',
+    aiConnected: '已连接 {provider} · {model}。',
+    aiChange: '更换服务商或模型',
+    aiForget: '忘记我的密钥',
+    copy: '复制安装命令',
+    copied: '已复制',
+    source: '源代码',
+    madeBy: '作者',
+    language: '语言',
+    comments: {
+      opened: '从您自己的模板库中打开',
+      optional: '可选：不传 `ai`，就没有 AI 按钮，也不加载 AI 代码。',
+      keys: '每位用户选择一个服务商，并连接自己的密钥：',
+    },
   },
 };
+
+/** The languages of the switcher, each in its own words. */
+const LANGUAGES = [
+  ['en', 'English'],
+  ['fr', 'Français'],
+  ['de', 'Deutsch'],
+  ['es', 'Español'],
+  ['ru', 'Русский'],
+  ['zh', '中文'],
+];
 
 const FEATURE_ICONS = [Layers, ShieldCheck, ServerCog];
 
 const CHIP_ICONS = [Mail, LayoutTemplate, Smartphone, Languages];
 
-const initialLocale = () => {
-  const fromUrl = new URLSearchParams(window.location.search).get('lang');
-  if (fromUrl === 'en' || fromUrl === 'fr') return fromUrl;
-  return navigator.language?.startsWith('fr') ? 'fr' : 'en';
-};
 
 /** The product mark: an envelope whose flap opens on the letters "beb". */
 function BrandMark() {
@@ -193,28 +360,31 @@ function InstallCommand({ text }) {
   );
 }
 
-/** The three ways to install it: both blocks, the editor alone, the bank alone. */
+/**
+ * The ways to install it: both blocks, the editor alone, the bank alone, with
+ * the AI. Their comments are in the page's language, and so is `locale`.
+ */
 const CODE_SAMPLES = [
   {
     id: 'both',
-    code: `import { EmailStudio, createHttpStorage } from 'best-email-builder';
+    code: (comments, locale) => `import { EmailStudio, createHttpStorage } from 'best-email-builder';
 
-<EmailStudio storage={createHttpStorage()} locale="fr" />`,
+<EmailStudio storage={createHttpStorage()} locale="${locale}" />`,
   },
   {
     id: 'builder',
-    code: `import { EmailBuilder } from 'best-email-builder/builder';
+    code: (comments) => `import { EmailBuilder } from 'best-email-builder/builder';
 
 <EmailBuilder
   storage={storage}
-  templateId={id}           // opened from your own library
+  templateId={id}           // ${comments.opened}
   onSaved={refreshMyList}
   onClose={backToMyList}
 />`,
   },
   {
     id: 'library',
-    code: `import { TemplateLibrary } from 'best-email-builder/library';
+    code: () => `import { TemplateLibrary } from 'best-email-builder/library';
 
 <TemplateLibrary
   storage={storage}
@@ -224,16 +394,16 @@ const CODE_SAMPLES = [
   },
   {
     id: 'ai',
-    code: `import Anthropic from '@anthropic-ai/sdk';
+    code: (comments) => `import Anthropic from '@anthropic-ai/sdk';
 import { claudeProvider, createAi } from 'best-email-builder/ai';
 
-// Optional: without \`ai\`, no AI button and no AI code.
+// ${comments.optional}
 const claude = claudeProvider({
   client: (apiKey) =>
     new Anthropic({ apiKey, dangerouslyAllowBrowser: true }),
 });
 
-// Each user picks a provider and connects their own key:
+// ${comments.keys}
 const ai = createAi({
   provider: [
     'openai',      // ChatGPT
@@ -271,7 +441,7 @@ function highlight(code) {
   return out;
 }
 
-function CodeSample({ text }) {
+function CodeSample({ text, locale }) {
   const [current, setCurrent] = useState('both');
   const sample = CODE_SAMPLES.find((s) => s.id === current);
   // Arrow keys move between the tabs, as in any tab list.
@@ -308,7 +478,7 @@ function CodeSample({ text }) {
         </span>
       </figcaption>
       <pre id="code-panel" role="tabpanel" aria-labelledby={`code-tab-${current}`} tabIndex={0}>
-        <code>{highlight(sample.code)}</code>
+        <code>{highlight(sample.code(text.comments, locale))}</code>
       </pre>
     </figure>
   );
@@ -398,13 +568,17 @@ function TopBar({ text, locale, setLocale, crumb }) {
         )}
       </span>
       <div className="topbar-actions">
-        <div className="segmented" role="group" aria-label="Language">
-          {['en', 'fr'].map((code) => (
-            <button key={code} type="button" onClick={() => setLocale(code)} aria-pressed={code === locale}>
-              {code.toUpperCase()}
-            </button>
-          ))}
-        </div>
+        <label className="lang" title={text.language}>
+          <Languages aria-hidden="true" />
+          <select value={locale} onChange={(event) => setLocale(event.target.value)} aria-label={text.language}>
+            {LANGUAGES.map(([code, name]) => (
+              <option key={code} value={code} lang={code}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown aria-hidden="true" />
+        </label>
         <a className="btn" href={REPOSITORY_URL} aria-label={text.source}>
           <GitHubMark />
           <span className="btn-label">{text.source}</span>
@@ -472,7 +646,7 @@ function Alternatives({ text }) {
   );
 }
 
-function Landing({ text }) {
+function Landing({ text, locale }) {
   return (
     <main>
       <section className="wrap hero">
@@ -507,7 +681,7 @@ function Landing({ text }) {
         </div>
         <div className="dev">
           <InstallCommand text={text} />
-          <CodeSample text={text} />
+          <CodeSample text={text} locale={locale} />
         </div>
       </section>
 
@@ -586,8 +760,12 @@ function DemoWindow({ text, step, expanded, setExpanded, children }) {
 }
 
 function App() {
-  const [locale, setLocale] = useState(initialLocale);
+  const [locale, setLocale] = useState(() => initialLocale(Object.keys(TEXT)));
   const text = TEXT[locale];
+  const chooseLocale = useCallback((code) => {
+    rememberLocale(code);
+    setLocale(code);
+  }, []);
   // The storage and the AI module live as long as the page.
   const storage = useMemo(() => createDemoStorage(), []);
   const ai = useMemo(() => createBrowserAi(), []);
@@ -627,7 +805,7 @@ function App() {
   return (
     <div className={`landing page-${route.page}`} ref={pageRef}>
       <div className="backdrop" aria-hidden="true" />
-      <TopBar text={text} locale={locale} setLocale={setLocale} crumb={inWindow ? text.demo : null} />
+      <TopBar text={text} locale={locale} setLocale={chooseLocale} crumb={inWindow ? text.demo : null} />
       {inWindow ? (
         <main className="wrap wrap-wide bank">
           <DemoWindow text={text} step={route.page === 'editor' ? 2 : 1} expanded={expanded} setExpanded={setExpanded}>
@@ -702,7 +880,7 @@ function App() {
           </p>
         </main>
       ) : (
-        <Landing text={text} />
+        <Landing text={text} locale={locale} />
       )}
       <Footer text={text} />
     </div>

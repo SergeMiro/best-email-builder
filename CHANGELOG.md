@@ -6,6 +6,19 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **German, Spanish, Russian and Chinese** (Simplified), built in next to
+  English and French: `locale="de"`, `"es"`, `"ru"` or `"zh"` (`"de-AT"`,
+  `"zh-CN"`… find them too). Every text is translated — the interface, the
+  starting templates, the server's messages and the AI module — and counts
+  are written so that no language needs plural forms.
+- The live demo offers the six languages in a list and opens in the
+  visitor's: their browser's language, else the country of their device's
+  time zone (read in the page, nothing is sent), else English; a language
+  picked is remembered. Its code samples follow the page: their comments and
+  `locale` change with the language.
+- `npm run check:i18n` checks every built-in language.
+
 ## [0.7.0] — 2026-10-15
 
 ### Added

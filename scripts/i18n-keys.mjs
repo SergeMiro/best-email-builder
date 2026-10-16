@@ -4,6 +4,7 @@
  *
  *   node scripts/i18n-keys.mjs            keys found in src/
  *   node scripts/i18n-keys.mjs fr         keys missing from the `fr` locale
+ *   node scripts/i18n-keys.mjs fr de es   the same for each one
  *
  * A key is the first argument of a `t('…')` call, or a user-visible field of
  * the block, variable and feature registries (label, description, group,
@@ -85,12 +86,13 @@ function pathToUrl(relative) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const keys = await collectKeys();
-  const locale = process.argv[2];
-  if (!locale) {
+  const locales = process.argv.slice(2);
+  if (!locales.length) {
     console.log([...keys.core, ...keys.ai].sort().join('\n'));
-  } else {
-    const { LOCALES } = await import(pathToUrl('src/i18n/index.js'));
-    const { AI_MESSAGES } = await import(pathToUrl('src/ai/i18n/index.js'));
+  }
+  const { LOCALES } = await import(pathToUrl('src/i18n/index.js'));
+  const { AI_MESSAGES } = await import(pathToUrl('src/ai/i18n/index.js'));
+  for (const locale of locales) {
     const coreMessages = LOCALES[locale] || {};
     const aiMessages = AI_MESSAGES[locale] || {};
     const report = {
@@ -104,7 +106,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
       unused: Object.keys(coreMessages).filter((k) => !keys.core.includes(k) && !keys.ai.includes(k)),
       unusedAi: Object.keys(aiMessages).filter((k) => !keys.ai.includes(k) && !keys.core.includes(k)),
     };
-    console.log(JSON.stringify(report, null, 2));
+    console.log(`${locale}: ${JSON.stringify(report, null, 2)}`);
+    if (!LOCALES[locale]) process.exitCode = 1;
     if (report.missing.length || report.missingAi.length || report.aiKeysInCore.length || report.coreKeysInAi.length) process.exitCode = 1;
   }
 }

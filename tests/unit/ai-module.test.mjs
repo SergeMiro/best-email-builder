@@ -157,16 +157,33 @@ test('createAi(): what the builder reads — frozen, its three components, its o
 });
 
 test('dictionaries: the AI’s texts are in its own, not in the core’s; the core keeps what both use', () => {
-  const core = LOCALES.fr;
-  const aiFr = AI_MESSAGES.fr;
-  for (const key of ['Suggest subjects', 'Rewrite with AI', 'Generate an email', 'More ideas', 'Done', 'No usable subject came back. Try again.']) {
-    assert.ok(key in aiFr, `${key} in the AI's dictionary`);
-    assert.ok(!(key in core), `${key} not shipped without the AI`);
+  assert.deepEqual(Object.keys(AI_MESSAGES), Object.keys(LOCALES), 'the same languages on both sides');
+  for (const [locale, core] of Object.entries(LOCALES)) {
+    if (locale === 'en') continue;
+    const ai = AI_MESSAGES[locale];
+    for (const key of ['Suggest subjects', 'Rewrite with AI', 'Generate an email', 'More ideas', 'Done', 'No usable subject came back. Try again.']) {
+      assert.ok(key in ai, `${locale}: ${key} in the AI's dictionary`);
+      assert.ok(!(key in core), `${locale}: ${key} not shipped without the AI`);
+    }
+    assert.deepEqual(Object.keys(ai).filter((key) => key in core), [], `${locale}: no text in both`);
+    // Words the core shows too stay the core's.
+    for (const key of ['Cancel', 'Retry']) assert.ok(key in core, `${locale}: ${key}`);
+    // The same entries as the French, so a language is never half there.
+    assert.deepEqual(Object.keys(core).sort(), Object.keys(LOCALES.fr).sort(), `${locale}: the core's entries`);
+    assert.deepEqual(Object.keys(ai).sort(), Object.keys(AI_MESSAGES.fr).sort(), `${locale}: the AI's entries`);
   }
-  assert.deepEqual(Object.keys(aiFr).filter((key) => key in core), [], 'no text in both');
-  // Words the core shows too stay the core's.
-  for (const key of ['Cancel', 'Retry']) assert.ok(key in core, key);
-  assert.ok(Object.keys(aiFr).length > 100);
+  assert.ok(Object.keys(AI_MESSAGES.fr).length > 100);
+});
+
+test('dictionaries: every translation keeps the placeholders of its English text', () => {
+  const placeholders = (text) => (text.match(/\{\w+\}/g) || []).sort().join(' ');
+  for (const dictionaries of [LOCALES, AI_MESSAGES]) {
+    for (const [locale, messages] of Object.entries(dictionaries)) {
+      for (const [key, value] of Object.entries(messages)) {
+        assert.equal(placeholders(value), placeholders(key), `${locale}: ${key}`);
+      }
+    }
+  }
 });
 
 test('messagesOf: the dictionary of a locale among several', () => {

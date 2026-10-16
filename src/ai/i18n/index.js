@@ -6,7 +6,11 @@
  * dictionaries (src/i18n/) do not carry them.
  */
 
+import { de } from './de.js';
+import { es } from './es.js';
 import { fr } from './fr.js';
+import { ru } from './ru.js';
+import { zh } from './zh.js';
 
 /** @type {Record<string, Record<string, string>>} */
-export const AI_MESSAGES = { en: {}, fr };
+export const AI_MESSAGES = { en: {}, fr, de, es, ru, zh };

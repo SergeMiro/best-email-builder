@@ -11,13 +11,17 @@
  * (validation and API error messages).
  */
 
+import { de } from './de.js';
+import { es } from './es.js';
 import { fr } from './fr.js';
+import { ru } from './ru.js';
+import { zh } from './zh.js';
 
 /** @typedef {Record<string, string>} Messages */
 /** @typedef {(text: string, params?: Record<string, string|number|null|undefined>) => string} Translate */
 
 /** Built-in locales. English is the source language: an empty dictionary. */
-export const LOCALES = /** @type {Record<string, Messages>} */ ({ en: {}, fr });
+export const LOCALES = /** @type {Record<string, Messages>} */ ({ en: {}, fr, de, es, ru, zh });
 
 /**
  * @param {Messages} [messages]

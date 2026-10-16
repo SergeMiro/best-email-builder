@@ -123,17 +123,17 @@
       .brand-mark svg { width: 44px; height: 33px; display: block; }
       .brand:hover .brand-mark { transform: translateY(-1px) rotate(-3deg); }
       .topbar-actions { display: flex; align-items: center; gap: 8px; }
-      .segmented {
-        display: inline-flex; padding: 3px; border-radius: 999px; border: 1px solid var(--line);
-        background: rgb(255 255 255 / 0.7); backdrop-filter: blur(8px);
+      /* the language: a native list, so it stays usable with any number of languages */
+      .lang { position: relative; display: inline-flex; align-items: center; color: var(--muted); }
+      .lang svg { position: absolute; z-index: 1; width: 14px; height: 14px; pointer-events: none; }
+      .lang svg:first-child { left: 11px; }
+      .lang svg:last-child { right: 10px; width: 13px; height: 13px; }
+      .lang select {
+        appearance: none; font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1; cursor: pointer;
+        padding: 8px 30px 8px 32px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink);
+        background: rgb(255 255 255 / 0.7); backdrop-filter: blur(8px); transition: border-color 0.15s;
       }
-      .segmented button {
-        font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; border: 0; cursor: pointer;
-        padding: 4px 11px; border-radius: 999px; background: transparent; color: var(--muted);
-        transition: background 0.15s, color 0.15s;
-      }
-      .segmented button:hover { color: var(--ink); }
-      .segmented button[aria-pressed='true'] { background: var(--primary); color: #fff; cursor: default; }
+      .lang:hover select { border-color: var(--muted); }
 
       .btn {
         font: inherit; font-size: 13px; font-weight: 500; line-height: 1; display: inline-flex; align-items: center; gap: 7px;

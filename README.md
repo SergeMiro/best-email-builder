@@ -89,7 +89,8 @@ Best Email Builder is the second option done once, properly, and given away:
   preview and fallbacks for recipients without a value.
 - **Framework-agnostic server**: one Fetch-API handler for Next.js, Hono, Bun,
   Deno, Cloudflare Workers — and Express / Node `http` through a bridge.
-- **English and French** built in, any other language through a dictionary.
+- **Six interface languages built in** — English, French, German, Spanish,
+  Russian and Chinese — and any other through a dictionary.
 
 ```
 React UI ─► EmailEditor ─► NativeAdapter ─► the email: an MJML tree
@@ -602,7 +603,7 @@ The live demo keeps the brand in `localStorage` and has no website field
 |---|---|---|
 | `storage` | `createHttpStorage()` | Where templates and images go (see *Storage*). |
 | `templateId` | `null` | Template to open; `null` starts from the starter template (or a local draft). |
-| `locale` | `'en'` | `'en'`, `'fr'`, or any BCP 47 tag used with `messages`. |
+| `locale` | `'en'` | `'en'`, `'fr'`, `'de'`, `'es'`, `'ru'`, `'zh'`, or any BCP 47 tag used with `messages`. |
 | `messages` | — | Extra or overriding translations (`{ 'Save': 'Speichern', … }`). |
 | `onNotify` | built-in notices | `(level, message) => void` to use your own toaster. |
 | `variables` | `DEFAULT_VARIABLES` | Merge tags offered in the *Variables* menu. Pass the same list to the server. |
@@ -768,8 +769,8 @@ This project is built for and with the developer community. Good first
 contributions:
 
 - **a new block** — one folder in `src/blocks/` and one line in its registry;
-- **a new interface language** — a dictionary like `src/i18n/fr.js`
-  (`npm run check:i18n` lists the missing keys);
+- **a new interface language** — two dictionaries like `src/i18n/fr.js` and
+  `src/ai/i18n/fr.js` (`node scripts/i18n-keys.mjs <code>` lists the missing keys);
 - **a storage recipe** — the memory repositories are the reference shape for
   PostgreSQL, MongoDB, S3 and friends;
 - **a rendering report** — a template that looks wrong in a given mail client,

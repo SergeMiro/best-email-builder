@@ -12,8 +12,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
-import { AI_PROVIDERS, EmailGenerationError, GENERATION_ERRORS, claudeEmailModel, listProviderModels, providerEmailModel, resolveProvider } from '../../src/ai/server.js';
-import { fr } from '../../src/ai/i18n/fr.js';
+import { AI_MESSAGES, AI_PROVIDERS, EmailGenerationError, GENERATION_ERRORS, claudeEmailModel, listProviderModels, providerEmailModel, resolveProvider } from '../../src/ai/server.js';
+
+/** The built-in translations of the AI module, English aside. */
+const TRANSLATIONS = Object.entries(AI_MESSAGES).filter(([locale]) => locale !== 'en');
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -62,7 +64,7 @@ test('every preset is complete, and a free one says what is free', () => {
     assert.ok(['json_schema', 'json_object', 'text'].includes(provider.format), id);
     if (provider.keyUrl) assert.match(provider.keyUrl, /^https:\/\//, id);
     if (!provider.keyless) assert.ok(provider.keyUrl, `${id}: a user needs to know where to get a key`);
-    if (provider.free) assert.ok(fr[provider.free], `${id}: "${provider.free}" has a French text`);
+    for (const [locale, messages] of TRANSLATIONS) if (provider.free) assert.ok(messages[provider.free], `${id}: "${provider.free}" in ${locale}`);
     assert.ok(Object.isFrozen(provider), id);
   }
   // The ones a user can start with for free.
@@ -231,7 +233,7 @@ test('the provider’s failures, as the errors the interface explains', async ()
   for (const code of ['KEY_MISSING', 'KEY_REFUSED', 'MODEL_CREDITS', 'MODEL_BUSY', 'MODEL_ERROR']) {
     assert.ok(GENERATION_ERRORS[code], code);
     assert.ok(GENERATION_ERRORS[code].status >= 500, code);
-    assert.ok(fr[GENERATION_ERRORS[code].message], `${code} has a French text`);
+    for (const [locale, messages] of TRANSLATIONS) assert.ok(messages[GENERATION_ERRORS[code].message], `${code} in ${locale}`);
   }
 });
 

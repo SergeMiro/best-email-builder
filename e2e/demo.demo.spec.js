@@ -131,6 +131,41 @@ test('bank and editor share one window; it spreads over the screen and back', as
   await expect(frame).not.toHaveClass(/is-expanded/);
 });
 
+// The first language: the browser's own, else the country of the clock, else English.
+for (const [locale, timezoneId, open] of [
+  ['de-DE', 'America/New_York', 'Live-Demo öffnen'],
+  ['zh-TW', 'Europe/Paris', '打开在线演示'],
+  ['ca-ES', 'Europe/Madrid', 'Abrir la demo'],
+  ['kk-KZ', 'Asia/Almaty', 'Открыть демо'],
+  ['en-US', 'Europe/Berlin', 'Open the live demo'],
+  ['it-IT', 'Europe/Rome', 'Open the live demo'],
+]) {
+  test.describe(`a ${locale} browser in ${timezoneId}`, () => {
+    test.use({ locale, timezoneId });
+    test(`opens in "${open}"`, async ({ page }) => {
+      await page.goto(HOME);
+      await expect(page.getByRole('link', { name: open })).toBeVisible();
+    });
+  });
+}
+
+test('the language picked: the code samples follow it, and it is kept for the next visit', async ({ page }) => {
+  await page.goto(HOME);
+  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
+  await expect(page.locator('#code-panel')).toContainText('locale="ru"');
+  await page.getByRole('tab', { name: 'С ИИ' }).click();
+  await expect(page.locator('#code-panel')).toContainText('// Каждый пользователь выбирает провайдера и подключает свой ключ:');
+  await page.getByRole('tab', { name: 'Только редактор' }).click();
+  await expect(page.locator('#code-panel')).toContainText('// открыт из вашей библиотеки');
+
+  await page.goto(HOME);
+  await expect(page.getByRole('link', { name: 'Открыть демо' })).toBeVisible();
+  // A link that names a language still wins.
+  await page.goto(`${HOME}?lang=es`);
+  await expect(page.getByRole('link', { name: 'Abrir la demo' })).toBeVisible();
+});
+
 test('after a first save, switching the language reopens the saved template (no duplicate)', async ({ page }) => {
   await page.goto(`${HOME}?lang=en#/editor/base/promotion`);
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
@@ -138,7 +173,7 @@ test('after a first save, switching the language reopens the saved template (no 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText(/^Saved at/)).toBeVisible();
 
-  await page.getByRole('button', { name: 'FR', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Language' }).selectOption('fr');
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   await expect(page.getByTestId('eb-properties').getByLabel(/^Libellé/)).toHaveValue('Saved once');
   await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
