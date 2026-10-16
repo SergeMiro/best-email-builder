@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-10-16
+
 ### Added
 - **An OpenAI-compatible API of the user's own** in the Connect dialog: add
   `'openai-compatible'` to `createAi({ provider: [...], askKey: true })`
