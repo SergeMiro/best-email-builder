@@ -136,6 +136,8 @@ for (const [locale, timezoneId, open] of [
   ['de-DE', 'America/New_York', 'Live-Demo öffnen'],
   ['zh-TW', 'Europe/Paris', '打开在线演示'],
   ['ca-ES', 'Europe/Madrid', 'Abrir la demo'],
+  ['pt-PT', 'Europe/Lisbon', 'Abrir a demo'],
+  ['gn-PY', 'America/Sao_Paulo', 'Abrir a demo'],
   ['kk-KZ', 'Asia/Almaty', 'Открыть демо'],
   ['en-US', 'Europe/Berlin', 'Open the live demo'],
   ['it-IT', 'Europe/Rome', 'Open the live demo'],

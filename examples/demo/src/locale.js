@@ -28,6 +28,13 @@ const TIME_ZONES = {
     'America/Guatemala', 'America/El_Salvador', 'America/Tegucigalpa', 'America/Managua', 'America/Costa_Rica',
     'America/Panama', 'America/Buenos_Aires', 'Pacific/Galapagos', 'Pacific/Easter',
   ],
+  pt: [
+    'America/Sao_Paulo', 'America/Rio_Branco', 'America/Manaus', 'America/Belem', 'America/Fortaleza', 'America/Recife',
+    'America/Bahia', 'America/Maceio', 'America/Araguaina', 'America/Cuiaba', 'America/Campo_Grande',
+    'America/Porto_Velho', 'America/Boa_Vista', 'America/Santarem', 'America/Noronha', 'America/Eirunepe',
+    'Europe/Lisbon', 'Atlantic/Madeira', 'Atlantic/Azores', 'Africa/Luanda', 'Africa/Maputo', 'Atlantic/Cape_Verde',
+    'Africa/Bissau',
+  ],
   ru: [
     'Europe/Moscow', 'Europe/Kaliningrad', 'Europe/Samara', 'Europe/Volgograd', 'Europe/Saratov', 'Europe/Ulyanovsk',
     'Europe/Astrakhan', 'Europe/Kirov', 'Europe/Minsk', 'Asia/Yekaterinburg', 'Asia/Omsk', 'Asia/Novosibirsk',

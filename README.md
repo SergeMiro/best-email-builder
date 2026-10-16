@@ -89,8 +89,8 @@ Best Email Builder is the second option done once, properly, and given away:
   preview and fallbacks for recipients without a value.
 - **Framework-agnostic server**: one Fetch-API handler for Next.js, Hono, Bun,
   Deno, Cloudflare Workers — and Express / Node `http` through a bridge.
-- **Six interface languages built in** — English, French, German, Spanish,
-  Russian and Chinese — and any other through a dictionary.
+- **Seven interface languages built in** — English, French, German, Spanish,
+  Portuguese, Russian and Chinese — and any other through a dictionary.
 
 ```
 React UI ─► EmailEditor ─► NativeAdapter ─► the email: an MJML tree
@@ -603,7 +603,7 @@ The live demo keeps the brand in `localStorage` and has no website field
 |---|---|---|
 | `storage` | `createHttpStorage()` | Where templates and images go (see *Storage*). |
 | `templateId` | `null` | Template to open; `null` starts from the starter template (or a local draft). |
-| `locale` | `'en'` | `'en'`, `'fr'`, `'de'`, `'es'`, `'ru'`, `'zh'`, or any BCP 47 tag used with `messages`. |
+| `locale` | `'en'` | `'en'`, `'fr'`, `'de'`, `'es'`, `'pt'`, `'ru'`, `'zh'`, or any BCP 47 tag used with `messages`. |
 | `messages` | — | Extra or overriding translations (`{ 'Save': 'Speichern', … }`). |
 | `onNotify` | built-in notices | `(level, message) => void` to use your own toaster. |
 | `variables` | `DEFAULT_VARIABLES` | Merge tags offered in the *Variables* menu. Pass the same list to the server. |

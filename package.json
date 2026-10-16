@@ -102,7 +102,7 @@
     "demo:preview": "vite preview --config examples/demo/vite.config.js --port 5176 --strictPort --base /best-email-builder/",
     "test:demo": "npm run demo:build:pages && playwright test --config=playwright.config.js --project=demo",
     "demo:build:pages": "vite build --config examples/demo/vite.config.js --base /best-email-builder/",
-    "check:i18n": "node scripts/i18n-keys.mjs fr de es ru zh",
+    "check:i18n": "node scripts/i18n-keys.mjs fr de es pt ru zh",
     "check:classes": "node scripts/check-classes.mjs dist/styles.css && node scripts/check-unprefixed.mjs"
   },
   "peerDependencies": {
