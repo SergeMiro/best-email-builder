@@ -10,6 +10,23 @@ npx playwright install chromium
 npm run dev        # playground (Ladle) on http://localhost:61010
 ```
 
+## Commands
+
+```bash
+npm run dev            # Ladle playground on http://localhost:61010
+npm test               # unit tests (node:test)
+npm run lint
+npm run typecheck
+npm run check:i18n     # missing translations, per language
+npm run test:stories   # Playwright against the playground
+npm run example        # full example app (React + server)
+npm run demo           # static demo (the GitHub Pages one)
+npm run test:e2e       # Playwright against the example app
+npm run build          # dist/ (ESM + styles.css + types)
+```
+
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the source tree.
+
 ## Before opening a pull request
 
 ```bash

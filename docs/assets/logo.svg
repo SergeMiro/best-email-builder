@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30" width="160" height="120" role="img" aria-label="beb">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7d6ff7"/>
+      <stop offset="1" stop-color="#3b2fa8"/>
+    </linearGradient>
+    <linearGradient id="flap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+  <!-- the envelope: its body and a soft flap, kept quiet behind the letters -->
+  <rect x="1" y="1" width="38" height="28" rx="7" fill="url(#body)"/>
+  <path d="M3.2 2.6h33.6L20 13.4Z" fill="url(#flap)"/>
+  <path d="M3.4 3.4 20 13.4 36.6 3.4" fill="none" stroke="#fff" stroke-opacity="0.4" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="1.5" y="1.5" width="37" height="27" rx="6.5" fill="none" stroke="#fff" stroke-opacity="0.18"/>
+  <!-- "beb", drawn rather than typed so it looks the same everywhere -->
+  <g fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+    <path d="M6.3 12.6v11.8"/>
+    <circle cx="9.5" cy="21.2" r="3.2"/>
+    <path d="M16.8 21.2h6.4"/>
+    <path d="M23.2 21.2a3.2 3.2 0 1 0-1.06 2.38" stroke-linecap="butt"/>
+    <path d="M27.3 12.6v11.8"/>
+    <circle cx="30.5" cy="21.2" r="3.2"/>
+  </g>
+</svg>

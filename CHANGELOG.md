@@ -19,6 +19,13 @@ All notable changes are documented here. The format follows
   `locale` change with the language.
 - `npm run check:i18n` checks every built-in language.
 
+### Changed
+- **Documentation.** The README is now a short front page: what the
+  builder is, a quick start and where to read next. The reference moved to
+  `docs/`, one page per subject: getting started, editor and library,
+  server, variables and sending, AI, brand, languages and the security
+  model, with an index in `docs/README.md`. The project has a logo.
+
 ## [0.7.0] — 2026-10-15
 
 ### Added
