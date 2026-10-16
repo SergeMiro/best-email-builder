@@ -1,6 +1,6 @@
 {
   "name": "best-email-builder",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Drag-and-drop email builder for React: MJML output that renders in Outlook, Gmail and Apple Mail, with server-side rendering, versions, variables and image uploads.",
   "keywords": [
     "email",

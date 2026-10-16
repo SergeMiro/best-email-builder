@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-10-16
+
 ### Added
 - **German, Spanish, Portuguese (Brazil), Russian and Chinese** (Simplified),
   built in next to English and French: `locale="de"`, `"es"`, `"pt"`, `"ru"`
