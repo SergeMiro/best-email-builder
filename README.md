@@ -69,9 +69,9 @@ once and given away.
 - *Rewrite* any text: shorter, longer, fixed, friendlier, more formal, or
   translated into 13 languages.
 - *Suggest* three subject lines drawn from the email.
-- OpenRouter, Gemini, Groq, Mistral, OpenAI, DeepSeek, Cerebras, Ollama,
-  Claude or your own agent. The model runs on your server, or in the page
-  with each user's own key.
+- OpenRouter, Gemini, Groq, Mistral, OpenAI, DeepSeek, Cerebras, Ollama, any
+  OpenAI-compatible API, Claude or your own agent. The model runs on your
+  server, or in the page with each user's own key.
 
 **Your app**
 - Merge-tag variables, including ones your users create.

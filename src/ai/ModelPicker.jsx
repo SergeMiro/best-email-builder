@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Gift, LoaderCircle, Search } from 'lucide-react';
+import { Check, ChevronDown, LoaderCircle, Search } from 'lucide-react';
 import { useUi } from '../ui/context.jsx';
 import { cn } from '../ui/primitives/cn.js';
 
@@ -8,7 +8,8 @@ import { cn } from '../ui/primitives/cn.js';
  * that opens the provider's list of models in place (not over the dialog, so
  * the list scrolls like the rest of it).
  *
- * The list comes from the provider with the key (OpenRouter's needs none):
+ * The list comes from the provider with the key (OpenRouter's needs none;
+ * an OpenAI-compatible API of the user's own, from the address given):
  * the default model first, then the free ones, then the newest. Type to
  * filter, ↑/↓ to move, Enter to choose, Esc to close. An id the list does not
  * have can be used as it is ("Use “…”"); without the list, the default model
@@ -18,6 +19,7 @@ import { cn } from '../ui/primitives/cn.js';
  *   aiKey: import('./keys.js').AiKey,
  *   provider: import('./keys.js').ProviderChoice,
  *   apiKey: string,
+ *   address?: string,
  *   delay?: number,
  *   value: string,
  *   onChange: (model: string) => void,
@@ -25,11 +27,12 @@ import { cn } from '../ui/primitives/cn.js';
  *   onOpenChange: (open: boolean) => void,
  * }} props
  *   `apiKey`: the key the list is asked with ('' when there is none yet);
- *   `delay`: how long to wait after it changes (a key being pasted).
+ *   `address`: where the API answers, for a provider that needs one;
+ *   `delay`: how long to wait after they change (a key being pasted).
  */
-export default function ModelPicker({ aiKey, provider, apiKey, delay = 0, value, onChange, open, onOpenChange }) {
+export default function ModelPicker({ aiKey, provider, apiKey, address = '', delay = 0, value, onChange, open, onOpenChange }) {
   const { t } = useUi();
-  const [list, setList] = useState(/** @type {{status: 'loading'|'ready'|'needs-key'|'refused'|'failed', models: import('./providers.js').ModelChoice[]}} */ ({ status: 'loading', models: [] }));
+  const [list, setList] = useState(/** @type {{status: 'loading'|'ready'|'needs-key'|'needs-address'|'refused'|'failed', models: import('./providers.js').ModelChoice[]}} */ ({ status: 'loading', models: [] }));
   const [query, setQuery] = useState('');
   const [freeOnly, setFreeOnly] = useState(false);
   const [active, setActive] = useState(0);
@@ -40,16 +43,20 @@ export default function ModelPicker({ aiKey, provider, apiKey, delay = 0, value,
   const listId = useId();
   const hintId = useId();
 
-  // The list of the provider, asked again when the key changes.
+  // The list of the provider, asked again when the key (or the address) changes.
   useEffect(() => {
-    if (!apiKey && !provider.publicModels) {
+    if (provider.needsAddress && !address) {
+      setList({ status: 'needs-address', models: [] });
+      return undefined;
+    }
+    if (!apiKey && !provider.publicModels && !provider.keyless) {
       setList({ status: 'needs-key', models: [] });
       return undefined;
     }
     const controller = new AbortController();
     setList({ status: 'loading', models: [] });
     const timer = setTimeout(() => {
-      aiKey.listModels(provider.id, { apiKey, signal: controller.signal }).then(
+      aiKey.listModels(provider.id, { apiKey, address, signal: controller.signal }).then(
         (models) => !controller.signal.aborted && setList({ status: 'ready', models }),
         (error) => !controller.signal.aborted && setList({ status: error?.code === 'KEY_REFUSED' ? 'refused' : 'failed', models: [] })
       );
@@ -58,7 +65,7 @@ export default function ModelPicker({ aiKey, provider, apiKey, delay = 0, value,
       clearTimeout(timer);
       controller.abort();
     };
-  }, [aiKey, provider.id, provider.publicModels, apiKey, delay]);
+  }, [aiKey, provider.id, provider.publicModels, provider.keyless, provider.needsAddress, apiKey, address, delay]);
 
   // Each time it opens: no search, the model in use under the keys.
   useEffect(() => {
@@ -122,8 +129,7 @@ export default function ModelPicker({ aiKey, provider, apiKey, delay = 0, value,
   const badges = (/** @type {import('./providers.js').ModelChoice} */ model) => (
     <>
       {model.free && (
-        <span className="eb:inline-flex eb:shrink-0 eb:items-center eb:gap-1 eb:rounded-full eb:bg-success/10 eb:px-1.5 eb:py-px eb:text-[10.5px] eb:font-medium eb:text-success">
-          <Gift className="eb:size-3" aria-hidden="true" />
+        <span className="eb:shrink-0 eb:rounded-full eb:bg-success/10 eb:px-1.5 eb:py-px eb:text-[10.5px] eb:font-medium eb:text-success">
           {t('Free')}
         </span>
       )}
@@ -141,8 +147,11 @@ export default function ModelPicker({ aiKey, provider, apiKey, delay = 0, value,
       </>
     ),
     'needs-key': t('Paste the key to see all the models of {provider}.', { provider: provider.name }),
+    'needs-address': t('Give the API address to see its models.'),
     refused: <span className="eb:text-warning">{t('{provider} refused this key: its models could not be listed.', { provider: provider.name })}</span>,
-    failed: t('The list of models could not be loaded. The default model works, or type the id of another.'),
+    failed: provider.model
+      ? t('The list of models could not be loaded. The default model works, or type the id of another.')
+      : t('The list of models could not be loaded. Type the id of the model.'),
     ready: list.models.length
       ? hasFree
         ? t('{count} models, the free ones first.', { count: list.models.length })
@@ -210,11 +219,10 @@ export default function ModelPicker({ aiKey, provider, apiKey, delay = 0, value,
                 aria-pressed={freeOnly}
                 onClick={() => setFreeOnly((on) => !on)}
                 className={cn(
-                  'eb:inline-flex eb:h-8 eb:shrink-0 eb:items-center eb:gap-1.5 eb:rounded-md eb:border eb:px-2.5 eb:text-[12px] eb:font-medium eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+                  'eb:inline-flex eb:h-8 eb:shrink-0 eb:items-center eb:rounded-md eb:border eb:px-2.5 eb:text-[12px] eb:font-medium eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
                   freeOnly ? 'eb:border-success/40 eb:bg-success/10 eb:text-success' : 'eb:border-border eb:text-foreground-lighter eb:hover:bg-muted'
                 )}
               >
-                <Gift className="eb:size-3.5" aria-hidden="true" />
                 {t('Free only')}
               </button>
             )}

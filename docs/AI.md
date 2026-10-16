@@ -68,7 +68,8 @@ const ai = createAi({ provider: 'openrouter', askKey: true });
 ```
 
 Give a list, and each user chooses. The dialog shows the providers as cards:
-name, model, free or not, and a dot on those whose key this browser keeps.
+name, model, and a dot on those whose key this browser keeps. Under them,
+the chosen provider's link to get a key and what it offers for free.
 The choice and one key per provider are remembered, so going back to a
 provider needs nothing pasted again.
 
@@ -84,6 +85,16 @@ Embedding, speech, image and video models are left out. The chosen model is
 remembered for each provider. Without the list, the default model still
 works.
 
+Add `'openai-compatible'` to the list for an API of the user's own: LM
+Studio, vLLM, Ollama on another machine, a company proxy. The dialog then
+asks for its address (`http://localhost:1234/v1`), a key only if it needs
+one, and a model from its `/models` list. The address is remembered like the
+key. The API must accept requests from the page (CORS).
+
+```jsx
+const ai = createAi({ provider: ['openrouter', 'gemini', 'openai-compatible'], askKey: true });
+```
+
 `ai.key` reads and changes this state:
 
 | Member | What it does |
@@ -92,7 +103,9 @@ works.
 | `choose(id)` | Switch provider. |
 | `get(id?)`, `set(key)`, `forget()` | Read, store or forget a key. |
 | `model(id?)`, `chooseModel(model, id?)` | Read or set the model of a provider. |
-| `listModels(id?, { apiKey, signal })` | The provider's models, as the dialog shows them. |
+| `listModels(id?, { apiKey, address, signal })` | The provider's models, as the dialog shows them. |
+| `address(id?)`, `setAddress(url, id?)` | Read or set the address of an OpenAI-compatible API. |
+| `ready()` | Whether the provider in use can write: key, address, model. |
 | `request()` | Open the dialog, for example to change provider or model. |
 | `subscribe(fn)`, `state()` | Follow `{ asking, refused, connected }`. |
 
@@ -293,9 +306,9 @@ new ones, and *Done* closes the list.
 ## The live demo
 
 The live demo has no server. Its AI runs in the page, with the visitor's own
-key, for the provider they choose: OpenAI, Claude, Mistral, Gemini or
-OpenRouter.
+key, for the provider they choose: OpenAI, Claude, Mistral, Gemini,
+OpenRouter or an OpenAI-compatible API of their own.
 
 ```js
-createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter'], askKey: true });
+createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'], askKey: true });
 ```

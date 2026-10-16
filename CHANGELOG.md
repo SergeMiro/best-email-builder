@@ -6,6 +6,25 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **An OpenAI-compatible API of the user's own** in the Connect dialog: add
+  `'openai-compatible'` to `createAi({ provider: [...], askKey: true })`
+  and the user gives its address (LM Studio, vLLM, Ollama on another
+  machine, a proxy…), a key only if it needs one, and a model from its
+  `/models` list. The address is remembered like the key. `ai.key` gains
+  `address(id?)`, `setAddress(url, id?)` and `ready()`; `listModels` takes
+  an `address`. A provider without a key of its own (Ollama) connects
+  without one, once a model is chosen.
+- The live demo offers it too, and its language list is now a list of its
+  own instead of the browser's: by mouse, or by keyboard (arrows, Home/End,
+  type a letter, Enter, Esc).
+
+### Changed
+- The Connect dialog and the list of models show what is free in words
+  only: no gift icons.
+- `ai.key.state().connected` is true once the provider in use can write:
+  its key (unless it needs none), its address and its model.
+
 ## [0.8.0] — 2026-10-16
 
 ### Added

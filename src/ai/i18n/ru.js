@@ -165,4 +165,13 @@ export const ru = {
   "{count} models, the free ones first.": "Моделей: {count}, сначала бесплатные.",
   "{count} models.": "Моделей: {count}.",
   "{provider} lists no models here: type the id of the one you want.": "Список моделей {provider} здесь недоступен: введите идентификатор нужной модели.",
+  "The AI writes with an OpenAI-compatible API of your choice. Give its address, and its key if it needs one: this browser remembers them.": "ИИ пишет через OpenAI-совместимый API на ваш выбор. Укажите его адрес и ключ, если он нужен: браузер их запомнит.",
+  "API address": "Адрес API",
+  "Any API that speaks OpenAI: LM Studio, vLLM, Ollama, a proxy of your own… It must accept requests from this page (CORS).": "Любой API, совместимый с OpenAI: LM Studio, vLLM, Ollama, ваш собственный прокси… Он должен принимать запросы с этой страницы (CORS).",
+  "An address starts with http:// or https://.": "Адрес начинается с http:// или https://.",
+  "API key (optional)": "API-ключ (необязательно)",
+  "Leave it empty if the API needs no key.": "Оставьте пустым, если API не требует ключа.",
+  "The address and the key stay in this browser; the key is sent only to that address.": "Адрес и ключ хранятся в этом браузере; ключ отправляется только по этому адресу.",
+  "Give the API address to see its models.": "Укажите адрес API, чтобы увидеть его модели.",
+  "The list of models could not be loaded. Type the id of the model.": "Не удалось загрузить список моделей. Введите идентификатор модели.",
 };

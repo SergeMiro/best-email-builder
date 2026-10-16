@@ -123,17 +123,52 @@
       .brand-mark svg { width: 44px; height: 33px; display: block; }
       .brand:hover .brand-mark { transform: translateY(-1px) rotate(-3deg); }
       .topbar-actions { display: flex; align-items: center; gap: 8px; }
-      /* the language: a native list, so it stays usable with any number of languages */
-      .lang { position: relative; display: inline-flex; align-items: center; color: var(--muted); }
-      .lang svg { position: absolute; z-index: 1; width: 14px; height: 14px; pointer-events: none; }
-      .lang svg:first-child { left: 11px; }
-      .lang svg:last-child { right: 10px; width: 13px; height: 13px; }
-      .lang select {
-        appearance: none; font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1; cursor: pointer;
-        padding: 8px 30px 8px 32px; border-radius: 999px; border: 1px solid var(--line); color: var(--ink);
-        background: rgb(255 255 255 / 0.7); backdrop-filter: blur(8px); transition: border-color 0.15s;
+      /* the language: a pill, and a list of the page's own under it (the
+         system's list cannot be styled). Above the hero, which comes later. */
+      .lang { position: relative; z-index: 30; }
+      .lang-button {
+        display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none;
+        font-size: 12.5px; font-weight: 600; line-height: 1; color: var(--ink);
+        padding: 8px 10px 8px 11px; border-radius: 999px; border: 1px solid var(--line);
+        background: rgb(255 255 255 / 0.7); backdrop-filter: blur(8px);
+        transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
       }
-      .lang:hover select { border-color: var(--muted); }
+      .lang-button svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--muted); }
+      .lang-button svg:last-child { width: 13px; height: 13px; transition: transform 0.2s ease; }
+      .lang-button:hover { border-color: #cdd2db; background: #fff; }
+      .lang-button[aria-expanded='true'] {
+        border-color: oklch(0.78 0.09 277); background: #fff; box-shadow: 0 0 0 3px oklch(0.55 0.2 277 / 0.12);
+      }
+      .lang-button[aria-expanded='true'] svg:first-child { color: var(--primary); }
+      .lang-button[aria-expanded='true'] svg:last-child { transform: rotate(180deg); }
+      .lang-list {
+        position: absolute; top: calc(100% + 8px); right: 0; min-width: 210px; max-height: min(360px, 70vh); overflow-y: auto;
+        margin: 0; padding: 6px; list-style: none;
+        background: rgb(255 255 255 / 0.96); backdrop-filter: blur(16px) saturate(1.5);
+        border: 1px solid rgb(227 230 236 / 0.9); border-radius: 14px;
+        box-shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 24px 48px -20px rgb(40 30 120 / 0.32), 0 0 0 4px rgb(255 255 255 / 0.4);
+        transform-origin: top right; animation: lang-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      @keyframes lang-in { from { opacity: 0; transform: translateY(-6px) scale(0.96); } }
+      .lang-option {
+        display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 9px;
+        font-size: 13.5px; line-height: 1.2; color: var(--ink-2); cursor: pointer; user-select: none;
+        transition: background 0.12s, color 0.12s;
+      }
+      .lang-option[data-active] { background: var(--primary-soft); color: var(--ink); }
+      .lang-option[aria-selected='true'] { color: var(--primary); font-weight: 600; }
+      .lang-check { width: 15px; height: 15px; flex-shrink: 0; visibility: hidden; }
+      .lang-option[aria-selected='true'] .lang-check { visibility: visible; }
+      .lang-name { flex: 1; white-space: nowrap; }
+      .lang-code {
+        font-family: var(--mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+        padding: 3px 6px; border-radius: 6px; color: var(--muted); background: rgb(31 36 51 / 0.05);
+      }
+      .lang-option[aria-selected='true'] .lang-code { color: var(--primary); background: oklch(0.55 0.2 277 / 0.12); }
+      @media (prefers-reduced-motion: reduce) {
+        .lang-list { animation: none; }
+        .lang-button svg:last-child { transition: none; }
+      }
 
       .btn {
         font: inherit; font-size: 13px; font-weight: 500; line-height: 1; display: inline-flex; align-items: center; gap: 7px;

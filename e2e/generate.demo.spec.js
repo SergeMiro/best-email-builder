@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 /**
  * THE AI in the static demo: the visitor's own key, with the provider they
  * choose in the builder's Connect dialog
- * (`createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter'], askKey: true })`).
+ * (`createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'], askKey: true })`).
  * The providers are answered by `page.route` — nothing leaves the machine; the
  * tests check what the browser would have sent.
  */
@@ -89,7 +89,7 @@ async function generateSale(page, label = 'Generate') {
 
 const connect = (page) => page.getByTestId('eb-ai-connect');
 /** A provider of the Connect dialog: its card, named by the provider first. */
-const providerCard = (page, name) => connect(page).getByRole('radio', { name: new RegExp(`^${name}`) });
+const providerCard = (page, name) => connect(page).getByRole('radio', { name: new RegExp(`^${name}(?!-)`) });
 const choose = (page, name) => providerCard(page, name).click();
 const stored = (page, slot) => page.evaluate((slot) => localStorage.getItem(slot), slot);
 
@@ -122,6 +122,8 @@ const MODELS = {
     ],
   },
   'https://api.openai.com/v1/models': { data: [{ id: 'gpt-5-mini', created: 1 }, { id: 'gpt-5.5', created: 2 }, { id: 'whisper-1', created: 3 }] },
+  // An OpenAI-compatible API of the visitor's own (LM Studio's shape).
+  'https://llm.example.test/v1/models': { object: 'list', data: [{ id: 'qwen3-8b', object: 'model' }, { id: 'llama-3.3-70b', object: 'model' }, { id: 'text-embedding-nomic-embed-text-v1.5', object: 'model' }] },
   'https://api.anthropic.com/v1/models': {
     data: [
       { type: 'model', id: 'claude-opus-5-5', display_name: 'Claude Opus 5.5', created_at: '2026-04-01T00:00:00Z' },
@@ -154,13 +156,13 @@ const modelField = (page) => connect(page).getByTestId('eb-ai-connect-model');
 const modelStatus = (page) => connect(page).getByTestId('eb-ai-connect-models-status');
 const modelList = (page) => connect(page).getByRole('listbox', { name: /^(Model|Modèle)$/ });
 
-test('without a key: the Connect dialog offers five providers and asks for a key; Cancel explains it, nothing is sent', async ({ page }) => {
+test('without a key: the Connect dialog offers six providers and asks for a key; Cancel explains it, nothing is sent', async ({ page }) => {
   const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(DRAFT)));
   // The page only: the canvas frame shares its storage, and would put the key back.
   await page.addInitScript(() => window === window.top && localStorage.setItem('best-email-builder-demo:anthropic-key', 'sk-ant-old'));
   await openEditor(page);
   const note = page.getByTestId('demo-ai-note');
-  await expect(note).toContainText('your own key: OpenAI, Claude, Mistral, Gemini or OpenRouter.');
+  await expect(note).toContainText('your own key: OpenAI, Claude, Mistral, Gemini, OpenRouter or any OpenAI-compatible API.');
   await expect(note).not.toContainText('Connected to');
   await expect(note.getByRole('button', { name: 'Forget my key' })).toBeHidden();
   // The key of the demo's Anthropic days is no longer kept.
@@ -169,17 +171,16 @@ test('without a key: the Connect dialog offers five providers and asks for a key
   const box = await generateSale(page);
   const dialog = connect(page);
   await expect(dialog.getByLabel('API key')).toBeFocused();
-  // Five providers, the first one chosen; the free ones say so.
+  // Six providers, the first one chosen; no icons on the cards.
   const choices = dialog.getByRole('radiogroup', { name: 'AI provider' }).getByRole('radio');
-  await expect(choices).toHaveCount(5);
-  for (const [at, name] of ['OpenAI', 'Claude', 'Mistral', 'Google Gemini', 'OpenRouter'].entries()) {
+  await expect(choices).toHaveCount(6);
+  for (const [at, name] of ['OpenAI', 'Claude', 'Mistral', 'Google Gemini', 'OpenRouter', 'OpenAI-compatible API'].entries()) {
     await expect(choices.nth(at)).toContainText(name);
   }
   await expect(providerCard(page, 'OpenAI')).toHaveAttribute('aria-checked', 'true');
   await expect(providerCard(page, 'OpenAI')).toContainText('gpt-5-mini');
   await expect(providerCard(page, 'Claude')).toContainText('claude-opus-5-5');
-  await expect(providerCard(page, 'Google Gemini').getByLabel('Free tier, with rate limits')).toBeAttached();
-  await expect(providerCard(page, 'OpenAI').getByLabel('Free tier, with rate limits')).toHaveCount(0);
+  await expect(choices.locator('svg')).toHaveCount(0);
   await expect(dialog.getByRole('heading', { name: 'Connect OpenAI' })).toBeVisible();
   await expect(dialog.getByRole('link', { name: 'Get a key' })).toHaveAttribute('href', 'https://platform.openai.com/api-keys');
 
@@ -190,12 +191,15 @@ test('without a key: the Connect dialog offers five providers and asks for a key
   await expect(providerCard(page, 'Claude')).toBeFocused();
   await expect(dialog.getByRole('heading', { name: 'Connect Claude' })).toBeVisible();
   await page.keyboard.press('End');
+  await expect(providerCard(page, 'OpenAI-compatible API')).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('ArrowLeft');
   await expect(providerCard(page, 'OpenRouter')).toHaveAttribute('aria-checked', 'true');
   await expect(providerCard(page, 'OpenAI')).toHaveAttribute('aria-checked', 'false');
 
   await expect(dialog.getByRole('heading', { name: 'Connect OpenRouter' })).toBeVisible();
   await expect(dialog).toContainText('The AI writes with your own OpenRouter key.');
   await expect(dialog.getByText('Free models, with a free account')).toBeVisible();
+  await expect(dialog.getByText('Free models, with a free account').locator('svg')).toHaveCount(0);
   await expect(dialog.getByText('The key stays in this browser and is sent only to OpenRouter.')).toBeVisible();
   const getKey = dialog.getByRole('link', { name: 'Get a key' });
   await expect(getKey).toHaveAttribute('href', 'https://openrouter.ai/keys');
@@ -567,4 +571,59 @@ test('the model in French; Claude\'s list through the Anthropic SDK', async ({ p
   await expect(modelList(page).getByRole('option')).toHaveText([/Claude Opus 5.5/, /Claude Haiku 5.5/]);
   await dialog.getByRole('button', { name: 'Annuler' }).click();
   await expect(box.getByRole('alert')).toBeVisible();
+});
+
+test('an OpenAI-compatible API of one\'s own: its address, no key, a model of its list; the email is written there', async ({ page }) => {
+  const OWN = 'https://llm.example.test/v1';
+  const seen = await fakeApi(page, `${OWN}/chat/completions`, () => completion(JSON.stringify(DRAFT)));
+  await openEditor(page);
+  const box = await generateSale(page);
+  await choose(page, 'OpenAI-compatible API');
+  const dialog = connect(page);
+  await expect(dialog.getByRole('heading', { name: 'Connect OpenAI-compatible API' })).toBeVisible();
+  await expect(dialog).toContainText('The AI writes with an OpenAI-compatible API of your choice.');
+  await expect(dialog.getByRole('link', { name: 'Get a key' })).toHaveCount(0);
+  await expect(dialog.getByText('The address and the key stay in this browser; the key is sent only to that address.')).toBeVisible();
+  const address = dialog.getByLabel('API address');
+  await expect(address).toHaveAttribute('placeholder', 'http://localhost:1234/v1');
+  await expect(dialog.getByLabel('API key (optional)')).toHaveValue('');
+  await expect(modelStatus(page)).toHaveText('Give the API address to see its models.');
+  await expect(dialog.getByRole('button', { name: 'Connect' })).toBeDisabled();
+
+  // Not an address yet: said, and Connect waits.
+  await address.fill('llm.example.test');
+  await expect(dialog.getByText('An address starts with http:// or https://.')).toBeVisible();
+  await expect(address).toHaveAttribute('aria-invalid', 'true');
+  // The address: its models, without a key (no embeddings); Connect waits for one.
+  await address.fill(`${OWN}/`);
+  await expect(modelStatus(page)).toHaveText('2 models.');
+  await expect(dialog.getByRole('button', { name: 'Connect' })).toBeDisabled();
+  await modelField(page).click();
+  await expect(modelList(page).getByRole('option')).toHaveText(['llama-3.3-70b', 'qwen3-8b']);
+  await modelList(page).getByRole('option', { name: 'qwen3-8b' }).click();
+  await expect(modelField(page)).toContainText('qwen3-8b');
+  await dialog.getByRole('button', { name: 'Connect' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(box).toBeHidden({ timeout: 30_000 });
+
+  expect(seen).toHaveLength(1);
+  expect(seen[0].url).toBe(`${OWN}/chat/completions`);
+  expect(seen[0].headers.authorization).toBeUndefined();
+  expect(seen[0].body.model).toBe('qwen3-8b');
+  expect(await stored(page, 'best-email-builder:ai-address:openai-compatible')).toBe(OWN);
+  expect(await stored(page, CHOICE)).toBe('openai-compatible');
+
+  const note = page.getByTestId('demo-ai-note');
+  await expect(note).toContainText('Connected to OpenAI-compatible API · qwen3-8b.');
+  // No key: none to forget.
+  await expect(note.getByRole('button', { name: 'Forget my key' })).toHaveCount(0);
+
+  // Opened again: the address kept, the model too.
+  await note.getByRole('button', { name: 'Change provider or model' }).click();
+  await expect(providerCard(page, 'OpenAI-compatible API')).toHaveAttribute('aria-checked', 'true');
+  await expect(dialog.getByLabel('API address')).toHaveValue(OWN);
+  await expect(modelField(page)).toContainText('qwen3-8b');
+  await expect(dialog.getByRole('button', { name: 'Connect' })).toBeEnabled();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toBeHidden();
 });

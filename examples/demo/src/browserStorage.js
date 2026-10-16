@@ -56,7 +56,7 @@ export function createBrowserAi() {
   } catch {
     // Private window.
   }
-  return createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter'], askKey: true, compile: compileWarnings });
+  return createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'], askKey: true, compile: compileWarnings });
 }
 
 const read = (key, empty = []) => {

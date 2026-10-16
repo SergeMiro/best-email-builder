@@ -56,7 +56,7 @@ const TEXT = {
     expand: 'Full screen',
     shrink: 'Exit full screen',
     note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
-    aiNote: '“Generate” writes a whole email, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with your own key: OpenAI, Claude, Mistral, Gemini or OpenRouter. Gemini and Mistral are free and answer in seconds; OpenRouter’s free models take minutes. The key stays in this browser and goes only to the provider you choose.',
+    aiNote: '“Generate” writes a whole email, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with your own key: OpenAI, Claude, Mistral, Gemini, OpenRouter or any OpenAI-compatible API. Gemini and Mistral are free and answer in seconds; OpenRouter’s free models take minutes. The key stays in this browser and goes only to the provider you choose.',
     aiConnected: 'Connected to {provider} · {model}.',
     aiChange: 'Change provider or model',
     aiForget: 'Forget my key',
@@ -93,7 +93,7 @@ const TEXT = {
     expand: 'Plein écran',
     shrink: 'Réduire',
     note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
-    aiNote: '« Générer » écrit un e-mail complet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec votre propre clé : OpenAI, Claude, Mistral, Gemini ou OpenRouter. Gemini et Mistral sont gratuits et répondent en quelques secondes ; les modèles gratuits d’OpenRouter prennent plusieurs minutes. La clé reste dans ce navigateur et n’est envoyée qu’au fournisseur choisi.',
+    aiNote: '« Générer » écrit un e-mail complet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec votre propre clé : OpenAI, Claude, Mistral, Gemini, OpenRouter ou toute API compatible OpenAI. Gemini et Mistral sont gratuits et répondent en quelques secondes ; les modèles gratuits d’OpenRouter prennent plusieurs minutes. La clé reste dans ce navigateur et n’est envoyée qu’au fournisseur choisi.',
     aiConnected: 'Connecté à {provider} · {model}.',
     aiChange: 'Changer de fournisseur ou de modèle',
     aiForget: 'Oublier ma clé',
@@ -130,7 +130,7 @@ const TEXT = {
     expand: 'Vollbild',
     shrink: 'Vollbild beenden',
     note: 'Live-Demo: Die Vorlagen bleiben in diesem Browser, die Vorschau wird im Browser kompiliert. Eine echte App kompiliert auf ihrem Server.',
-    aiNote: '„Generieren“ schreibt eine ganze E-Mail, „Mit KI umschreiben“ überarbeitet einen markierten Text und „Betreff vorschlagen“ bietet drei Betreffzeilen an — mit Ihrem eigenen Schlüssel: OpenAI, Claude, Mistral, Gemini oder OpenRouter. Gemini und Mistral sind kostenlos und antworten in Sekunden; die kostenlosen Modelle von OpenRouter brauchen Minuten. Der Schlüssel bleibt in diesem Browser und geht nur an den gewählten Anbieter.',
+    aiNote: '„Generieren“ schreibt eine ganze E-Mail, „Mit KI umschreiben“ überarbeitet einen markierten Text und „Betreff vorschlagen“ bietet drei Betreffzeilen an — mit Ihrem eigenen Schlüssel: OpenAI, Claude, Mistral, Gemini, OpenRouter oder jede OpenAI-kompatible API. Gemini und Mistral sind kostenlos und antworten in Sekunden; die kostenlosen Modelle von OpenRouter brauchen Minuten. Der Schlüssel bleibt in diesem Browser und geht nur an den gewählten Anbieter.',
     aiConnected: 'Verbunden mit {provider} · {model}.',
     aiChange: 'Anbieter oder Modell wechseln',
     aiForget: 'Meinen Schlüssel vergessen',
@@ -167,7 +167,7 @@ const TEXT = {
     expand: 'Pantalla completa',
     shrink: 'Salir de pantalla completa',
     note: 'Demo en vivo: las plantillas se quedan en este navegador y la vista previa se compila en el navegador. Una aplicación real compila en su servidor.',
-    aiNote: '“Generar” escribe un correo completo, “Reescribir con IA” rehace el texto seleccionado y “Sugerir asuntos” propone tres asuntos, con tu propia clave: OpenAI, Claude, Mistral, Gemini u OpenRouter. Gemini y Mistral son gratuitos y responden en segundos; los modelos gratuitos de OpenRouter tardan minutos. La clave se queda en este navegador y solo se envía al proveedor que elijas.',
+    aiNote: '“Generar” escribe un correo completo, “Reescribir con IA” rehace el texto seleccionado y “Sugerir asuntos” propone tres asuntos, con tu propia clave: OpenAI, Claude, Mistral, Gemini, OpenRouter o cualquier API compatible con OpenAI. Gemini y Mistral son gratuitos y responden en segundos; los modelos gratuitos de OpenRouter tardan minutos. La clave se queda en este navegador y solo se envía al proveedor que elijas.',
     aiConnected: 'Conectado a {provider} · {model}.',
     aiChange: 'Cambiar de proveedor o de modelo',
     aiForget: 'Olvidar mi clave',
@@ -204,7 +204,7 @@ const TEXT = {
     expand: 'Tela cheia',
     shrink: 'Sair da tela cheia',
     note: 'Demo ao vivo: os modelos ficam neste navegador e a pré-visualização é compilada no navegador. Um app de verdade compila no próprio servidor.',
-    aiNote: '“Gerar” escreve um e-mail completo, “Reescrever com IA” refaz o texto selecionado e “Sugerir assuntos” propõe três assuntos, com a sua própria chave: OpenAI, Claude, Mistral, Gemini ou OpenRouter. Gemini e Mistral são gratuitos e respondem em segundos; os modelos gratuitos do OpenRouter levam minutos. A chave fica neste navegador e só é enviada ao provedor que você escolher.',
+    aiNote: '“Gerar” escreve um e-mail completo, “Reescrever com IA” refaz o texto selecionado e “Sugerir assuntos” propõe três assuntos, com a sua própria chave: OpenAI, Claude, Mistral, Gemini, OpenRouter ou qualquer API compatível com OpenAI. Gemini e Mistral são gratuitos e respondem em segundos; os modelos gratuitos do OpenRouter levam minutos. A chave fica neste navegador e só é enviada ao provedor que você escolher.',
     aiConnected: 'Conectado a {provider} · {model}.',
     aiChange: 'Trocar de provedor ou de modelo',
     aiForget: 'Esquecer minha chave',
@@ -241,7 +241,7 @@ const TEXT = {
     expand: 'Во весь экран',
     shrink: 'Выйти из полноэкранного режима',
     note: 'Живое демо: шаблоны хранятся в этом браузере, предпросмотр компилируется тоже в браузере. Настоящее приложение компилирует на своём сервере.',
-    aiNote: '«Сгенерировать» пишет письмо целиком, «Переписать с помощью ИИ» перерабатывает выделенный текст, а «Предложить темы» даёт три варианта темы — с вашим собственным ключом: OpenAI, Claude, Mistral, Gemini или OpenRouter. Gemini и Mistral бесплатны и отвечают за секунды; бесплатным моделям OpenRouter нужны минуты. Ключ остаётся в этом браузере и уходит только выбранному провайдеру.',
+    aiNote: '«Сгенерировать» пишет письмо целиком, «Переписать с помощью ИИ» перерабатывает выделенный текст, а «Предложить темы» даёт три варианта темы — с вашим собственным ключом: OpenAI, Claude, Mistral, Gemini, OpenRouter или любой OpenAI-совместимый API. Gemini и Mistral бесплатны и отвечают за секунды; бесплатным моделям OpenRouter нужны минуты. Ключ остаётся в этом браузере и уходит только выбранному провайдеру.',
     aiConnected: 'Подключено: {provider} · {model}.',
     aiChange: 'Сменить провайдера или модель',
     aiForget: 'Забыть мой ключ',
@@ -278,7 +278,7 @@ const TEXT = {
     expand: '全屏',
     shrink: '退出全屏',
     note: '在线演示：模板保存在当前浏览器中，预览也在浏览器中编译。真实应用会在自己的服务器上编译。',
-    aiNote: '“生成”写出一封完整的邮件，“AI 改写”重写选中的文字，“推荐主题”给出三个邮件主题——使用您自己的密钥：OpenAI、Claude、Mistral、Gemini 或 OpenRouter。Gemini 和 Mistral 免费，几秒内即可回复；OpenRouter 的免费模型需要几分钟。密钥只保存在当前浏览器中，且只发送给您选择的服务商。',
+    aiNote: '“生成”写出一封完整的邮件，“AI 改写”重写选中的文字，“推荐主题”给出三个邮件主题——使用您自己的密钥：OpenAI、Claude、Mistral、Gemini、OpenRouter 或任何 OpenAI 兼容 API。Gemini 和 Mistral 免费，几秒内即可回复；OpenRouter 的免费模型需要几分钟。密钥只保存在当前浏览器中，且只发送给您选择的服务商。',
     aiConnected: '已连接 {provider} · {model}。',
     aiChange: '更换服务商或模型',
     aiForget: '忘记我的密钥',
@@ -449,6 +449,7 @@ const ai = createAi({
     'mistral',
     'gemini',
     'openrouter',
+    'openai-compatible', // LM Studio, vLLM, a proxy…
   ],
   askKey: true,
 });
@@ -587,6 +588,138 @@ function useHashRoute() {
   return [useMemo(() => parseRoute(hash), [hash]), navigate];
 }
 
+/**
+ * The language, as a list of the page's own: the system's list cannot be
+ * styled. A select-only combobox (WAI-ARIA): the focus stays on the button
+ * while the arrows, Home / End and the first letters move through the list;
+ * Enter or Space picks, Escape and a click elsewhere close it.
+ */
+function LanguagePicker({ label, locale, setLocale }) {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const root = useRef(null);
+  const typed = useRef({ text: '', at: 0 });
+  const listId = useId();
+  const selected = Math.max(0, LANGUAGES.findIndex(([code]) => code === locale));
+  const [currentCode, currentName] = LANGUAGES[selected];
+  const optionId = (index) => `${listId}-${index}`;
+
+  const show = (index = selected) => {
+    setActive(index);
+    setOpen(true);
+  };
+  const pick = (index) => {
+    setOpen(false);
+    const [code] = LANGUAGES[index];
+    if (code !== locale) setLocale(code);
+  };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (event) => {
+      if (!root.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) document.getElementById(optionId(active))?.scrollIntoView({ block: 'nearest' });
+  });
+
+  /** The next language whose name starts with what was just typed. */
+  const matching = (key) => {
+    const now = Date.now();
+    const text = now - typed.current.at < 600 ? typed.current.text + key : key;
+    typed.current = { text, at: now };
+    const from = open ? active + (text.length === 1 ? 1 : 0) : selected + 1;
+    for (let step = 0; step < LANGUAGES.length; step += 1) {
+      const index = (from + step) % LANGUAGES.length;
+      if (LANGUAGES[index][1].toLocaleLowerCase().startsWith(text.toLocaleLowerCase())) return index;
+    }
+    return -1;
+  };
+
+  const onKeyDown = (event) => {
+    const last = LANGUAGES.length - 1;
+    const moves = { ArrowDown: Math.min(active + 1, last), ArrowUp: Math.max(active - 1, 0), Home: 0, End: last, PageDown: last, PageUp: 0 };
+    if (event.key.length === 1 && event.key !== ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const index = matching(event.key);
+      if (index >= 0) show(index);
+      return;
+    }
+    if (!open) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
+        event.preventDefault();
+        show();
+      } else if (event.key === 'Home' || event.key === 'End') {
+        event.preventDefault();
+        show(event.key === 'Home' ? 0 : last);
+      }
+      return;
+    }
+    if (event.key in moves) {
+      event.preventDefault();
+      setActive(moves[event.key]);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      pick(active);
+    } else if (event.key === 'Escape') {
+      // Handled here: the full-screen demo does not close with it.
+      event.preventDefault();
+      setOpen(false);
+    } else if (event.key === 'Tab') {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="lang" ref={root}>
+      <div
+        className="lang-button"
+        role="combobox"
+        tabIndex={0}
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-activedescendant={open ? optionId(active) : undefined}
+        onClick={() => (open ? setOpen(false) : show())}
+        onKeyDown={onKeyDown}
+      >
+        <Languages aria-hidden="true" />
+        <span lang={currentCode}>{currentName}</span>
+        <ChevronDown aria-hidden="true" />
+      </div>
+      {open && (
+        <ul className="lang-list" id={listId} role="listbox" aria-label={label}>
+          {LANGUAGES.map(([code, name], index) => (
+            <li
+              key={code}
+              id={optionId(index)}
+              className="lang-option"
+              role="option"
+              aria-selected={index === selected}
+              data-active={index === active || undefined}
+              lang={code}
+              // The focus stays on the button.
+              onMouseDown={(event) => event.preventDefault()}
+              onPointerMove={() => setActive(index)}
+              onClick={() => pick(index)}
+            >
+              <Check className="lang-check" aria-hidden="true" />
+              <span className="lang-name">{name}</span>
+              <span className="lang-code" aria-hidden="true">
+                {code}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function TopBar({ text, locale, setLocale, crumb }) {
   // On the bank page the bar lines up with the wide window under it.
   return (
@@ -606,17 +739,7 @@ function TopBar({ text, locale, setLocale, crumb }) {
         )}
       </span>
       <div className="topbar-actions">
-        <label className="lang" title={text.language}>
-          <Languages aria-hidden="true" />
-          <select value={locale} onChange={(event) => setLocale(event.target.value)} aria-label={text.language}>
-            {LANGUAGES.map(([code, name]) => (
-              <option key={code} value={code} lang={code}>
-                {name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown aria-hidden="true" />
-        </label>
+        <LanguagePicker label={text.language} locale={locale} setLocale={setLocale} />
         <a className="btn" href={REPOSITORY_URL} aria-label={text.source}>
           <GitHubMark />
           <span className="btn-label">{text.source}</span>
@@ -808,6 +931,8 @@ function App() {
   const storage = useMemo(() => createDemoStorage(), []);
   const ai = useMemo(() => createBrowserAi(), []);
   const aiConnected = useSyncExternalStore(ai.key.subscribe, () => ai.key.state().connected);
+  // An API of one's own may need no key: then there is none to forget.
+  const aiHasKey = useSyncExternalStore(ai.key.subscribe, () => Boolean(ai.key.get()));
   const aiProvider = useSyncExternalStore(ai.key.subscribe, () => ai.key.provider.name);
   const aiModel = useSyncExternalStore(ai.key.subscribe, () => ai.key.model());
   const [route, navigate] = useHashRoute();
@@ -906,7 +1031,7 @@ function App() {
                   </button>
                 </>
               )}
-              {aiConnected && (
+              {aiConnected && aiHasKey && (
                 <>
                   {route.page === 'editor' ? ' · ' : ' '}
                   <button type="button" className="note-link" onClick={() => ai.key.forget()}>

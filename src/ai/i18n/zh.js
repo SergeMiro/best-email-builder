@@ -165,4 +165,13 @@ export const zh = {
   "{count} models, the free ones first.": "共 {count} 个模型，免费模型优先显示。",
   "{count} models.": "共 {count} 个模型。",
   "{provider} lists no models here: type the id of the one you want.": "{provider} 未在此列出任何模型，请输入所需模型的 ID。",
+  "The AI writes with an OpenAI-compatible API of your choice. Give its address, and its key if it needs one: this browser remembers them.": "AI 将使用您选择的 OpenAI 兼容 API 撰写。请填写其地址，如需密钥也一并填写：此浏览器会记住它们。",
+  "API address": "API 地址",
+  "Any API that speaks OpenAI: LM Studio, vLLM, Ollama, a proxy of your own… It must accept requests from this page (CORS).": "任何兼容 OpenAI 的 API：LM Studio、vLLM、Ollama、您自己的代理…… 它必须接受来自此页面的请求（CORS）。",
+  "An address starts with http:// or https://.": "地址以 http:// 或 https:// 开头。",
+  "API key (optional)": "API 密钥（可选）",
+  "Leave it empty if the API needs no key.": "如果该 API 不需要密钥，请留空。",
+  "The address and the key stay in this browser; the key is sent only to that address.": "地址和密钥仅保存在此浏览器中；密钥只会发送到该地址。",
+  "Give the API address to see its models.": "填写 API 地址即可查看其模型。",
+  "The list of models could not be loaded. Type the id of the model.": "无法加载模型列表。请输入模型的 ID。",
 };

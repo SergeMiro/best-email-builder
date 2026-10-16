@@ -34,6 +34,7 @@
  */
 
 import { createHttpCaller } from '../storage/client.js';
+import { EmailGenerationError } from './draft.js';
 import { createEmailGenerator } from './generator.js';
 import { AI_MESSAGES } from './i18n/index.js';
 import { createKeyStore } from './keys.js';
@@ -146,22 +147,27 @@ export function createAi(options = {}) {
     const modelOf = (id) => {
       const chosen = /** @type {import('./providers.js').AiProvider} */ (providers.find((item) => item.id === id));
       const name = key ? key.model(id) : chosen.model;
-      const slot = `${id}\n${name}`;
+      // An OpenAI-compatible API of the user's own: where it answers is theirs too.
+      const address = key && key.providers.find((item) => item.id === id)?.needsAddress ? key.address(id) : '';
+      const slot = `${id}\n${name}\n${address}`;
       if (!models.has(slot)) {
         models.set(
           slot,
           chosen.createModel
             ? chosen.createModel({ apiKey: keyFor, fetch: fetchImpl, ...(name ? { model: name } : {}) })
-            : providerEmailModel({ provider: chosen, fetch: fetchImpl, apiKey: keyFor, ...(name ? { model: name } : {}) })
+            : providerEmailModel({ provider: chosen, fetch: fetchImpl, apiKey: keyFor, ...(name ? { model: name } : {}), ...(address ? { baseUrl: address } : {}) })
         );
       }
       return /** @type {import('./generator.js').EmailModel} */ (models.get(slot));
     };
     /** @type {import('./generator.js').EmailModel} */
     const model = async (request) => {
-      // The user's key, asked when there is none — they may choose another
-      // provider there ('' when they cancel: KEY_MISSING).
-      if (key && !key.get() && !providers.find((item) => item.id === key.provider.id)?.keyless) await key.request();
+      // The user's key (and the address, the model it needs), asked when
+      // missing — they may choose another provider there. Cancelled: KEY_MISSING.
+      if (key && !key.ready()) {
+        await key.request();
+        if (!key.ready()) throw new EmailGenerationError('KEY_MISSING', `${key.provider.name}: not connected`);
+      }
       return modelOf(key ? key.provider.id : provider.id)(request);
     };
     const generator = createEmailGenerator({ model, maxAttempts, compile });

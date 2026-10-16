@@ -151,9 +151,51 @@ for (const [locale, timezoneId, open] of [
   });
 }
 
+/** The demo's own list of languages: open it, click the language. */
+async function pickLanguage(page, name) {
+  await page.getByRole('combobox', { name: 'Language' }).click();
+  await page.getByRole('listbox', { name: 'Language' }).getByRole('option', { name }).click();
+}
+
+test('the language list: its own, by mouse and by keyboard; a click outside or Esc closes it unchanged', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en`);
+  const button = page.getByRole('combobox', { name: 'Language' });
+  const list = page.getByRole('listbox', { name: 'Language' });
+  await expect(button).toHaveAttribute('aria-expanded', 'false');
+  await expect(list).toHaveCount(0);
+
+  await button.click();
+  await expect(button).toHaveAttribute('aria-expanded', 'true');
+  await expect(list.getByRole('option')).toHaveText([/English/, /Français/, /Deutsch/, /Español/, /Português/, /Русский/, /中文/]);
+  await expect(list.getByRole('option', { name: 'English' })).toHaveAttribute('aria-selected', 'true');
+  await expect(list.getByRole('option', { name: 'Русский' })).toHaveAttribute('lang', 'ru');
+  await page.mouse.click(5, 400);
+  await expect(list).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+  // ↓ opens it on the language in use, End goes to the last, Esc closes it.
+  await button.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(list.locator('[data-active]')).toContainText('English');
+  await page.keyboard.press('End');
+  await expect(list.locator('[data-active]')).toContainText('中文');
+  await expect(button).toHaveAttribute('aria-activedescendant', (await list.getByRole('option').last().getAttribute('id')) || '');
+  await page.keyboard.press('Escape');
+  await expect(list).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+  // A letter goes to the language it starts; Enter picks it.
+  await page.keyboard.press('d');
+  await expect(list.locator('[data-active]')).toContainText('Deutsch');
+  await page.keyboard.press('Enter');
+  await expect(list).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+  await expect(page.getByRole('combobox', { name: 'Sprache' })).toContainText('Deutsch');
+});
+
 test('the language picked: the code samples follow it, and it is kept for the next visit', async ({ page }) => {
   await page.goto(HOME);
-  await page.getByRole('combobox', { name: 'Language' }).selectOption('ru');
+  await pickLanguage(page, 'Русский');
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   await expect(page.locator('#code-panel')).toContainText('locale="ru"');
   await page.getByRole('tab', { name: 'С ИИ' }).click();
@@ -175,7 +217,7 @@ test('after a first save, switching the language reopens the saved template (no 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText(/^Saved at/)).toBeVisible();
 
-  await page.getByRole('combobox', { name: 'Language' }).selectOption('fr');
+  await pickLanguage(page, 'Français');
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   await expect(page.getByTestId('eb-properties').getByLabel(/^Libellé/)).toHaveValue('Saved once');
   await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();

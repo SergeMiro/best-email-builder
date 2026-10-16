@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
-import { ArrowUpRight, Eye, EyeOff, Gift, KeyRound, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { ArrowUpRight, Eye, EyeOff, KeyRound, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useUi } from '../ui/context.jsx';
 import { cn } from '../ui/primitives/cn.js';
 import { Button } from '../ui/primitives/button.jsx';
@@ -9,6 +9,8 @@ import ModelPicker from './ModelPicker.jsx';
 
 /** A key this long is complete enough to ask the provider for its models. */
 const LISTABLE_KEY = 20;
+/** An address the API can be asked at (keys.js keeps it without the trailing slash). */
+const ADDRESS = /^https?:\/\/[^\s/]+/i;
 
 /**
  * CONNECT — the dialog that asks the user for their provider key, when the AI
@@ -22,29 +24,36 @@ const LISTABLE_KEY = 20;
  * Given several providers (`createAi({ provider: [...] })`), the user chooses
  * one at the top; a provider whose key this browser already keeps needs no
  * new one. Under the key, the model: the provider's own, or another of its
- * list (ModelPicker.jsx).
+ * list (ModelPicker.jsx). An OpenAI-compatible API of the user's own
+ * ('openai-compatible': LM Studio, vLLM, a proxy…) takes its address first,
+ * and a key only if it needs one.
  */
 export default function ConnectAi({ aiKey }) {
   const { t } = useUi();
   const state = useSyncExternalStore(aiKey.subscribe, aiKey.state, aiKey.state);
   const [value, setValue] = useState('');
+  const [address, setAddress] = useState('');
   const [shown, setShown] = useState(false);
   const [chosenId, setChosenId] = useState(aiKey.provider.id);
   /** The models chosen in the dialog, by provider, until Connect. */
   const [picks, setPicks] = useState(/** @type {Record<string, string>} */ ({}));
   const [modelsOpen, setModelsOpen] = useState(false);
   const inputRef = useRef(/** @type {HTMLInputElement|null} */ (null));
+  const addressRef = useRef(/** @type {HTMLInputElement|null} */ (null));
   const choicesRef = useRef(/** @type {HTMLDivElement|null} */ (null));
   const inputId = useId();
   const hintId = useId();
+  const addressId = useId();
+  const addressHintId = useId();
   const choices = aiKey.providers;
   const chosen = choices.find((provider) => provider.id === chosenId) || aiKey.provider;
-  const { name, keyUrl, keyHint, free } = chosen;
+  const { name, keyUrl, keyHint, free, keyless, needsAddress } = chosen;
 
   // Each time it opens: the provider in use, an empty field, the key hidden.
   useEffect(() => {
     if (!state.asking) return;
     setChosenId(aiKey.provider.id);
+    setAddress(aiKey.address());
     setValue('');
     setShown(false);
     setPicks({});
@@ -59,19 +68,24 @@ export default function ConnectAi({ aiKey }) {
   const refused = state.refused && chosen.id === aiKey.provider.id;
   /** @param {string} id */
   const modelFor = (id) => picks[id] ?? aiKey.model(id);
+  const where = address.trim().replace(/\/+$/, '');
+  const addressOk = !needsAddress || ADDRESS.test(where);
+  // Connect: a key (unless it needs none), the address, a model to write with.
+  const ready = Boolean((key || saved || keyless) && (!needsAddress || (where && addressOk)) && modelFor(chosen.id));
 
   const submit = (/** @type {React.FormEvent} */ event) => {
     event.preventDefault();
-    const answer = key || saved;
-    if (!answer) return;
+    if (!ready) return;
+    if (needsAddress && where !== aiKey.address(chosen.id)) aiKey.setAddress(where, chosen.id);
     if (chosen.id !== aiKey.provider.id) aiKey.choose(chosen.id);
     if (picks[chosen.id] && picks[chosen.id] !== aiKey.model(chosen.id)) aiKey.chooseModel(picks[chosen.id], chosen.id);
-    aiKey.answer(answer);
+    aiKey.answer(key || saved);
   };
 
   /** @param {string} id */
   const choose = (id) => {
     setChosenId(id);
+    setAddress(aiKey.address(id));
     setValue('');
     setModelsOpen(false);
   };
@@ -94,7 +108,7 @@ export default function ConnectAi({ aiKey }) {
         data-testid="eb-ai-connect"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
-          inputRef.current?.focus();
+          (needsAddress && !where ? addressRef : inputRef).current?.focus();
         }}
         // Esc closes the list of models first, then the dialog. From inside
         // the list, the list closes itself (and gives the focus back to its field).
@@ -114,7 +128,9 @@ export default function ConnectAi({ aiKey }) {
               <div className="eb:flex eb:flex-col eb:gap-1.5">
                 <DialogTitle>{t('Connect {provider}', { provider: name })}</DialogTitle>
                 <DialogDescription className="eb:text-[13px] eb:leading-relaxed eb:text-foreground-lighter">
-                  {t('The AI writes with your own {provider} key. Connect it once: this browser remembers it.', { provider: name })}
+                  {needsAddress
+                    ? t('The AI writes with an OpenAI-compatible API of your choice. Give its address, and its key if it needs one: this browser remembers them.')
+                    : t('The AI writes with your own {provider} key. Connect it once: this browser remembers it.', { provider: name })}
                 </DialogDescription>
               </div>
             </DialogHeader>
@@ -145,7 +161,6 @@ export default function ConnectAi({ aiKey }) {
                     >
                       <span className="eb:flex eb:items-center eb:gap-1.5 eb:text-[13px] eb:leading-tight eb:font-medium eb:text-foreground">
                         <span className="eb:truncate">{provider.name}</span>
-                        {provider.free && <Gift className="eb:size-3 eb:shrink-0 eb:text-success" aria-label={t(provider.free)} />}
                         {aiKey.get(provider.id) && (
                           <span className="eb:ml-auto eb:size-1.5 eb:shrink-0 eb:rounded-full eb:bg-success" title={t('Key saved')} aria-label={t('Key saved')} />
                         )}
@@ -189,16 +204,45 @@ export default function ConnectAi({ aiKey }) {
                   </Button>
                 )}
                 {free && (
-                  <span className="eb:inline-flex eb:items-center eb:gap-1.5 eb:rounded-full eb:bg-success/10 eb:px-2.5 eb:py-1 eb:text-[11.5px] eb:font-medium eb:text-success">
-                    <Gift className="eb:size-3.5" aria-hidden="true" />
+                  <span className="eb:rounded-full eb:bg-success/10 eb:px-2.5 eb:py-1 eb:text-[11.5px] eb:font-medium eb:text-success">
                     {t(free)}
                   </span>
                 )}
               </div>
             )}
 
+            {needsAddress && (
+              <div className="eb:flex eb:flex-col eb:gap-1.5">
+                <Label htmlFor={addressId}>{t('API address')}</Label>
+                <Input
+                  ref={addressRef}
+                  id={addressId}
+                  type="url"
+                  inputMode="url"
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                  placeholder="http://localhost:1234/v1"
+                  autoComplete="url"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  aria-invalid={where && !addressOk ? true : undefined}
+                  aria-describedby={addressHintId}
+                  className="eb:h-9 eb:font-mono eb:text-[12.5px]"
+                  data-testid="eb-ai-connect-address"
+                />
+                <p id={addressHintId} className="eb:text-[11.5px] eb:leading-relaxed eb:text-foreground-muted">
+                  {where && !addressOk ? (
+                    <span className="eb:text-warning">{t('An address starts with http:// or https://.')}</span>
+                  ) : (
+                    t('Any API that speaks OpenAI: LM Studio, vLLM, Ollama, a proxy of your own… It must accept requests from this page (CORS).')
+                  )}
+                </p>
+              </div>
+            )}
+
             <div className="eb:flex eb:flex-col eb:gap-1.5">
-              <Label htmlFor={inputId}>{t('API key')}</Label>
+              <Label htmlFor={inputId}>{keyless ? t('API key (optional)') : t('API key')}</Label>
               <div className="eb:relative">
                 <Input
                   ref={inputRef}
@@ -232,6 +276,8 @@ export default function ConnectAi({ aiKey }) {
                   t('A key for {provider} is saved in this browser: Connect uses it, or paste another one.', { provider: name })
                 ) : keyHint ? (
                   t('{provider} keys start with {prefix}.', { provider: name, prefix: keyHint })
+                ) : keyless ? (
+                  t('Leave it empty if the API needs no key.')
                 ) : null}
               </p>
             </div>
@@ -239,8 +285,9 @@ export default function ConnectAi({ aiKey }) {
             <ModelPicker
               aiKey={aiKey}
               provider={chosen}
-              apiKey={key.length >= LISTABLE_KEY ? key : saved}
-              delay={key.length >= LISTABLE_KEY ? 350 : 0}
+              apiKey={key.length >= LISTABLE_KEY || (keyless && key) ? key : saved}
+              address={addressOk ? where : ''}
+              delay={key.length >= LISTABLE_KEY || (keyless && key) || where !== aiKey.address(chosen.id) ? 350 : 0}
               value={modelFor(chosen.id)}
               onChange={(model) => setPicks((current) => ({ ...current, [chosen.id]: model }))}
               open={modelsOpen}
@@ -250,14 +297,18 @@ export default function ConnectAi({ aiKey }) {
 
           <div className="eb:flex eb:items-start eb:gap-2 eb:border-t eb:border-border eb:bg-surface-75 eb:px-6 eb:py-3 eb:text-[11.5px] eb:leading-relaxed eb:text-foreground-lighter">
             <ShieldCheck className="eb:mt-0.5 eb:size-3.5 eb:shrink-0 eb:text-foreground-muted" aria-hidden="true" />
-            <span>{t('The key stays in this browser and is sent only to {provider}.', { provider: name })}</span>
+            <span>
+              {needsAddress
+                ? t('The address and the key stay in this browser; the key is sent only to that address.')
+                : t('The key stays in this browser and is sent only to {provider}.', { provider: name })}
+            </span>
           </div>
 
           <DialogFooter className="eb:border-t eb:border-border eb:px-6 eb:py-4">
             <Button type="button" variant="ghost" onClick={() => aiKey.answer(null)}>
               {t('Cancel')}
             </Button>
-            <Button type="submit" disabled={!key && !saved} data-testid="eb-ai-connect-submit">
+            <Button type="submit" disabled={!ready} data-testid="eb-ai-connect-submit">
               {t('Connect')}
             </Button>
           </DialogFooter>

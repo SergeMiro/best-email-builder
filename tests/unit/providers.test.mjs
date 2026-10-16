@@ -790,3 +790,70 @@ test('claudeProvider: the models the key opens, through the SDK; the model chose
   await ai.rewrite(REWRITE);
   assert.equal(requests.at(-1).model, 'claude-sonnet-5-5');
 });
+
+test('askKey: an OpenAI-compatible API of the user\'s own — its address, a key only if it needs one, a model of its list', async (t) => {
+  const storage = memoryStorage();
+  globalThis.localStorage = storage;
+  t.after(() => delete globalThis.localStorage);
+  const calls = [];
+  const fetch = async (url, init = {}) => {
+    calls.push({ url, headers: init.headers || {} });
+    if (url.endsWith('/models')) return new Response(JSON.stringify({ data: [{ id: 'qwen3-8b' }, { id: 'text-embedding-nomic' }] }));
+    return new Response(JSON.stringify(REWRITTEN.body));
+  };
+  const ai = createAi({ provider: ['openrouter', 'openai-compatible'], askKey: true, fetch });
+  const own = ai.key.providers.find((provider) => provider.id === 'openai-compatible');
+  assert.equal(own.needsAddress, true);
+  assert.equal(own.keyless, true);
+  assert.equal(ai.key.providers[0].needsAddress, false, 'a preset has its own address');
+  assert.throws(() => ai.key.setAddress('http://localhost:1234/v1', 'openrouter'), /has an address of its own/);
+  assert.throws(() => ai.key.setAddress('localhost:1234', 'openai-compatible'), /an http\(s\) address/);
+
+  // No address: no list, no request.
+  assert.deepEqual(await ai.key.listModels('openai-compatible'), []);
+  assert.equal(calls.length, 0);
+  // The address being typed lists its models, with no key.
+  const listed = await ai.key.listModels('openai-compatible', { address: 'http://localhost:1234/v1/' });
+  assert.deepEqual(listed.map((model) => model.id), ['qwen3-8b']);
+  assert.equal(calls[0].url, 'http://localhost:1234/v1/models');
+  assert.equal(calls[0].headers.Authorization, undefined);
+
+  // The action asks: the address, the model, no key; then it goes on.
+  const running = ai.rewrite(REWRITE);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(ai.key.state().asking, true);
+  ai.key.setAddress(' http://localhost:1234/v1/ ', 'openai-compatible');
+  ai.key.choose('openai-compatible');
+  assert.equal(ai.key.ready(), false, 'no model yet');
+  ai.key.chooseModel('qwen3-8b');
+  assert.equal(ai.key.ready(), true, 'no key needed');
+  ai.key.answer('');
+  assert.equal((await running).text, 'Welcome to our shop!');
+  assert.equal(calls.at(-1).url, 'http://localhost:1234/v1/chat/completions');
+  assert.equal(calls.at(-1).headers.Authorization, undefined);
+  assert.equal(storage.map.get('best-email-builder:ai-address:openai-compatible'), 'http://localhost:1234/v1');
+  assert.deepEqual(ai.key.state(), { asking: false, refused: false, connected: true });
+
+  // Another page of this browser: the same address and model, no question.
+  const later = createAi({ provider: ['openrouter', 'openai-compatible'], askKey: true, fetch });
+  assert.equal(later.key.address(), 'http://localhost:1234/v1');
+  await later.rewrite(REWRITE);
+  assert.equal(later.key.state().asking, false);
+
+  // A key, when the API wants one; a new address is used at once.
+  ai.key.set('sk-proxy');
+  ai.key.setAddress('https://llm.example.test/v1');
+  await ai.rewrite(REWRITE);
+  assert.equal(calls.at(-1).url, 'https://llm.example.test/v1/chat/completions');
+  assert.equal(calls.at(-1).headers.Authorization, 'Bearer sk-proxy');
+
+  // Cancelled without an address: KEY_MISSING, nothing sent.
+  ai.key.setAddress('');
+  assert.equal(ai.key.state().connected, false);
+  const sent = calls.length;
+  const cancelled = codeOf(ai.rewrite(REWRITE));
+  await new Promise((resolve) => setImmediate(resolve));
+  ai.key.answer(null);
+  assert.equal(await cancelled, 'KEY_MISSING');
+  assert.equal(calls.length, sent);
+});

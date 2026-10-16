@@ -165,4 +165,13 @@ export const es = {
   "{count} models, the free ones first.": "Modelos: {count}, primero los gratuitos.",
   "{count} models.": "Modelos: {count}.",
   "{provider} lists no models here: type the id of the one you want.": "{provider} no muestra modelos aquí: escribe el ID del que quieras.",
+  "The AI writes with an OpenAI-compatible API of your choice. Give its address, and its key if it needs one: this browser remembers them.": "La IA escribe con una API compatible con OpenAI que tú elijas. Indica su dirección, y su clave si la pide: este navegador las recuerda.",
+  "API address": "Dirección de la API",
+  "Any API that speaks OpenAI: LM Studio, vLLM, Ollama, a proxy of your own… It must accept requests from this page (CORS).": "Cualquier API que hable OpenAI: LM Studio, vLLM, Ollama, un proxy propio… Debe aceptar peticiones de esta página (CORS).",
+  "An address starts with http:// or https://.": "Una dirección empieza por http:// o https://.",
+  "API key (optional)": "Clave API (opcional)",
+  "Leave it empty if the API needs no key.": "Déjalo vacío si la API no pide clave.",
+  "The address and the key stay in this browser; the key is sent only to that address.": "La dirección y la clave se quedan en este navegador; la clave solo se envía a esa dirección.",
+  "Give the API address to see its models.": "Indica la dirección de la API para ver sus modelos.",
+  "The list of models could not be loaded. Type the id of the model.": "No se pudo cargar la lista de modelos. Escribe el ID del modelo.",
 };
