@@ -21,10 +21,10 @@ import { NoticeArea, UiProvider, useUi } from '../context.jsx';
 import { Button } from '../primitives/button.jsx';
 import { cn } from '../primitives/cn.js';
 import { Input } from '../primitives/fields.jsx';
-import { SectionLabel } from '../primitives/misc.jsx';
+import { FilterChip, SectionLabel } from '../primitives/misc.jsx';
 import { SEARCH_KEYS, SearchKeyHint, useSearchShortcut } from '../primitives/searchShortcut.jsx';
 import { useLayoutWidth } from '../useLayoutWidth.js';
-import { TagBadge } from './TagBadge.jsx';
+import { TAG_SWATCHES, TagBadge } from './TagBadge.jsx';
 import TagsDialog from './TagsDialog.jsx';
 
 /**
@@ -35,7 +35,8 @@ import TagsDialog from './TagsDialog.jsx';
  *   ├──────────────┬──────────────────────────┬────────────────────────┤
  *   │ New template │ Name                  ☆  │ Desktop | Mobile       │
  *   │ 🔍  Ctrl K   │ code                     │ ┌────────────────────┐ │
- *   │ FAVORITES    │ Origin, subject, dates…  │ │   rendered email   │ │
+ *   │ (All)(●Promo)│ Origin, subject, dates…  │ │   rendered email   │ │
+ *   │ FAVORITES    │                          │ │                    │ │
  *   │ TEMPLATES    │ Tags  [Promo] [Events] ✎ │ │                    │ │
  *   │              │ [ Edit ] [ Duplicate ]   │ │                    │ │
  *   │              │ [Copy HTML] [Download] 🗑 │ └────────────────────┘ │
@@ -55,7 +56,9 @@ import TagsDialog from './TagsDialog.jsx';
  *               turns favorites off).
  *   Tags        up to three colored tags on a template, chosen and created in
  *               the tags dialog, when the storage has them (`listTags`…).
- *               The search finds them too.
+ *               The search finds them too, and the tags under it filter
+ *               the list: one or several (a template with any of them), or
+ *               *All*. Only the tags some template carries are offered.
  *
  * Layout follows the library's own width, like the builder: three columns,
  * then the preview under the details, then (phone) list and details as two
@@ -187,6 +190,8 @@ function Library({
   const [tags, setTags] = useState([]);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [query, setQuery] = useState('');
+  /** The tags picked under the search (ids); none is *All*. */
+  const [picked, setPicked] = useState(() => new Set());
   /** `template:<id>` */
   const [selection, setSelection] = useState(selectedId != null ? `template:${selectedId}` : null);
   /** Phone layout: the details screen is shown over the list. */
@@ -237,7 +242,25 @@ function Library({
       item,
     }));
   }, [items.list, tags, formatDate]);
-  const shown = templateEntries.filter((e) => matches(query, e.name, e.code, e.subject, ...e.tags.map((tag) => tag.label)));
+  /** The filters: the tags some template carries, by name. */
+  const usedTags = useMemo(() => {
+    const used = new Set(items.list.flatMap((item) => (item.tags || []).map(String)));
+    return tags.filter((tag) => used.has(String(tag.id)));
+  }, [items.list, tags]);
+  // A picked tag deleted or left by every template no longer filters.
+  const active = new Set(usedTags.map((tag) => String(tag.id)).filter((id) => picked.has(id)));
+  const togglePicked = (id) =>
+    setPicked((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const shown = templateEntries.filter(
+    (e) =>
+      (active.size === 0 || e.tags.some((tag) => active.has(String(tag.id)))) &&
+      matches(query, e.name, e.code, e.subject, ...e.tags.map((tag) => tag.label))
+  );
   const favoriteEntries = shown.filter((e) => stars.favorites.has(e.key));
   const otherTemplates = shown.filter((e) => !stars.favorites.has(e.key));
 
@@ -412,6 +435,36 @@ function Library({
             <SearchKeyHint>{query ? 'Esc' : null}</SearchKeyHint>
           </div>
         </div>
+        {usedTags.length > 0 && (
+          <div
+            role="group"
+            aria-label={t('Filter by tag')}
+            className="eb:-m-1 eb:flex eb:max-h-[4.75rem] eb:flex-wrap eb:gap-1 eb:overflow-y-auto eb:p-1"
+            data-testid="eb-library-tag-filter"
+          >
+            <FilterChip pressed={active.size === 0} onClick={() => setPicked(new Set())} className="eb:h-6 eb:px-2.5 eb:text-[11.5px]">
+              {t('All')}
+            </FilterChip>
+            {usedTags.map((tag) => (
+              <FilterChip
+                key={tag.id}
+                pressed={active.has(String(tag.id))}
+                onClick={() => togglePicked(String(tag.id))}
+                className="eb:h-6 eb:max-w-full eb:px-2.5 eb:text-[11.5px]"
+              >
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'eb:size-2 eb:shrink-0 eb:rounded-full',
+                    TAG_SWATCHES[tag.color] || TAG_SWATCHES.gray,
+                    active.has(String(tag.id)) && 'eb:ring-1 eb:ring-primary-foreground'
+                  )}
+                />
+                <span className="eb:truncate">{tag.label}</span>
+              </FilterChip>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="eb:flex eb:min-h-0 eb:flex-1 eb:flex-col eb:gap-4 eb:overflow-y-auto eb:p-3">

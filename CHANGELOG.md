@@ -32,6 +32,9 @@ The library loses its bases and gains tags. This breaks code that passed
   *Delete* staying in place, dimmed. For a public demo.
 - `createMemoryStorage({ compile })`: the templates keep their compiled HTML,
   as on the server, so the library shows *Copy HTML* and *Download*.
+- Tag filters under the library's search: the tags some template carries,
+  one or several (a template with any of them), or *All*; with the search,
+  both apply.
 - The editor's *Templates* dialog has a search (names, descriptions, tags)
   and the bases' tags as filters: one or several (a base with any of them),
   or *All*. A gallery entry takes `tags`, translated like its name.

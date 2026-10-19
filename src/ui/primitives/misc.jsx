@@ -20,6 +20,27 @@ export function Skeleton({ className, as: Comp = 'div', ...props }) {
   return <Comp data-slot="skeleton" className={cn('eb:animate-pulse eb:rounded-lg2 eb:bg-accent', className)} {...props} />;
 }
 
+/**
+ * A filter that is on or off (`aria-pressed`): the tags under a search. A
+ * row of them starts with *All*, pressed while no other one is.
+ */
+export function FilterChip({ pressed, className, ...props }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      className={cn(
+        'eb:inline-flex eb:h-7 eb:shrink-0 eb:cursor-pointer eb:items-center eb:gap-1.5 eb:rounded-full eb:border eb:px-3 eb:text-[12px] eb:font-medium eb:whitespace-nowrap eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+        pressed
+          ? 'eb:border-primary eb:bg-primary eb:text-primary-foreground eb:hover:bg-primary/90'
+          : 'eb:border-border eb:bg-background eb:text-foreground eb:hover:border-primary/50 eb:hover:bg-primary/5',
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
 /** Small uppercase heading of a panel section. */
 export function SectionLabel({ className, ...props }) {
   return (

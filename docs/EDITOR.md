@@ -5,7 +5,7 @@ or both:
 
 | Block | Import | What it is |
 |---|---|---|
-| **A**, the library | `TemplateLibrary` from `best-email-builder/library` | A searchable list of your templates, with up to three colored tags each. It shows the selected template's details and its preview (desktop or mobile, light or dark), and five actions: *Edit*, *Duplicate*, *Copy HTML*, *Download* and *Delete*. *Edit* and *New template* only call `onEdit(template)` or `onCreate()`. The library never mounts an editor, and it loads neither the editor's engine nor its MJML compiler. |
+| **A**, the library | `TemplateLibrary` from `best-email-builder/library` | A searchable list of your templates, with up to three colored tags each that also filter it. It shows the selected template's details and its preview (desktop or mobile, light or dark), and five actions: *Edit*, *Duplicate*, *Copy HTML*, *Download* and *Delete*. *Edit* and *New template* only call `onEdit(template)` or `onCreate()`. The library never mounts an editor, and it loads neither the editor's engine nor its MJML compiler. |
 | **B**, the editor | `EmailBuilder` from `best-email-builder/builder` | The editor. It opens whatever the host gives it and knows nothing about the library. |
 | **A + B** | `EmailStudio` from `best-email-builder` | The two wired together: the library, then the editor, then the library again with the saved template selected. A new template starts from a ready-made base with the editor's *Templates* button. |
 
@@ -124,7 +124,9 @@ workspace's tags. A tag is a name of 24 characters at most, unique case
 aside, with one of twelve colors (`TAG_COLORS`) that read well in both themes.
 Each change is saved at once. A deleted tag leaves every template. The tags
 show in the list before the template's date, and the search finds a
-template by its tags too.
+template by its tags too. Under the search, the tags that some template
+carries filter the list: one or several (a template with any of them), or
+*All*.
 
 | Prop | Default | Description |
 |---|---|---|

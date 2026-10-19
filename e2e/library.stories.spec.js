@@ -168,6 +168,52 @@ test('tags: create, tick up to three, rename, delete — on the row at once', as
   expect(stored.rows.map((r) => r.tags.length)).toEqual([2, 0]);
 });
 
+test('tag filters under the search: one tag, several (any of them), All, with the search; a deleted tag stops filtering', async ({ page }) => {
+  await page.goto(STANDALONE);
+  const filter = page.getByTestId('eb-library-tag-filter');
+  const names = () => page.getByTestId('eb-library-templates').getByTestId('eb-library-template');
+  const chip = (name) => filter.getByRole('button', { name, exact: true });
+  await expect(filter.getByRole('button')).toHaveText(['All', 'Marketing', 'Onboarding']);
+  await expect(chip('All')).toHaveAttribute('aria-pressed', 'true');
+
+  await chip('Marketing').click();
+  await expect(names()).toHaveCount(1);
+  await expect(names().first()).toContainText('October newsletter');
+  await expect(chip('All')).toHaveAttribute('aria-pressed', 'false');
+  await chip('Onboarding').click();
+  await expect(names()).toHaveCount(2);
+  await chip('Marketing').click();
+  await expect(names()).toHaveCount(1);
+  await expect(names().first()).toContainText('Welcome series');
+
+  // The search narrows what the tags keep.
+  const search = page.getByRole('searchbox', { name: 'Search templates' });
+  await search.fill('october');
+  await expect(page.getByText('Nothing matches “october”.')).toBeVisible();
+  await search.fill('');
+  await chip('All').click();
+  await expect(names()).toHaveCount(2);
+
+  // A tag put on a template joins the filters; deleted, it stops filtering.
+  await row(page, 'October newsletter').click();
+  await details(page).getByTestId('eb-library-tags-button').click();
+  const dialog = page.getByTestId('eb-tags-dialog');
+  await dialog.getByLabel('New tag').fill('VIP');
+  await dialog.getByTestId('eb-tags-form').getByRole('button', { name: 'Create' }).click();
+  await expect(dialog.getByRole('checkbox', { name: 'VIP' })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(filter.getByRole('button')).toHaveText(['All', 'Marketing', 'Onboarding', 'VIP']);
+  await chip('VIP').click();
+  await expect(names()).toHaveCount(1);
+  await details(page).getByTestId('eb-library-tags-button').click();
+  await dialog.getByRole('button', { name: 'Delete the tag “VIP”' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(filter.getByRole('button')).toHaveText(['All', 'Marketing', 'Onboarding']);
+  await expect(chip('All')).toHaveAttribute('aria-pressed', 'true');
+  await expect(names()).toHaveCount(2);
+});
+
 test('favorites: the star moves an entry to the top section, and it stays after a reload', async ({ page }) => {
   await page.goto(STANDALONE);
   await page.evaluate(() => localStorage.removeItem('best-email-builder:favorites'));

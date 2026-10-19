@@ -4,6 +4,7 @@ import { useUi } from '../../ui/context.jsx';
 import { Button } from '../../ui/primitives/button.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { Input } from '../../ui/primitives/fields.jsx';
+import { FilterChip } from '../../ui/primitives/misc.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
 import { withThumbnailImages } from './gallery.js';
 
@@ -76,24 +77,6 @@ function Thumbnail({ html, title }) {
         }}
       />
     </div>
-  );
-}
-
-function Chip({ pressed, onClick, children }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      onClick={onClick}
-      className={cn(
-        'eb:inline-flex eb:h-7 eb:cursor-pointer eb:items-center eb:rounded-full eb:border eb:px-3 eb:text-[12px] eb:font-medium eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
-        pressed
-          ? 'eb:border-primary eb:bg-primary eb:text-primary-foreground eb:hover:bg-primary/90'
-          : 'eb:border-border eb:bg-background eb:text-foreground eb:hover:border-primary/50 eb:hover:bg-primary/5'
-      )}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -226,13 +209,13 @@ export default function TemplateGalleryButton({ context }) {
             </div>
             {tags.length > 0 && (
               <div role="group" aria-label={t('Filter by tag')} className="eb:flex eb:flex-wrap eb:gap-1.5" data-testid="eb-gallery-tags">
-                <Chip pressed={chosen.size === 0} onClick={() => setChosen(new Set())}>
+                <FilterChip pressed={chosen.size === 0} onClick={() => setChosen(new Set())}>
                   {t('All')}
-                </Chip>
+                </FilterChip>
                 {tags.map((tag) => (
-                  <Chip key={tag} pressed={chosen.has(tag)} onClick={() => toggle(tag)}>
+                  <FilterChip key={tag} pressed={chosen.has(tag)} onClick={() => toggle(tag)}>
                     {tag}
-                  </Chip>
+                  </FilterChip>
                 ))}
               </div>
             )}
