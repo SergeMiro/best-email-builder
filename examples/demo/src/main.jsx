@@ -1,7 +1,7 @@
 import { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 // The two blocks through their own entries, as an application using them apart would.
-import { EmailBuilder, TEMPLATE_GALLERY, buildGallery, translatorFor } from 'best-email-builder/builder';
+import { EmailBuilder } from 'best-email-builder/builder';
 import { TemplateLibrary } from 'best-email-builder/library';
 import 'best-email-builder/styles.css';
 import {
@@ -65,6 +65,7 @@ const TEXT = {
     source: 'Source code',
     madeBy: 'Made by',
     language: 'Language',
+    deleteOff: 'Deleting is turned off in this demo.',
     comments: {
       opened: 'opened from your own library',
       optional: 'Optional: without `ai`, no AI button and no AI code.',
@@ -102,6 +103,7 @@ const TEXT = {
     source: 'Code source',
     madeBy: 'Réalisé par',
     language: 'Langue',
+    deleteOff: 'La suppression est désactivée dans cette démo.',
     comments: {
       opened: 'ouvert depuis votre propre bibliothèque',
       optional: 'Facultatif : sans `ai`, ni bouton IA ni code IA.',
@@ -139,6 +141,7 @@ const TEXT = {
     source: 'Quellcode',
     madeBy: 'Erstellt von',
     language: 'Sprache',
+    deleteOff: 'Löschen ist in dieser Demo deaktiviert.',
     comments: {
       opened: 'aus Ihrer eigenen Bibliothek geöffnet',
       optional: 'Optional: ohne `ai` weder KI-Schaltfläche noch KI-Code.',
@@ -176,6 +179,7 @@ const TEXT = {
     source: 'Código fuente',
     madeBy: 'Hecho por',
     language: 'Idioma',
+    deleteOff: 'Eliminar está desactivado en esta demo.',
     comments: {
       opened: 'abierta desde tu propia biblioteca',
       optional: 'Opcional: sin `ai`, ni botón de IA ni código de IA.',
@@ -213,6 +217,7 @@ const TEXT = {
     source: 'Código-fonte',
     madeBy: 'Feito por',
     language: 'Idioma',
+    deleteOff: 'A exclusão está desativada nesta demo.',
     comments: {
       opened: 'aberto a partir da sua própria biblioteca',
       optional: 'Opcional: sem `ai`, nem botão de IA nem código de IA.',
@@ -250,6 +255,7 @@ const TEXT = {
     source: 'Исходный код',
     madeBy: 'Сделал',
     language: 'Язык',
+    deleteOff: 'В демо удаление отключено.',
     comments: {
       opened: 'открыт из вашей библиотеки',
       optional: 'Необязательно: без `ai` нет ни кнопки ИИ, ни кода ИИ.',
@@ -287,6 +293,7 @@ const TEXT = {
     source: '源代码',
     madeBy: '作者',
     language: '语言',
+    deleteOff: '此演示中已禁用删除。',
     comments: {
       opened: '从您自己的模板库中打开',
       optional: '可选：不传 `ai`，就没有 AI 按钮，也不加载 AI 代码。',
@@ -427,7 +434,7 @@ const CODE_SAMPLES = [
 <TemplateLibrary
   storage={storage}
   onEdit={(template) => openMyEditor(template.id)}
-  onCreate={(start) => openMyEditor(start)}
+  onCreate={() => openMyEditor()}
 />`,
   },
   {
@@ -560,15 +567,16 @@ function usePointerGlow(ref) {
  *
  *   #/                    landing
  *   #/templates           level 1 — the template bank (TemplateLibrary)
- *   #/editor/new          level 2 — the editor (EmailBuilder), blank
- *   #/editor/base/<id>    level 2, from a base of the gallery
+ *   #/editor/new          level 2 — the editor (EmailBuilder), new: its
+ *                         Templates button starts it from a base of the gallery
  *   #/editor/<id>         level 2, a saved template
  */
 function parseRoute(hash) {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
   if (parts[0] === 'templates') return { page: 'templates' };
   if (parts[0] === 'editor') {
-    if (parts[1] === 'base' && parts[2]) return { page: 'editor', baseId: parts[2] };
+    // The bank picked the bases before 0.11: an old link opens a new template.
+    if (parts[1] === 'base') return { page: 'editor' };
     if (parts[1] && parts[1] !== 'new') return { page: 'editor', templateId: parts[1] };
     return { page: 'editor' };
   }
@@ -928,7 +936,8 @@ function App() {
     setLocale(code);
   }, []);
   // The storage and the AI module live as long as the page.
-  const storage = useMemo(() => createDemoStorage(), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the first visit's templates take the language once
+  const storage = useMemo(() => createDemoStorage({ locale, sender: SENDER }), []);
   const ai = useMemo(() => createBrowserAi(), []);
   const aiConnected = useSyncExternalStore(ai.key.subscribe, () => ai.key.state().connected);
   // An API of one's own may need no key: then there is none to forget.
@@ -955,14 +964,10 @@ function App() {
 
   // Which template the editor opens. After a first save the address already
   // names the new template (replaceState, so no remount): a later remount —
-  // switching the language — must reopen that template, not the blank or the
-  // base it started from (that would save a duplicate).
-  const editorKey = route.templateId ?? route.baseId ?? 'new';
+  // switching the language — must reopen that template, not a new one (that
+  // would save a duplicate).
+  const editorKey = route.templateId ?? 'new';
   const savedId = savedAs?.key === editorKey ? savedAs.id : null;
-  const base =
-    route.page === 'editor' && route.baseId && savedId == null
-      ? buildGallery({ templates: TEMPLATE_GALLERY, sender: SENDER, t: translatorFor(locale) }).find((b) => b.id === route.baseId)
-      : null;
   const inWindow = route.page === 'templates' || route.page === 'editor';
 
   return (
@@ -979,12 +984,8 @@ function App() {
                 storage={storage}
                 ai={ai}
                 templateId={savedId ?? route.templateId ?? null}
-                initialMjml={base?.mjml}
-                initialMeta={base ? { subject: base.subject, preheader: base.preheader } : undefined}
                 locale={locale}
                 sender={SENDER}
-                // The bases are picked in the bank (step 1), not again in the editor.
-                templates={[]}
                 onSaved={(template) => {
                   if (template?.id == null) return;
                   setLastId(template.id);
@@ -1000,16 +1001,15 @@ function App() {
               <TemplateLibrary
                 storage={storage}
                 locale={locale}
-                sender={SENDER}
                 selectedId={lastId}
+                // The demo keeps its templates: Delete only says it is off.
+                deleteDisabled={text.deleteOff}
                 onClose={() => navigate('/')}
                 onEdit={(template) => {
                   setLastId(template.id);
                   navigate(`/editor/${encodeURIComponent(template.id)}`);
                 }}
-                onCreate={(start) =>
-                  navigate(start?.baseId ? `/editor/base/${encodeURIComponent(start.baseId)}` : '/editor/new')
-                }
+                onCreate={() => navigate('/editor/new')}
               />
             )}
           </DemoWindow>

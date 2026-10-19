@@ -18,6 +18,10 @@
  *   listVariables()             → custom variables            (optional: user-defined
  *   saveVariable(variable)      → saved variable               variables, shared by
  *   deleteVariable(key)         → void                         every template)
+ *   listTags()                  → the workspace's tags        (optional: tags on
+ *   saveTag(tag)                → saved tag                    templates, at most
+ *   deleteTag(id)               → void                         three each; `list()`
+ *   setTemplateTags(id, tagIds) → the template's tag ids       gives their ids)
  *
  * The AI is not part of this contract: it is a module of its own
  * (`createAi`, `best-email-builder/ai`), given to the builder as `ai`.
@@ -36,6 +40,7 @@ import { DEFAULT_ASSETS_PATH } from '../renderer/links.js';
 import { IMAGE_TYPES, imageUploadError } from '../validation/images.js';
 import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables/catalog.js';
 import { cleanBrand } from '../features/brand/brand.js';
+import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/tags/tags.js';
 
 /**
  * @typedef {import('../core/document.js').EmailDocument} EmailDocument
@@ -51,6 +56,7 @@ import { cleanBrand } from '../features/brand/brand.js';
  *   document?: EmailDocument,
  *   mjml?: string,
  *   html?: string,
+ *   tags?: string[],
  *   createdAt?: string,
  *   updatedAt?: string|null,
  * }} StoredTemplate
@@ -78,6 +84,7 @@ import { cleanBrand } from '../features/brand/brand.js';
  * @typedef {{mjml: string, subject?: string|null, preheader?: string|null}} RenderInput
  * @typedef {{html: string, warnings: {message: string}[], quality: {code: string, level: string, message: string}[]}} RenderResult
  * @typedef {import('../features/brand/brand.js').Brand} Brand
+ * @typedef {import('../features/tags/tags.js').TemplateTag} TemplateTag
  * @typedef {{brand: Brand, notes: string[]}} BrandImportResult
  *   `notes`: what could not be read (`LOGO_NOT_FOUND`, `LOGO_UNSUPPORTED`,
  *   `LOGO_ICON`, `COLORS_NOT_FOUND`).
@@ -102,6 +109,10 @@ import { cleanBrand } from '../features/brand/brand.js';
  *   loadBrand?: () => Promise<Brand>,
  *   saveBrand?: (brand: Brand) => Promise<Brand>,
  *   importBrand?: (url: string, options?: {signal?: AbortSignal}) => Promise<BrandImportResult>,
+ *   listTags?: () => Promise<TemplateTag[]>,
+ *   saveTag?: (tag: {id?: string, label: string, color: string}, options?: {create?: boolean}) => Promise<TemplateTag>,
+ *   deleteTag?: (id: string) => Promise<void>,
+ *   setTemplateTags?: (id: number|string, tagIds: string[]) => Promise<string[]>,
  * }} TemplateStorage
  */
 
@@ -166,17 +177,19 @@ export function createHttpCaller({ baseUrl = '/api/email-builder', headers = {},
  *
  * `brand: true` turns on the Brand button: the server must have a
  * `brandStore`, and a `brandImporter` to read a brand from a website
- * (`brand: {import: false}` when it has none).
+ * (`brand: {import: false}` when it has none). `tags: true` turns on the
+ * library's tags: the server must have a `tagStore`.
  *
  * @param {{
  *   baseUrl?: string,
  *   headers?: Record<string, string> | (() => Record<string, string>),
  *   fetch?: typeof fetch,
  *   brand?: boolean|{import?: boolean},
+ *   tags?: boolean,
  * }} [options]
  * @returns {TemplateStorage}
  */
-export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = false } = {}) {
+export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = false, tags = false } = {}) {
   const { root, call, unwrap, doFetch, extraHeaders } = createHttpCaller({ baseUrl, headers, fetch: fetchImpl });
 
   /** @param {SavePayload} payload */
@@ -218,6 +231,20 @@ export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = 
             : {}),
         }
       : {}),
+    ...(tags
+      ? {
+          listTags: async () => call('/tags'),
+          saveTag: async (tag, { create = false } = {}) =>
+            create
+              ? call('/tags', { method: 'POST', body: JSON.stringify(tag) })
+              : call(`/tags/${encodeURIComponent(String(tag.id))}`, { method: 'PUT', body: JSON.stringify(tag) }),
+          deleteTag: async (id) => {
+            await call(`/tags/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          },
+          setTemplateTags: async (id, tagIds) =>
+            call(`/templates/${encodeURIComponent(id)}/tags`, { method: 'PUT', body: JSON.stringify({ tags: tagIds }) }),
+        }
+      : {}),
     async uploadImage(file) {
       assertUploadable(file);
       const form = new FormData();
@@ -235,12 +262,17 @@ export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = 
  * `render` and `sendTest` cannot run in a browser (MJML compiles on the
  * server): pass implementations to enable the preview and test buttons;
  * `importBrand` likewise for reading a brand from a website. The brand itself is kept in memory (`brand`: the
- * one to start with).
+ * one to start with), the tags too.
+ *
+ * `compile` gives the templates their final HTML, as the server keeps it:
+ * called on every create and save, its `html` comes back with `load()` (the
+ * library's *Copy HTML* and *Download*).
  *
  * @param {{
  *   render?: TemplateStorage['render'],
  *   sendTest?: TemplateStorage['sendTest'],
  *   importBrand?: TemplateStorage['importBrand'],
+ *   compile?: (input: RenderInput) => Promise<{html: string}>,
  *   brand?: Brand|null,
  *   assetsPath?: string,
  *   systemVariables?: EmailVariable[],
@@ -251,6 +283,7 @@ export function createMemoryStorage({
   render,
   sendTest,
   importBrand,
+  compile,
   brand = null,
   assetsPath = DEFAULT_ASSETS_PATH,
   systemVariables = DEFAULT_VARIABLES,
@@ -263,8 +296,11 @@ export function createMemoryStorage({
   const images = new Map();
   /** @type {Map<string, EmailVariable>} */
   const customVariables = new Map();
+  /** @type {Map<string, TemplateTag>} */
+  const tags = new Map();
   let savedBrand = cleanBrand(brand);
   let nextId = 1;
+  let nextTagId = 1;
   let tick = Date.parse('2026-01-01T00:00:00.000Z');
   const now = () => new Date((tick += 1000)).toISOString();
 
@@ -279,10 +315,16 @@ export function createMemoryStorage({
       revision: row.revision,
       document: readDocument(row.documentJson),
       mjml: row.mjml,
+      ...(row.html !== undefined ? { html: row.html } : {}),
+      tags: [...row.tags],
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
   }
+
+  /** The final HTML, when the storage was given a compiler. */
+  const htmlOf = async (/** @type {RenderInput} */ input) => (compile ? { html: (await compile(input)).html } : {});
+  const tagList = () => sortTags([...tags.values()]);
 
   /** @param {any} row */
   function snapshot(row) {
@@ -314,7 +356,7 @@ export function createMemoryStorage({
       return [...rows.values()]
         .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))
         .map((row) => {
-          const { document: _d, mjml: _m, ...summary } = toTemplate(row);
+          const { document: _d, mjml: _m, html: _h, ...summary } = toTemplate(row);
           return summary;
         });
     },
@@ -328,6 +370,8 @@ export function createMemoryStorage({
     },
     async create(payload) {
       if (!payload.name?.trim()) throw new StorageError('Name required', 400, 'NAME_REQUIRED');
+      const documentJson = JSON.stringify(readDocument(payload.document));
+      const compiled = await htmlOf({ mjml: payload.mjml, subject: payload.subject, preheader: payload.preheader });
       const at = now();
       const row = {
         id: nextId++,
@@ -335,8 +379,10 @@ export function createMemoryStorage({
         description: payload.description ?? null,
         subject: payload.subject ?? null,
         preheader: payload.preheader ?? null,
-        documentJson: JSON.stringify(readDocument(payload.document)),
+        documentJson,
         mjml: payload.mjml,
+        ...compiled,
+        tags: [],
         createdAt: at,
         updatedAt: null,
         revision: at,
@@ -347,7 +393,7 @@ export function createMemoryStorage({
     },
     async duplicate(id) {
       const source = rowOf(id);
-      return storage.create({
+      const result = await storage.create({
         name: `${source.name} (copy)`,
         description: source.description,
         subject: source.subject,
@@ -355,20 +401,30 @@ export function createMemoryStorage({
         document: readDocument(source.documentJson),
         mjml: source.mjml,
       });
+      // A copy keeps its tags.
+      rowOf(result.template.id).tags = [...source.tags];
+      return { ...result, template: { ...result.template, tags: [...source.tags] } };
     },
     async save(id, payload) {
       const row = rowOf(id);
       if (payload.revision && payload.revision !== row.revision) {
         throw new StorageError('Template changed in the meantime — reload it before saving', 409, 'CONFLICT');
       }
+      const documentJson = JSON.stringify(readDocument(payload.document));
+      const compiled = await htmlOf({
+        mjml: payload.mjml,
+        subject: payload.subject !== undefined ? payload.subject : row.subject,
+        preheader: payload.preheader !== undefined ? payload.preheader : row.preheader,
+      });
       const at = now();
       Object.assign(row, {
         ...(payload.name !== undefined ? { name: payload.name } : {}),
         ...(payload.description !== undefined ? { description: payload.description } : {}),
         ...(payload.subject !== undefined ? { subject: payload.subject } : {}),
         ...(payload.preheader !== undefined ? { preheader: payload.preheader } : {}),
-        documentJson: JSON.stringify(readDocument(payload.document)),
+        documentJson,
         mjml: payload.mjml,
+        ...compiled,
         updatedAt: at,
         revision: at,
       });
@@ -419,6 +475,29 @@ export function createMemoryStorage({
       savedBrand = cleanBrand(value);
       return { ...savedBrand };
     },
+    async listTags() {
+      return tagList().map((tag) => ({ ...tag }));
+    },
+    async saveTag(input, { create = false } = {}) {
+      if (!create && !tags.has(String(input?.id))) throw new StorageError('Tag not found', 404, 'NOT_FOUND');
+      if (create && tags.size >= MAX_TAGS) throw new StorageError(`${MAX_TAGS} tags at most`, 400, 'TOO_MANY_TAGS');
+      const { tag, errors } = validateTag(input, { existing: tagList(), editing: create ? null : String(input.id) });
+      if (errors) throw new StorageError(Object.values(errors)[0], 400, 'INVALID_TAG');
+      const saved = { id: create ? String(nextTagId++) : String(input.id), ...tag };
+      tags.set(saved.id, saved);
+      return { ...saved };
+    },
+    async deleteTag(id) {
+      if (!tags.delete(String(id))) throw new StorageError('Tag not found', 404, 'NOT_FOUND');
+      for (const row of rows.values()) row.tags = row.tags.filter((tagId) => tagId !== String(id));
+    },
+    async setTemplateTags(id, tagIds) {
+      const row = rowOf(id);
+      const { ids, error } = checkTemplateTags(tagIds, tagList());
+      if (error) throw new StorageError(error.message, 400, error.code);
+      row.tags = ids;
+      return [...ids];
+    },
     ...(importBrand ? { importBrand } : {}),
     ...(render ? { render } : {}),
     ...(sendTest ? { sendTest } : {}),
@@ -428,6 +507,7 @@ export function createMemoryStorage({
       images: [...images.keys()],
       variables: [...customVariables.values()],
       brand: savedBrand,
+      tags: tagList(),
     }),
   };
   return storage;

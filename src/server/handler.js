@@ -11,6 +11,7 @@
  *   GET    {base}/templates/:id                   read    template
  *   PUT    {base}/templates/:id                   write   save
  *   DELETE {base}/templates/:id                   write   delete
+ *   PUT    {base}/templates/:id/tags              write   the template's tags, { tags: [ids] } (needs `tagStore`)
  *   GET    {base}/templates/:id/versions          read    versions
  *   GET    {base}/templates/:id/versions/:vid     read    version with its project
  *   POST   {base}/render                          read    preview (server rendering)
@@ -24,6 +25,10 @@
  *   POST   {base}/variables                       write   create a custom variable
  *   PUT    {base}/variables/:key                  write   edit (label, group, sample, fallback)
  *   DELETE {base}/variables/:key                  write   delete
+ *   GET    {base}/tags                            read    the workspace's tags
+ *   POST   {base}/tags                            write   create a tag (needs `tagStore`)
+ *   PUT    {base}/tags/:id                        write   rename it, change its color
+ *   DELETE {base}/tags/:id                        write   delete it, from every template too
  *   GET    {base}/brand                           read    the workspace's brand
  *   PUT    {base}/brand                           write   save it (needs `brandStore`)
  *   POST   {base}/brand/import                    write   read a brand from a website (needs `brandImporter`)
@@ -51,6 +56,7 @@ import { MAX_TEST_RECIPIENTS, sendTestEmail } from './sendTest.js';
 import { createTemplateService } from './templates.js';
 import { createVariableService } from './variables.js';
 import { createBrandService } from './brand.js';
+import { createTagService } from './tags.js';
 import { BrandImportError } from './brandImport.js';
 import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
 
@@ -75,6 +81,7 @@ import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
  *   variableStore?: import('./variables.js').VariableRepository|null,
  *   brandStore?: import('./brand.js').BrandRepository|null,
+ *   tagStore?: import('./tags.js').TagRepository|null,
  *   brandImporter?: {import: (url: string, options?: {signal?: AbortSignal}) => Promise<import('./brandImport.js').BrandImport>}|null,
  *   locale?: string,
  *   messages?: Record<string, string>,
@@ -165,6 +172,7 @@ export function createEmailBuilderHandler(options) {
   const assets = createAssetService({ repository: assetRepository, publicPath: assetsPath, t });
   const customVariables = createVariableService({ repository: options.variableStore || null, system: variables, t });
   const brand = createBrandService({ repository: options.brandStore || null, t });
+  const tags = createTagService({ repository: options.tagStore || null, t });
   const testLimiter = createLimiter(rateLimits.testPerHour ?? 20);
   const uploadLimiter = createLimiter(rateLimits.uploadsPerHour ?? 100);
   const proofreadLimiter = createLimiter(rateLimits.proofreadPerHour ?? 60);
@@ -247,20 +255,25 @@ export function createEmailBuilderHandler(options) {
     if (section === 'templates') {
       if (!id && method === 'GET') {
         await userFor(request, 'read');
-        return json({ data: await templates.list() });
+        return json({ data: await tags.decorate(await templates.list()) });
       }
       if (!id && method === 'POST') {
         const user = await userFor(request, 'write');
         const body = await readJson(request);
-        const result =
-          body?.duplicateOf !== undefined && body?.duplicateOf !== null
-            ? await templates.duplicate(body.duplicateOf, user)
-            : await templates.create(body, user);
-        return json({ data: result }, 201);
+        if (body?.duplicateOf === undefined || body?.duplicateOf === null) {
+          return json({ data: await templates.create(body, user) }, 201);
+        }
+        const result = await templates.duplicate(body.duplicateOf, user);
+        if (!tags.enabled) return json({ data: result }, 201);
+        // A copy keeps its tags.
+        const [source] = await tags.decorate([{ id: body.duplicateOf }]);
+        const copyTags = source.tags?.length ? await tags.setTemplateTags(result.template.id, source.tags) : [];
+        return json({ data: { ...result, template: { ...result.template, tags: copyTags } } }, 201);
       }
       if (id && !sub && method === 'GET') {
         await userFor(request, 'read');
-        return json({ data: await templates.get(id) });
+        const [template] = await tags.decorate([await templates.get(id)]);
+        return json({ data: template });
       }
       if (id && !sub && method === 'PUT') {
         const user = await userFor(request, 'write');
@@ -268,7 +281,16 @@ export function createEmailBuilderHandler(options) {
       }
       if (id && !sub && method === 'DELETE') {
         await userFor(request, 'write');
-        return json({ data: await templates.remove(id) });
+        const removed = await templates.remove(id);
+        await tags.forget(id);
+        return json({ data: removed });
+      }
+      if (id && sub === 'tags' && !subId && method === 'PUT') {
+        await userFor(request, 'write');
+        if (!tags.enabled) throw new HttpError(501, t('Tags are not configured'), 'NO_TAG_STORE');
+        const body = await readJson(request);
+        await templates.get(id); // 404 for a template that does not exist
+        return json({ data: await tags.setTemplateTags(id, body?.tags) });
       }
       if (id && sub === 'versions' && method === 'GET') {
         await userFor(request, 'read');
@@ -386,6 +408,25 @@ export function createEmailBuilderHandler(options) {
       if (id && !sub && method === 'DELETE') {
         await userFor(request, 'write');
         return json({ data: await customVariables.remove(id) });
+      }
+    }
+
+    if (section === 'tags' && !sub) {
+      if (!id && method === 'GET') {
+        await userFor(request, 'read');
+        return json({ data: await tags.list() });
+      }
+      if (!id && method === 'POST') {
+        const user = await userFor(request, 'write');
+        return json({ data: await tags.create(await readJson(request), user) }, 201);
+      }
+      if (id && method === 'PUT') {
+        const user = await userFor(request, 'write');
+        return json({ data: await tags.update(id, await readJson(request), user) });
+      }
+      if (id && method === 'DELETE') {
+        await userFor(request, 'write');
+        return json({ data: await tags.remove(id) });
       }
     }
 

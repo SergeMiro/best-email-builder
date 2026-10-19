@@ -36,15 +36,17 @@ async function graph(entry) {
 test('block A alone: the library entry reaches neither the editor nor its engine', async () => {
   const { inputs, packages } = await graph('src/library.js');
   assert.ok(inputs.includes('src/ui/library/TemplateLibrary.jsx'));
-  // (The bases reuse a few pure MJML helpers of the blocks, and the brand
-  // repaints them with the engine's text parser — model.js and mjml.js, no
-  // dependency; the rest of the engine and the canvas stay out.)
-  const PURE_PARSER = new Set(['src/engine/model.js', 'src/engine/mjml.js']);
+  // The bases are the editor's (its Templates button): not even the gallery.
+  // (The memory storage cleans the brand, whose module repaints MJML with the
+  // engine's text parser — model.js and mjml.js, no dependency — and a few
+  // pure helpers of the blocks; the rest of the engine and the canvas stay out.)
+  const PURE = new Set(['src/engine/model.js', 'src/engine/mjml.js', 'src/blocks/shared.js']);
   const editor = inputs.filter(
     (f) =>
       f === 'src/ui/EmailBuilder.jsx' ||
       f === 'src/defaultEditor.js' ||
-      (f.startsWith('src/engine/') && !PURE_PARSER.has(f)) ||
+      ((f.startsWith('src/engine/') || f.startsWith('src/blocks/')) && !PURE.has(f)) ||
+      f === 'src/features/templates/gallery.js' ||
       f.startsWith('src/core/EmailEditor'),
   );
   assert.deepEqual(editor, []);

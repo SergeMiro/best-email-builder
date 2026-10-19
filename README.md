@@ -76,6 +76,8 @@ once and given away.
   server, or in the page with each user's own key.
 
 **Your app**
+- A template library: search, favorites, up to three colored tags per
+  template, and *Edit*, *Duplicate*, *Copy HTML*, *Download*, *Delete*.
 - Merge-tag variables, including ones your users create.
 - Your brand read from your website: logo, colors and font.
 - One Fetch-API handler for Next.js, Hono, Bun, Deno, Cloudflare Workers and Express.

@@ -53,6 +53,7 @@ export {
 export { applyVariables, applyVariablesToText, usedVariables, unknownVariables } from './features/variables/service.js';
 export { createStarterMjml, STARTER_MJML } from './features/templates/starter.js';
 export { TEMPLATE_GALLERY, buildGallery, withPlaceholderImages } from './features/templates/gallery.js';
+export { MAX_TEMPLATE_TAGS, TAG_COLORS, validateTag } from './features/tags/tags.js';
 export { isAssetPath, absoluteAssetUrls, DEFAULT_ASSETS_PATH } from './renderer/links.js';
 
 /* The AI is a module of its own: best-email-builder/ai (createAi). */

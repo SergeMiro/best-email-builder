@@ -21,7 +21,7 @@ component knows the model or the canvas: everything goes through the
 | `core/` | `EmailEditor` contract, versioned document envelope (`document.js`), registries, events |
 | `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
-| `features/` | one folder per feature + the `emailBuilderFeatures` registry (brand, variables, autosave, versions, preview, test send) and the starter template |
+| `features/` | one folder per feature + the `emailBuilderFeatures` registry (brand, variables, autosave, versions, preview, test send), the starter template and the gallery of bases, and the library's tags (`tags/`) |
 | `ai/` | the AI module, an entry of its own (`best-email-builder/ai`, `/ai/server`): proofreading, writing and rewriting, subject ideas, the providers, their buttons and texts — see *AI* |
 | `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template library (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |
@@ -39,9 +39,10 @@ nothing of a library. Only `EmailStudio` (a few lines of state) knows both, so
 an application can install either screen alone. Each has its own entry —
 `src/library.js` (`best-email-builder/library`) and `src/builder.js`
 (`best-email-builder/builder`) — and `tests/unit/entries.test.mjs` bundles
-both and fails if one reaches the other (or if the library reaches the engine
-or the MJML compiler — only the engine's text parser, `model.js` and
-`mjml.js`, which the brand uses to repaint the gallery, is allowed).
+both and fails if one reaches the other (or if the library reaches the engine,
+the gallery of bases or the MJML compiler — only the engine's text parser,
+`model.js` and `mjml.js`, which the brand module uses to repaint MJML, is
+allowed).
 Hence no module under `ui/` imports `src/index.js`: the default editor is
 built in `src/defaultEditor.js`.
 
@@ -181,7 +182,7 @@ color, font) and applies it:
 | `BrandButton.jsx` | the toolbar button and the dialog |
 
 The brand reaches every way an email starts: the starter and the gallery
-(`brandTemplate`, in `EmailBuilder` and `TemplateLibrary`) and inserted blocks
+(`brandTemplate`, in `EmailBuilder`) and inserted blocks
 (`editor.setBrand` paints a block's MJML before the adapter gets it).
 Applying it to the open email is `editor.setMjml` — one commit, so Ctrl+Z is
 the undo.

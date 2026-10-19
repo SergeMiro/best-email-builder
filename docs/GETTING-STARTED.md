@@ -15,8 +15,9 @@ needs Node 20 or later, or any runtime with the Fetch API and `node:crypto`.
 
 ## 2. The component
 
-`EmailStudio` shows the template library first. *Edit*, *New template* or
-*Start from this base* opens the editor, and *Back* returns to the library:
+`EmailStudio` shows the template library first. *Edit* or *New template*
+opens the editor, where the *Templates* button offers ready-made bases, and
+*Back* returns to the library:
 
 ```jsx
 import { EmailStudio, createHttpStorage } from 'best-email-builder';

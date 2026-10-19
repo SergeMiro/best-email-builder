@@ -19,7 +19,6 @@ export const ru = {
   "Suggest subjects": "Предложить темы",
   "Subject ideas": "Идеи для темы",
   "More ideas": "Ещё идеи",
-  "Done": "Готово",
   "yours": "ваша",
   "Reading the email…": "Чтение письма…",
   "No subject could be suggested.": "Не удалось предложить ни одной темы.",

@@ -5,9 +5,9 @@ or both:
 
 | Block | Import | What it is |
 |---|---|---|
-| **A**, the library | `TemplateLibrary` from `best-email-builder/library` | A searchable list of your templates and the ready-made bases. It shows the selected template's details and its preview (desktop or mobile, light or dark). *Edit*, *New template* and *Start from this base* only call `onEdit(template)` or `onCreate(start)`. The library never mounts an editor, and it loads neither the editor's engine nor its MJML compiler. |
+| **A**, the library | `TemplateLibrary` from `best-email-builder/library` | A searchable list of your templates, with up to three colored tags each. It shows the selected template's details and its preview (desktop or mobile, light or dark), and five actions: *Edit*, *Duplicate*, *Copy HTML*, *Download* and *Delete*. *Edit* and *New template* only call `onEdit(template)` or `onCreate()`. The library never mounts an editor, and it loads neither the editor's engine nor its MJML compiler. |
 | **B**, the editor | `EmailBuilder` from `best-email-builder/builder` | The editor. It opens whatever the host gives it and knows nothing about the library. |
-| **A + B** | `EmailStudio` from `best-email-builder` | The two wired together: the library, then the editor, then the library again with the saved template selected. Here the editor has no *Templates* button, because the bases are in the library. |
+| **A + B** | `EmailStudio` from `best-email-builder` | The two wired together: the library, then the editor, then the library again with the saved template selected. A new template starts from a ready-made base with the editor's *Templates* button. |
 
 Each block has its own entry point, so importing one never pulls in the
 other's code. The main entry, `best-email-builder`, exports everything. All
@@ -20,7 +20,7 @@ the parent's width:
 - the library has three columns, then two, then the list and the details on two screens.
 
 <p align="center">
-  <img src="assets/library.png" width="860" alt="The template library: templates and bases on the left, the selected base's details in the middle, its preview on the right">
+  <img src="assets/library.png" width="860" alt="The template library: templates with their tags on the left, the selected template's details and its five actions in the middle, its preview on the right">
 </p>
 
 ## A + B, nothing to wire
@@ -33,11 +33,11 @@ import { EmailStudio, createHttpStorage } from 'best-email-builder';
 
 | Prop | Description |
 |---|---|
-| `storage`, `locale`, `messages`, `onNotify`, `sender` | Passed to both screens. |
-| `templates` | The bases. Only the library shows them; the editor gets `[]`. |
+| `storage`, `locale`, `messages`, `onNotify` | Passed to both screens. |
+| `sender`, `templates` | For the editor: the sender of the bases, and the bases behind its *Templates* button. |
 | `ai` | The AI module. Only the editor uses it (see [AI](AI.md)). |
 | `onClose` | Shows the library's close button. |
-| `libraryProps`, `builderProps` | Extra props for one screen only. `builderProps.templates` gives the editor its own gallery back. |
+| `libraryProps`, `builderProps` | Extra props for one screen only, such as `libraryProps.deleteDisabled`. |
 | `className` | A class on the root element. |
 
 ## Block B with your own library
@@ -79,7 +79,6 @@ function Emails() {
       key={open.key}
       storage={storage}
       locale="fr"
-      templates={[]}
       templateId={open.templateId ?? null}
       initialMjml={open.mjml}
       initialMeta={open.meta}
@@ -102,28 +101,42 @@ import { TemplateLibrary, createHttpStorage } from 'best-email-builder/library';
   storage={createHttpStorage()}
   locale="fr"
   onEdit={(template) => router.push(`/emails/${template.id}`)}
-  onCreate={(start) => openMyEditor(start)}   // start: null (new), or { baseId, mjml, meta: { subject, preheader } }
+  onCreate={() => openMyEditor()}             // a new template: your editor offers the bases
   onClose={closeModal}                        // optional: shows a close button
 />
 ```
 
-The library uses three methods of the storage. It needs `storage.list()`.
-*Delete* appears only when the storage has `remove()`. The preview uses
-`render()` when the storage has it, and otherwise the HTML compiled at the
-last save.
+The library needs `storage.list()`. The rest depends on what the storage has:
+
+- *Delete* appears when it has `remove()`;
+- *Copy HTML* and *Download* appear when `load()` gives the template's `html`,
+  as the server does (the HTML compiled at the last save);
+- the preview uses `render()`, and otherwise that `html`;
+- tags appear when it has `listTags()` and `setTemplateTags()`
+  (`createHttpStorage({ tags: true })`, and a `tagStore` on the server; the
+  memory storage has them).
+
+### Tags
+
+The *Tags* line of the details opens a dialog. There the user ticks up to
+three tags for the template, and creates, renames, recolors or deletes the
+workspace's tags. A tag is a name of 24 characters at most, unique case
+aside, with one of nine colors (`TAG_COLORS`) that read well in both themes.
+Each change is saved at once. A deleted tag leaves every template. The tags
+show in the list after the template's type and before its date, and the
+search finds a template by its tags too.
 
 | Prop | Default | Description |
 |---|---|---|
 | `storage` | `createHttpStorage()` | Where the templates are read. |
 | `locale`, `messages` | `'en'` | The interface language (see [Languages](LANGUAGES.md)). |
 | `onNotify` | built-in notices | `(level, message) => void` to use your own toaster. |
-| `sender` | — | `{ name, address, logoUrl, logoWidth }`, used by the bases. |
-| `templates` | `TEMPLATE_GALLERY` | The bases. `[]` hides them. |
 | `title`, `description` | *Email template library* | The header's title and the line below it. |
 | `selectedId` | — | The entry selected on opening. |
 | `favoritesKey` | `'best-email-builder:favorites'` | The star in the details moves an entry to a *Favorites* section at the top. Favorites are kept in `localStorage` under this key. `null` turns favorites off. |
 | `onEdit` | — | `(template) => void`: the user wants to edit a saved template. |
-| `onCreate` | — | `(start) => void`: a new template, blank (`null`) or from a base. |
+| `onCreate` | — | `() => void`: the user wants a new template. |
+| `deleteDisabled` | — | A sentence: *Delete* stays in place, dimmed, and a click shows this sentence instead of deleting. For a public demo. |
 | `onClose` | — | Shows a close button. |
 | `className` | — | A class on the root element. |
 

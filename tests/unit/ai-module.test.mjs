@@ -165,13 +165,13 @@ test('dictionaries: the AI’s texts are in its own, not in the core’s; the co
   for (const [locale, core] of Object.entries(LOCALES)) {
     if (locale === 'en') continue;
     const ai = AI_MESSAGES[locale];
-    for (const key of ['Suggest subjects', 'Rewrite with AI', 'Write with AI', 'Proofread the email', 'More ideas', 'Done', 'No usable subject came back. Try again.']) {
+    for (const key of ['Suggest subjects', 'Rewrite with AI', 'Write with AI', 'Proofread the email', 'More ideas', 'No usable subject came back. Try again.']) {
       assert.ok(key in ai, `${locale}: ${key} in the AI's dictionary`);
       assert.ok(!(key in core), `${locale}: ${key} not shipped without the AI`);
     }
     assert.deepEqual(Object.keys(ai).filter((key) => key in core), [], `${locale}: no text in both`);
-    // Words the core shows too stay the core's.
-    for (const key of ['Cancel', 'Retry']) assert.ok(key in core, `${locale}: ${key}`);
+    // Words the core shows too stay the core's ("Done": the tags dialog).
+    for (const key of ['Cancel', 'Retry', 'Done']) assert.ok(key in core, `${locale}: ${key}`);
     // The same entries as the French, so a language is never half there.
     assert.deepEqual(Object.keys(core).sort(), Object.keys(LOCALES.fr).sort(), `${locale}: the core's entries`);
     assert.deepEqual(Object.keys(ai).sort(), Object.keys(AI_MESSAGES.fr).sort(), `${locale}: the AI's entries`);

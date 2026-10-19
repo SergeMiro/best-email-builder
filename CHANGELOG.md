@@ -6,6 +6,47 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+The library loses its bases and gains tags. This breaks code that passed
+`sender` or `templates` to `TemplateLibrary`, or read `onCreate`'s argument
+(see *Changed* and *Removed*).
+
+### Added
+- **Tags** on templates, in the library: up to three per template
+  (`MAX_TEMPLATE_TAGS`), shown in the list after the template's type and
+  before its date, and found by the search. The *Tags* line of the details
+  opens a dialog to tick them and to create, rename, recolor or delete the
+  workspace's tags (a name of 24 characters at most, unique case aside, one
+  of the nine `TAG_COLORS`). Each change is saved at once; a deleted tag
+  leaves every template; a copy keeps its template's tags.
+- The storage methods `listTags()`, `saveTag(tag, { create })`,
+  `deleteTag(id)` and `setTemplateTags(id, tagIds)`, in the memory storage
+  and in `createHttpStorage({ tags: true })`. `list()` and `load()` give each
+  template's `tags` (ids).
+- On the server: the `tagStore` option (`createMemoryTagRepository()` is the
+  reference), the routes `GET`/`POST {base}/tags`, `PUT`/`DELETE
+  {base}/tags/:id` and `PUT {base}/templates/:id/tags`, `createTagService`.
+  `validateTag`, `TAG_COLORS`, `TAG_LIMITS`, `MAX_TEMPLATE_TAGS` and
+  `MAX_TAGS` are exported (`validateTag`, `TAG_COLORS` and
+  `MAX_TEMPLATE_TAGS` from the browser entries too).
+- `TemplateLibrary`'s `deleteDisabled`: a sentence shown instead of deleting,
+  *Delete* staying in place, dimmed. For a public demo.
+- `createMemoryStorage({ compile })`: the templates keep their compiled HTML,
+  as on the server, so the library shows *Copy HTML* and *Download*.
+
+### Changed
+- `TemplateLibrary` lists only the templates; a new one starts from a base
+  with the editor's *Templates* button. `onCreate()` takes no argument.
+- `EmailStudio` passes `sender` and `templates` to the editor only, which
+  keeps its *Templates* button.
+- The live demo opens on five templates of the gallery, three of them
+  tagged; its *Delete* is turned off.
+
+### Removed
+- The *Bases* section of the library, its *Start from this base* button, and
+  `TemplateLibrary`'s `sender` and `templates` props.
+- `TEMPLATE_GALLERY` and `buildGallery` from `best-email-builder/library`
+  (they stay in `best-email-builder/builder` and `best-email-builder`).
+
 ## [0.10.0] — 2026-10-19
 
 The AI no longer writes whole emails: it checks and writes their texts.

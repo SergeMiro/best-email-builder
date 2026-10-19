@@ -6,19 +6,19 @@ import TemplateLibrary from './library/TemplateLibrary.jsx';
 /**
  * EMAIL STUDIO — the two screens wired together.
  *
- *   TemplateLibrary ── Edit / New template / Start from this base ──▶ EmailBuilder
- *         ▲                                                              │
- *         └──────────────────────────── Back ───────────────────────────┘
+ *   TemplateLibrary ── Edit / New template ──▶ EmailBuilder
+ *         ▲                                       │
+ *         └──────────────── Back ─────────────────┘
  *
  * Nothing here that a host could not write itself: both screens are exported
  * on their own, and an application that only wants the editor mounts
  * `EmailBuilder` alone (or the library alone, opening its own editor).
  *
- * Shared props go to both screens — except `templates` (the bases), which
- * only the library shows: the editor gets `[]`, so no second gallery replaces
- * the email being edited (`builderProps.templates` brings it back).
- * `libraryProps` / `builderProps` reach only one. Coming back from the editor, the library selects the template that was
- * just edited or created.
+ * Shared props go to both screens; `templates` (the bases) and `sender` only
+ * matter to the editor, where a new template starts from a base with the
+ * *Templates* button. `libraryProps` / `builderProps` reach only one. Coming
+ * back from the editor, the library selects the template that was just
+ * edited or created.
  *
  * `ai` (`createAi()` from `best-email-builder/ai`) goes to the editor only:
  * without it, the editor has no AI button at all.
@@ -51,10 +51,10 @@ export default function EmailStudio({
   className,
 }) {
   const storage = useMemo(() => injectedStorage || createHttpStorage(), [injectedStorage]);
-  /** null = library; else the editor session: {key, templateId, start}. */
+  /** null = library; else the editor session: {key, templateId}. */
   const [session, setSession] = useState(null);
   const [lastId, setLastId] = useState(null);
-  const shared = { storage, locale, messages, onNotify, sender, templates, className };
+  const shared = { storage, locale, messages, onNotify, className };
 
   if (session) {
     return (
@@ -62,13 +62,10 @@ export default function EmailStudio({
         key={session.key}
         {...shared}
         ai={ai}
-        // The bases are picked in the bank: no second gallery in the editor,
-        // where picking one would replace the email being edited.
-        templates={[]}
+        sender={sender}
+        templates={templates}
         {...builderProps}
         templateId={session.templateId}
-        initialMjml={session.start?.mjml}
-        initialMeta={session.start?.meta}
         onSaved={(template) => {
           if (template?.id != null) setLastId(template.id);
           builderProps?.onSaved?.(template);
@@ -89,9 +86,9 @@ export default function EmailStudio({
       onClose={onClose}
       onEdit={(template) => {
         setLastId(template.id);
-        setSession({ key: Date.now(), templateId: template.id, start: null });
+        setSession({ key: Date.now(), templateId: template.id });
       }}
-      onCreate={(start) => setSession({ key: Date.now(), templateId: null, start })}
+      onCreate={() => setSession({ key: Date.now(), templateId: null })}
     />
   );
 }

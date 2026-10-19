@@ -21,6 +21,8 @@ export { simulateDarkMode } from '../features/preview/darkMode.js';
 
 export { createVariableService, createMemoryVariableRepository } from './variables.js';
 export { createBrandService, createMemoryBrandRepository } from './brand.js';
+export { createTagService, createMemoryTagRepository } from './tags.js';
+export { MAX_TEMPLATE_TAGS, MAX_TAGS, TAG_COLORS, TAG_LIMITS, validateTag } from '../features/tags/tags.js';
 export { createBrandImporter, isPublicAddress, BrandImportError, BRAND_IMPORT_LIMITS } from './brandImport.js';
 export { applyBrand, cleanBrand } from '../features/brand/brand.js';
 export {

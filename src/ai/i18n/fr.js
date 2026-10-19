@@ -19,7 +19,6 @@ export const fr = {
   "Suggest subjects": "Suggérer des objets",
   "Subject ideas": "Idées d'objet",
   "More ideas": "Autres idées",
-  "Done": "Terminé",
   "yours": "le vôtre",
   "Reading the email…": "Lecture de l'e-mail…",
   "No subject could be suggested.": "Aucun objet n'a pu être suggéré.",

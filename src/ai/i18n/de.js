@@ -19,7 +19,6 @@ export const de = {
   "Suggest subjects": "Betreff vorschlagen",
   "Subject ideas": "Betreffideen",
   "More ideas": "Weitere Ideen",
-  "Done": "Fertig",
   "yours": "Ihrer",
   "Reading the email…": "E-Mail wird gelesen…",
   "No subject could be suggested.": "Es konnte kein Betreff vorgeschlagen werden.",

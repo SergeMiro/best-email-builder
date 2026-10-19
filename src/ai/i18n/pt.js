@@ -19,7 +19,6 @@ export const pt = {
   "Suggest subjects": "Sugerir assuntos",
   "Subject ideas": "Ideias de assunto",
   "More ideas": "Mais ideias",
-  "Done": "Concluído",
   "yours": "o seu",
   "Reading the email…": "Lendo o e-mail…",
   "No subject could be suggested.": "Não foi possível sugerir nenhum assunto.",

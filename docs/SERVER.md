@@ -17,11 +17,12 @@ your database.
 
 | Method | Path | Permission | What it does |
 |---|---|---|---|
-| `GET` | `{base}/templates` | read | List the templates. |
+| `GET` | `{base}/templates` | read | List the templates, each with its `tags` (ids) when there is a `tagStore`. |
 | `POST` | `{base}/templates` | write | Create a template, or copy one with `{ duplicateOf }`. |
 | `GET` | `{base}/templates/:id` | read | Read a template. |
 | `PUT` | `{base}/templates/:id` | write | Save a template. |
 | `DELETE` | `{base}/templates/:id` | write | Delete a template. |
+| `PUT` | `{base}/templates/:id/tags` | write | Set a template's tags, `{ tags: [ids] }`, three at most (needs `tagStore`). |
 | `GET` | `{base}/templates/:id/versions` | read | List a template's versions. |
 | `GET` | `{base}/templates/:id/versions/:vid` | read | Read one version, with its project. |
 | `POST` | `{base}/render` | read | Preview: render on the server and run the quality checks. |
@@ -37,6 +38,10 @@ your database.
 | `GET` | `{base}/brand` | read | Read the workspace's brand. |
 | `PUT` | `{base}/brand` | write | Save the brand (needs `brandStore`). |
 | `POST` | `{base}/brand/import` | write | Read a brand from a website (needs `brandImporter`). |
+| `GET` | `{base}/tags` | read | List the workspace's tags, by name. |
+| `POST` | `{base}/tags` | write | Create a tag, `{ label, color }` (needs `tagStore`). |
+| `PUT` | `{base}/tags/:id` | write | Rename a tag or change its color. |
+| `DELETE` | `{base}/tags/:id` | write | Delete a tag, from every template too. |
 | `GET` | `{assetsPath}:key` | **public** | Serve an uploaded image. |
 
 Images are public on purpose, because mail clients download them without a
@@ -66,6 +71,7 @@ const handler = createEmailBuilderHandler({
 | `variableStore` | `null` | The repository of user-created variables. Without it, users cannot create variables. |
 | `brandStore` | `null` | `{ get(), save(brand) }`. Turns on the *Brand* button. |
 | `brandImporter` | `null` | `createBrandImporter()`. Turns on *Get my brand*. |
+| `tagStore` | `null` | The repository of tags. Turns on tags in the library. |
 | `locale` | `'en'` | The language of error messages (see [Languages](LANGUAGES.md)). |
 | `messages` | — | Extra or overriding translations for those messages. |
 | `lang` | `locale.slice(0, 2)` | The `<html lang>` of compiled emails. The AI also writes in this language when the browser does not send one. |
@@ -116,10 +122,14 @@ interface TemplateStorage {
   loadBrand?(): Promise<Brand>;                          // enable the Brand button
   saveBrand?(brand): Promise<Brand>;
   importBrand?(url, { signal }): Promise<{ brand; notes }>; // enables "Get my brand"
+  listTags?(): Promise<Tag[]>;                           // enable tags in the library
+  saveTag?(tag, { create }): Promise<Tag>;
+  deleteTag?(id): Promise<void>;
+  setTemplateTags?(id, tagIds): Promise<string[]>;
 }
 ```
 
-`createHttpStorage({ baseUrl, headers, fetch, brand })` takes these options:
+`createHttpStorage({ baseUrl, headers, fetch, brand, tags })` takes these options:
 
 | Option | Default | Description |
 |---|---|---|
@@ -127,16 +137,19 @@ interface TemplateStorage {
 | `headers` | `{}` | Added to every request. Can be a function, to send a fresh token each time. |
 | `fetch` | the global `fetch` | Your own `fetch`. |
 | `brand` | `false` | `true` turns on the *Brand* button. Use `{ import: false }` when the server has no `brandImporter`. |
+| `tags` | `false` | `true` turns on tags in the library. The server needs a `tagStore`. |
 
 `createMemoryStorage()` implements the contract in memory. It is meant for
-demos, tests and playgrounds.
+demos, tests and playgrounds. Give it `compile` (`({ mjml, subject, preheader })
+=> ({ html })`) and its templates keep their HTML, as the server does: the
+library then shows *Copy HTML* and *Download*.
 
 ## Repositories
 
 The handler leaves persistence to small repositories. The memory versions are
 the reference: `createMemoryTemplateRepository`, `createMemoryAssetRepository`,
-`createMemoryVariableRepository` and `createMemoryBrandRepository`. Copy their
-shape for SQL, MongoDB, S3 and so on.
+`createMemoryVariableRepository`, `createMemoryBrandRepository` and
+`createMemoryTagRepository`. Copy their shape for SQL, MongoDB, S3 and so on.
 
 - `templates.update(id, fields, { expectedRevision })` must be **atomic**
   (`UPDATE … WHERE id = ? AND revision = ?`). On a mismatch it must return
@@ -146,9 +159,14 @@ shape for SQL, MongoDB, S3 and so on.
   and keeps the latest `keep` (50 by default).
 - `assets.findBySha256`, `insert` and `get` store images. Images are
   deduplicated by the hash of their content.
+- The tags are two tables: the tags (`list`, `insert`, `update`, `remove`)
+  and the links between a template and its tags (`listLinks`, `setLinks`).
+  `remove` deletes a tag's links too; the handler clears a deleted
+  template's links.
 
 The full contracts are JSDoc types in
 [`src/server/templates.js`](../src/server/templates.js),
 [`src/server/assets.js`](../src/server/assets.js),
-[`src/server/variables.js`](../src/server/variables.js) and
-[`src/server/brand.js`](../src/server/brand.js).
+[`src/server/variables.js`](../src/server/variables.js),
+[`src/server/brand.js`](../src/server/brand.js) and
+[`src/server/tags.js`](../src/server/tags.js).

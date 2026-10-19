@@ -19,7 +19,6 @@ export const zh = {
   "Suggest subjects": "推荐主题",
   "Subject ideas": "主题建议",
   "More ideas": "更多建议",
-  "Done": "完成",
   "yours": "您的",
   "Reading the email…": "正在读取邮件……",
   "No subject could be suggested.": "未能推荐任何主题。",
