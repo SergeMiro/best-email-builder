@@ -326,13 +326,12 @@ test('createAi({ provider }): what goes together, and what does not', () => {
   assert.throws(() => createAi({ askKey: true }), /go with a `provider`/);
   assert.throws(() => createAi({ provider: 'openrouter', askKey: 'yes' }), /`askKey` must be true or false/);
   assert.throws(() => createAi({ provider: 'openrouter', apiKey: '' }), /non-empty string/);
-  assert.throws(() => createAi({ compile: async () => ({}) }), /`compile`/);
   assert.throws(() => createAi({ provider: 'nope', apiKey: 'k' }), /Unknown AI provider/);
 
   const shared = createAi({ provider: 'openrouter', apiKey: 'k', fetch });
   assert.equal(shared.key, null, 'one key for all: nothing to ask');
   assert.equal(shared.components.Connect, null);
-  assert.equal(typeof shared.generate, 'function');
+  assert.equal(typeof shared.proofread, 'function');
   const local = createAi({ provider: { baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' }, fetch });
   assert.equal(local.key, null);
   // askKey off is the default: a provider's key must then be given.

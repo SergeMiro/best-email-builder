@@ -2,11 +2,11 @@
 /**
  * BRAND — the look of a company's emails: its name, its logo, a main color,
  * a color for headings and a font. Set once (by hand, or read from the
- * company's website), it is used by every new email, template, block and
- * generated email, and can be applied to the email being edited.
+ * company's website), it is used by every new email, template and block,
+ * and can be applied to the email being edited.
  *
  * `applyBrand` repaints an email by ROLE, not by exact color, so it works on
- * any email — a template, a generated one, one the user built:
+ * any email — a template, an imported one, one the user built:
  *
  *   buttons             filled with the main color, text in the color that
  *                       reads on it (white or ink);

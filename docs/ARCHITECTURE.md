@@ -22,7 +22,7 @@ component knows the model or the canvas: everything goes through the
 | `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
 | `features/` | one folder per feature + the `emailBuilderFeatures` registry (brand, variables, autosave, versions, preview, test send) and the starter template |
-| `ai/` | the AI module, an entry of its own (`best-email-builder/ai`, `/ai/server`): generation, rewriting, subject ideas, the providers, their buttons and texts — see *AI* |
+| `ai/` | the AI module, an entry of its own (`best-email-builder/ai`, `/ai/server`): proofreading, writing and rewriting, subject ideas, the providers, their buttons and texts — see *AI* |
 | `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template library (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |
 | `renderer/` | MJML preparation, service links, uploaded image URLs (shared browser/server) |
@@ -126,30 +126,31 @@ the AI on screen.
 | `server.js`, `index.js` | the two entries |
 | `i18n/` | the module's texts, merged under the host's when it is given |
 
-Generation writes an email from a purpose, in four separate steps:
+What the AI does for the texts of an email, each part with its own checks:
 
 | File | Role |
 |---|---|
-| `purposes.js` | the 68 purposes and their 8 categories; each has a `kind` (marketing, transactional, security) that decides the footer, and a `brief` for the model |
-| `prompt.js` | the system prompt (the MJML the builder edits, email rules) and the JSON schema of a draft |
-| `draft.js` | reading the answer, cleaning the MJML for the builder (`normalizeGeneratedMjml`), the checks (`reviewDraft`: blocking = `validateMjml`, advice = footer, subject, MJML warnings) |
-| `generator.js` | the loop: ask, clean, check, at most one repair turn |
-| `claude.js` | the model for Claude (Anthropic SDK client passed in, never imported); `task: 'rewrite'` and `'subjects'` ask for less effort |
-| `GenerateButton.jsx` | the toolbar button and the dialog |
-| `rewrite.js` | rewriting one text: the actions and languages, its prompt, `reviewRewrite` (same links, same variables, valid markup) and the loop with one repair turn |
-| `RewriteText.jsx` | the *Rewrite with AI* section of the properties of a text or a button |
+| `generator.js` | `createEmailGenerator({ model })`: the three parts below around one model |
+| `errors.js` | `EmailGenerationError` and its codes, the messages the interface shows |
+| `claude.js` | the model for Claude (Anthropic SDK client passed in, never imported), `effort: 'low'` by default |
+| `proofread.js` | the mistakes of the whole email: the texts sent, the prompt, `reviewFix` (words changed, a third at most; same markup, links and variables) and the loop with one repair turn |
+| `diff.js` | `diffWords`, `changedWords`: the word-by-word difference of a correction |
+| `ProofreadButton.jsx` | the toolbar button and the dialog: the corrections, applied one by one or all at once (`editor.setContents`, one step of the history) |
+| `rewrite.js` | writing on a topic or rewriting one text: the actions and languages, its prompt, `reviewRewrite` (same links, same variables, valid markup) and the loop with one repair turn |
+| `RewriteText.jsx` | the *Write with AI* and *Rewrite with AI* sections of the properties of a text or a button |
 | `subjects.js` | subject ideas: the words of the email (`emailWords`), the prompt, `reviewSubjects` (distinct, known merge tags) and the loop with one repair turn |
 | `SubjectIdeas.jsx` | *Suggest subjects* under the subject field: the list to pick from, the user's subject first |
 | `chip.js` | the badge button they use |
 
 The model is a plain function, so the browser (the demo, `createAi({ provider })`),
-the server (the handler's `POST /generate`, `POST /rewrite` and
+the server (the handler's `POST /proofread`, `POST /rewrite` and
 `POST /subjects`) and the tests (a fake model) run the same generator. The
-interface only calls `ai.generate`, `ai.rewrite` and `ai.suggestSubjects`;
+interface only calls `ai.proofread`, `ai.rewrite` and `ai.suggestSubjects`;
 each control is shown when the module has the function.
 
-A rewrite replaces the text through `editor.setContent` — one step of the
-history, so Ctrl+Z is the undo — and the section is keyed by the selected
+A rewrite replaces the text through `editor.setContent`, and the corrections
+of a proofread through `editor.setContents` — one step of the history either
+way, so Ctrl+Z is the undo. The rewrite section is keyed by the selected
 element: selecting another one aborts the request. The text sent is the
 stored one (`describe(id).html` for a text block, `content` for a button
 label), so links and variables are compared on the source, not on what the
@@ -180,11 +181,10 @@ color, font) and applies it:
 | `BrandButton.jsx` | the toolbar button and the dialog |
 
 The brand reaches every way an email starts: the starter and the gallery
-(`brandTemplate`, in `EmailBuilder` and `TemplateLibrary`), inserted blocks
-(`editor.setBrand` paints a block's MJML before the adapter gets it), and
-generated emails (the colors and font are in the prompt, and the answer is
-repainted anyway). Applying it to the open email is `editor.setMjml` — one
-commit, so Ctrl+Z is the undo.
+(`brandTemplate`, in `EmailBuilder` and `TemplateLibrary`) and inserted blocks
+(`editor.setBrand` paints a block's MJML before the adapter gets it).
+Applying it to the open email is `editor.setMjml` — one commit, so Ctrl+Z is
+the undo.
 
 Reading a website is the server's job (`server/brandImport.js`), because the
 browser cannot read another site and the server must not read just anything:

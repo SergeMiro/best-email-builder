@@ -65,7 +65,9 @@ once and given away.
   unsubscribe link.
 
 **AI, optional**
-- *Generate* a complete email from one of 68 purposes.
+- *Proofread* the whole email: spelling, grammar and punctuation in every
+  text, each correction shown word by word, applied in one step.
+- *Write* a text on a topic, to fit the rest of the email.
 - *Rewrite* any text: shorter, longer, fixed, friendlier, more formal, or
   translated into 13 languages.
 - *Suggest* three subject lines drawn from the email.
@@ -140,7 +142,7 @@ the layout, Next.js, Express and image hosting.
 | [Editor and library](docs/EDITOR.md) | The three ways to mount them, every prop, theming. |
 | [Server](docs/SERVER.md) | Routes, handler options, the storage contract, your database. |
 | [Variables and sending](docs/VARIABLES.md) | Merge tags, custom variables, personalizing at send time. |
-| [AI](docs/AI.md) | Generate, Rewrite, Subjects. Where the model runs, and the providers. |
+| [AI](docs/AI.md) | Proofread, Write, Rewrite, Subjects. Where the model runs, and the providers. |
 | [Your own AI agent](docs/AGENT.md) | The `agent@1` protocol. |
 | [Brand](docs/BRAND.md) | Logo, colors and font, read from a website. |
 | [Languages](docs/LANGUAGES.md) | Seven built in, your own strings, adding one. |

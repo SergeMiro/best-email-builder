@@ -58,8 +58,9 @@ import { useLayoutWidth } from './useLayoutWidth.js';
  *
  * ── AI (`ai`, a module of its own) ──────────────────────────────────────────
  * `createAi()` from `best-email-builder/ai` brings its buttons, their logic
- * and their texts: Generate in the toolbar, "Rewrite with AI" in the
- * properties of a text or a button, "Suggest subjects" under the subject —
+ * and their texts: Proofread in the toolbar, "Write with AI" and "Rewrite
+ * with AI" in the properties of a text or a button, "Suggest subjects" under
+ * the subject —
  * and, when each user connects their own key, the dialog that asks for it.
  * Nothing here imports it: without `ai`, there is no AI in the bundle.
  */
@@ -524,7 +525,7 @@ function Builder({
         compact={compact}
         actions={[
           // The AI module's button first, when the host gave the module.
-          ai?.generate && <ai.components.Generate key="ai-generate" context={featureContext} generate={ai.generate} />,
+          ai?.proofread && <ai.components.Proofread key="ai-proofread" context={featureContext} proofread={ai.proofread} />,
           ...toolbarFeatures.map((feature) => {
             const Action = feature.toolbar;
             return <Action key={feature.id} context={featureContext} />;
@@ -675,7 +676,7 @@ export default function EmailBuilder({ locale = 'en', messages, onNotify, ai: ai
 
 /**
  * The AI module as `createAi` made it, or none. Anything else (a storage, a
- * bare `{generate}`) is refused once, out loud: the core cannot build the
+ * bare `{rewrite}`) is refused once, out loud: the core cannot build the
  * module's buttons itself.
  * @param {unknown} value
  */

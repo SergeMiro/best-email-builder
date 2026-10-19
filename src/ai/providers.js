@@ -23,7 +23,7 @@
  * user's own key with `createAi({ askKey: true })`) and on the server.
  */
 
-import { EmailGenerationError } from './draft.js';
+import { EmailGenerationError } from './errors.js';
 
 /**
  * @typedef {'json_schema'|'json_object'|'text'} AnswerFormat

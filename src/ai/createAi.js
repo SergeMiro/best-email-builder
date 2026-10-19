@@ -9,8 +9,9 @@
  * texts is in the application's bundle: the core never imports this folder.
  * With it, the builder gets what the module can do:
  *
- *   generate         the Generate button (an email written from a purpose)
- *   rewrite          "Rewrite with AI" in the properties of a text or a button
+ *   proofread        the Proofread button: the mistakes of every text, to apply
+ *   rewrite          "Write with AI" and "Rewrite with AI" in the properties
+ *                    of a text or a button
  *   suggestSubjects  "Suggest subjects" under the subject
  *
  * Where the model runs:
@@ -27,30 +28,29 @@
  *   createAi({ provider, apiKey })      the same with one key for all (prototypes: the key
  *                                       is then in the page)
  *   createAi({ model })                 the generator runs in the page with this model
- *   createAi({ generate, rewrite, … })  functions of your own: only those given are on
+ *   createAi({ proofread, rewrite, … }) functions of your own: only those given are on
  *
- * Each of `generate`, `rewrite` and `suggestSubjects` can also be `false`,
+ * Each of `proofread`, `rewrite` and `suggestSubjects` can also be `false`,
  * to leave that part out — its button with it.
  */
 
 import { createHttpCaller } from '../storage/client.js';
-import { EmailGenerationError } from './draft.js';
+import { EmailGenerationError } from './errors.js';
 import { createEmailGenerator } from './generator.js';
 import { AI_MESSAGES } from './i18n/index.js';
 import { createKeyStore } from './keys.js';
 import { providerEmailModel, resolveProvider } from './providers.js';
 import ConnectAi from './ConnectAi.jsx';
-import GenerateButton from './GenerateButton.jsx';
+import ProofreadButton from './ProofreadButton.jsx';
 import RewriteText from './RewriteText.jsx';
 import SubjectIdeas from './SubjectIdeas.jsx';
 
 /**
- * @typedef {import('./generator.js').GenerateInput} GenerateInput
- * @typedef {import('./generator.js').GeneratedEmail} GeneratedEmail
  * @typedef {import('./rewrite.js').RewriteInput} RewriteInput
  * @typedef {import('./subjects.js').SubjectsInput} SubjectsInput
+ * @typedef {import('./proofread.js').ProofreadInput} ProofreadInput
  * @typedef {{signal?: AbortSignal}} CallOptions
- * @typedef {(input: GenerateInput, options?: CallOptions) => Promise<GeneratedEmail | Omit<GeneratedEmail, 'warnings'|'attempts'>>} GenerateFn
+ * @typedef {(input: ProofreadInput, options?: CallOptions) => Promise<{fixes: import('./proofread.js').ProofreadFix[]}>} ProofreadFn
  * @typedef {(input: RewriteInput, options?: CallOptions) => Promise<{text: string}>} RewriteFn
  * @typedef {(input: SubjectsInput, options?: CallOptions) => Promise<{subjects: string[]}>} SuggestSubjectsFn
  *
@@ -62,9 +62,8 @@ import SubjectIdeas from './SubjectIdeas.jsx';
  *   provider?: ProviderOption | ProviderOption[],
  *   apiKey?: string,
  *   askKey?: boolean,
- *   compile?: (mjml: string) => Promise<{warnings?: {message: string}[]}>,
  *   maxAttempts?: number,
- *   generate?: GenerateFn | boolean,
+ *   proofread?: ProofreadFn | boolean,
  *   rewrite?: RewriteFn | boolean,
  *   suggestSubjects?: SuggestSubjectsFn | boolean,
  * }} AiOptions
@@ -72,16 +71,15 @@ import SubjectIdeas from './SubjectIdeas.jsx';
  *   `{ id, model, baseUrl, headers }` for another model or an endpoint of your
  *   own — or a list of them, with `askKey`: the user chooses (the first is
  *   offered first). `apiKey`: one key for every user. `askKey`: each user
- *   connects their own (off by default). `compile`: with `provider` or `model`, MJML's own
- *   warnings fed back to the model (see createEmailGenerator).
+ *   connects their own (off by default).
  *
  * @typedef {Readonly<{
- *   generate: GenerateFn | null,
+ *   proofread: ProofreadFn | null,
  *   rewrite: RewriteFn | null,
  *   suggestSubjects: SuggestSubjectsFn | null,
  *   key: import('./keys.js').AiKey | null,
  *   messages: Record<string, Record<string, string>>,
- *   components: Readonly<{Generate: typeof GenerateButton, Rewrite: typeof RewriteText, Subjects: typeof SubjectIdeas, Connect: typeof ConnectAi | null}>,
+ *   components: Readonly<{Proofread: typeof ProofreadButton, Rewrite: typeof RewriteText, Subjects: typeof SubjectIdeas, Connect: typeof ConnectAi | null}>,
  * }>} EmailBuilderAi
  *   What the builder reads. `key`: the user's key, with `askKey` (keys.js).
  *   `messages`: the module's own translations, by locale, merged under the
@@ -90,8 +88,8 @@ import SubjectIdeas from './SubjectIdeas.jsx';
 
 /** @typedef {string | Partial<import('./providers.js').AiProvider>} ProviderOption */
 
-const PARTS = /** @type {const} */ (['generate', 'rewrite', 'suggestSubjects']);
-const ROUTES = { generate: '/generate', rewrite: '/rewrite', suggestSubjects: '/subjects' };
+const PARTS = /** @type {const} */ (['proofread', 'rewrite', 'suggestSubjects']);
+const ROUTES = { proofread: '/proofread', rewrite: '/rewrite', suggestSubjects: '/subjects' };
 
 /**
  * @param {AiOptions} [options]
@@ -99,7 +97,7 @@ const ROUTES = { generate: '/generate', rewrite: '/rewrite', suggestSubjects: '/
  */
 export function createAi(options = {}) {
   if (!options || typeof options !== 'object') throw new TypeError('createAi: options must be an object');
-  const { model, maxAttempts, compile, baseUrl, headers, fetch: fetchImpl, provider: providerOption, apiKey, askKey = false } = options;
+  const { model, maxAttempts, baseUrl, headers, fetch: fetchImpl, provider: providerOption, apiKey, askKey = false } = options;
   const usesProvider = providerOption !== undefined;
   const http = baseUrl !== undefined || headers !== undefined || (fetchImpl !== undefined && !usesProvider);
   if (model !== undefined && typeof model !== 'function') throw new TypeError('createAi: `model` must be a function');
@@ -111,8 +109,10 @@ export function createAi(options = {}) {
     throw new TypeError('createAi: `apiKey` and `askKey` go with a `provider` (e.g. provider: "openrouter")');
   }
   if (apiKey !== undefined && (typeof apiKey !== 'string' || !apiKey)) throw new TypeError('createAi: `apiKey` must be a non-empty string');
-  if (compile !== undefined && (typeof compile !== 'function' || (!model && !usesProvider))) {
-    throw new TypeError('createAi: `compile` must be a function, and goes with `provider` or `model` (the AI in the page)');
+  // Gone in 0.10: no email is written from scratch any more. `false` (off) asks for nothing.
+  const { generate } = /** @type {any} */ (options);
+  if (generate !== undefined && generate !== false) {
+    throw new TypeError('createAi: `generate` was removed in 0.10 — the AI checks and writes the texts of an email (`proofread`, `rewrite`), not whole emails');
   }
   if (typeof askKey !== 'boolean') throw new TypeError('createAi: `askKey` must be true or false');
   if (apiKey && askKey) throw new TypeError('createAi: `apiKey` (one key for all) or `askKey` (each user\'s own), not both');
@@ -170,10 +170,10 @@ export function createAi(options = {}) {
       }
       return modelOf(key ? key.provider.id : provider.id)(request);
     };
-    const generator = createEmailGenerator({ model, maxAttempts, compile });
+    const generator = createEmailGenerator({ model, maxAttempts });
     for (const part of PARTS) transport[part] = key ? askedAgain(generator[part], key) : generator[part];
   } else if (model) {
-    transport = createEmailGenerator({ model, maxAttempts, compile });
+    transport = createEmailGenerator({ model, maxAttempts });
   } else if (!ownOnly) {
     const { call } = createHttpCaller({ baseUrl, headers, fetch: fetchImpl });
     for (const part of PARTS) {
@@ -191,12 +191,12 @@ export function createAi(options = {}) {
   };
 
   return Object.freeze({
-    generate: /** @type {GenerateFn|null} */ (resolve('generate')),
+    proofread: /** @type {ProofreadFn|null} */ (resolve('proofread')),
     rewrite: /** @type {RewriteFn|null} */ (resolve('rewrite')),
     suggestSubjects: /** @type {SuggestSubjectsFn|null} */ (resolve('suggestSubjects')),
     key,
     messages: AI_MESSAGES,
-    components: Object.freeze({ Generate: GenerateButton, Rewrite: RewriteText, Subjects: SubjectIdeas, Connect: key ? ConnectAi : null }),
+    components: Object.freeze({ Proofread: ProofreadButton, Rewrite: RewriteText, Subjects: SubjectIdeas, Connect: key ? ConnectAi : null }),
   });
 }
 

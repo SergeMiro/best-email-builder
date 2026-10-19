@@ -16,13 +16,17 @@ import { createEmailGenerator } from '../src/ai/generator.js';
  *   window.__reopenBuilder(id|null, {mjml, meta}?)  close then reopen the screen
  *   window.__setAutosave({ idleMs, maxWaitMs, draftDelayMs })  short delays
  *   window.__sentTests     test sends received by the fake transport
- *   window.__generated     what "Generate" asked the fake model (purpose, details,
- *                          language, sender, variables); `__generateDelay` (ms)
- *                          and `__generateFail` (an error message) drive it
- *   window.__rewritten     what "Rewrite with AI" asked (action, text, format…);
- *                          the fake model answers `__rewriteAnswers` in turn,
- *                          else the text with "Rewritten:" in front;
- *                          `__rewriteDelay`, `__rewriteFail` as above
+ *   window.__proofread     what "Proofread" asked (texts, language); the fake
+ *                          model answers `__proofreadAnswers` in turn (`{fixes}`
+ *                          each), else corrects the typos of TYPOS wherever
+ *                          they are; `__proofreadDelay` (ms) and
+ *                          `__proofreadFail` (an error message) drive it
+ *   window.__rewritten     what "Write with AI" and "Rewrite with AI" asked
+ *                          (action, text, format…); the fake model answers
+ *                          `__rewriteAnswers` in turn, else the text with
+ *                          "Rewritten:" in front (a text written: "Written
+ *                          about" the topic); `__rewriteDelay`, `__rewriteFail`
+ *                          as above
  *   window.__subjectAsks   what "Suggest subjects" asked (subject, text, avoid…);
  *                          the fake model answers `__subjectAnswers` in turn
  *                          (an array of subjects each), else three fixed ones;
@@ -64,23 +68,13 @@ function fakeSendTest({ emails, subject }) {
   });
 }
 
-/**
- * "Generate" without a model: the real generator (cleaning, checks) around a
- * fake model that answers a fixed email in the shape models get wrong —
- * shorthand padding, a stock photo, an unknown variable.
- */
-const FAKE_EMAIL = {
-  name: 'Password reset',
-  subject: 'Reset your password',
-  preheader: 'A link to choose a new password, valid for one hour.',
-  mjml:
-    '<mjml><mj-body><mj-section background-color="#ffffff" padding="32px 0px"><mj-column>' +
-    '<mj-image src="https://picsum.photos/600/200" alt="A padlock"></mj-image>' +
-    '<mj-text font-family="Arial, Helvetica, sans-serif" font-size="28px" line-height="36px" color="#212e5a" font-weight="bold">Reset your password</mj-text>' +
-    '<mj-text font-family="Arial, Helvetica, sans-serif" font-size="15px" line-height="24px" color="#2b3038">Hello {{contact.firstname|there}}, use code {{reset.code}} or the button below.</mj-text>' +
-    '<mj-button href="https://example.com/reset-password" background-color="#2977bc" color="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="15px" font-weight="bold" border-radius="6px" inner-padding="12px 28px">Reset my password</mj-button>' +
-    '</mj-column></mj-section></mj-body></mjml>',
-};
+/** The mistakes the fake proofreader corrects, wherever they are. */
+const TYPOS = [
+  [/\bsumer\b/g, 'summer'],
+  [/\bteh\b/g, 'the'],
+  [/\brecieve\b/g, 'receive'],
+  [/\bprodcuts\b/g, 'products'],
+];
 
 const wait = (ms, signal) =>
   new Promise((resolve, reject) => {
@@ -91,13 +85,27 @@ const wait = (ms, signal) =>
     });
   });
 
+/** The real generator (reading, checks, repair turn) around a fake model. */
 const fakeGenerator = createEmailGenerator({
   model: async ({ signal, task, messages }) => {
+    const asking = messages[0].content;
+    if (task === 'rewrite' && asking.includes('<text id=')) {
+      await wait(window.__proofreadDelay ?? 300, signal);
+      if (window.__proofreadFail) throw new Error(window.__proofreadFail);
+      if (window.__proofreadAnswers?.length) return JSON.stringify(window.__proofreadAnswers.shift());
+      const fixes = [...asking.matchAll(/<text id="([^"]+)"[^>]*>\n([\s\S]*?)\n<\/text>/g)]
+        .map(([, id, text]) => ({ id, text, fixed: TYPOS.reduce((words, [typo, word]) => words.replace(typo, word), text) }))
+        .filter(({ text, fixed }) => fixed !== text)
+        .map(({ id, fixed }) => ({ id, text: fixed }));
+      return JSON.stringify({ fixes });
+    }
     if (task === 'rewrite') {
       await wait(window.__rewriteDelay ?? 300, signal);
       if (window.__rewriteFail) throw new Error(window.__rewriteFail);
-      const asked = /<text>\n([\s\S]*)\n<\/text>/.exec(messages[0].content)?.[1] ?? '';
-      return JSON.stringify({ text: window.__rewriteAnswers?.length ? window.__rewriteAnswers.shift() : `Rewritten: ${asked}` });
+      if (window.__rewriteAnswers?.length) return JSON.stringify({ text: window.__rewriteAnswers.shift() });
+      const topic = /^Change: Write a new text about: (.*?) It is /.exec(asking)?.[1];
+      const asked = /<text>\n([\s\S]*)\n<\/text>/.exec(asking)?.[1] ?? '';
+      return JSON.stringify({ text: topic ? `<p>Written about ${topic}.</p>` : `Rewritten: ${asked}` });
     }
     if (task === 'subjects') {
       // `__subjectLate`: a model that settles after it was cancelled.
@@ -108,15 +116,13 @@ const fakeGenerator = createEmailGenerator({
         : ['Your new password is one click away', 'Locked out? Not for long', '{{contact.firstname}}, reset your password'];
       return JSON.stringify({ subjects });
     }
-    await wait(window.__generateDelay ?? 300, signal);
-    if (window.__generateFail) throw new Error(window.__generateFail);
-    return JSON.stringify(FAKE_EMAIL);
+    throw new Error(`No fake answer for the task ${task}`);
   },
 });
 
-function fakeGenerate(input, options) {
-  window.__generated = [...(window.__generated || []), input];
-  return fakeGenerator.generate(input, options);
+function fakeProofread(input, options) {
+  window.__proofread = [...(window.__proofread || []), input];
+  return fakeGenerator.proofread(input, options);
 }
 
 function fakeSuggestSubjects(input, options) {
@@ -147,7 +153,7 @@ async function fakeImportBrand(url, { signal } = {}) {
 function benchAi(mode) {
   if (mode === 'off') return null;
   if (mode === 'rewrite') return createAi({ rewrite: fakeRewrite });
-  return createAi({ generate: fakeGenerate, rewrite: fakeRewrite, suggestSubjects: fakeSuggestSubjects });
+  return createAi({ proofread: fakeProofread, rewrite: fakeRewrite, suggestSubjects: fakeSuggestSubjects });
 }
 
 function Session({ storage, templateId, initial, onClose, locale, ai }) {

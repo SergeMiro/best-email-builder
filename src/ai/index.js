@@ -12,10 +12,10 @@
 
 export { createAi } from './createAi.js';
 export { AI_MESSAGES } from './i18n/index.js';
-export { EMAIL_PURPOSES, PURPOSE_CATEGORIES } from './purposes.js';
 export { REWRITE_ACTIONS, REWRITE_LANGUAGES } from './rewrite.js';
 export { emailWords } from './subjects.js';
-export { EmailGenerationError, GENERATION_ERRORS } from './draft.js';
+export { diffWords } from './diff.js';
+export { EmailGenerationError, GENERATION_ERRORS } from './errors.js';
 // The generator itself, to run the AI in the page (`createAi({ model })`
 // does it for you) — the model's key is then in the page.
 export { createEmailGenerator } from './generator.js';

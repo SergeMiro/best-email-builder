@@ -668,6 +668,18 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
       commit(setContent(requireRoot(), id, value), { merge: `content:${id}` });
     },
 
+    setContents(entries) {
+      const editing = view?.editingId();
+      if (editing && entries.some((entry) => entry.id === editing)) view?.finishEditing();
+      let next = requireRoot();
+      for (const { id, content } of entries) {
+        const node = findNode(next, id);
+        if (!node || node.content === null) continue;
+        next = setContent(next, id, LABEL_TAGS.has(node.tag) ? escapeText(content) : String(content || ''));
+      }
+      commit(next);
+    },
+
     insertText(text) {
       if (!view || !root) return false;
       if (view.editingId()) return view.insertText(text);

@@ -10,7 +10,7 @@
  *   - the server never reaches anything but the public web: private and
  *     cloud-metadata addresses, other ports, credentials and redirects there
  *     are refused before any connection;
- *   - routes, storages and the AI generator carry the brand.
+ *   - routes and storages carry the brand.
  */
 
 import { test } from 'node:test';
@@ -46,7 +46,6 @@ import {
   validateMjml,
   compileMjml,
 } from '../../src/server/index.js';
-import { createEmailGenerator, buildUserPrompt } from '../../src/ai/server.js';
 import { siteUrl } from '../../src/server/brandImport.js';
 import { createHttpStorage, createMemoryStorage } from '../../src/storage/client.js';
 import { createStarterMjml } from '../../src/features/templates/starter.js';
@@ -699,33 +698,4 @@ test('brandOf: read once per storage, {} when it fails or keeps none', async () 
   assert.equal(reads, 1);
   assert.deepEqual(await brandOf({ loadBrand: async () => { throw new Error('down'); } }).loaded, {});
   assert.deepEqual(await brandOf({}).loaded, {});
-});
-
-test('AI generator: the brand is in the prompt, and the email comes out in its colors whatever the model chose', async () => {
-  const prompt = buildUserPrompt({ purpose: null, details: 'Spring sale', brand: { primary: PINK, heading: '#1a1a2e', font: BRAND.font } });
-  assert.match(prompt, /Brand \(use exactly these\):/);
-  assert.match(prompt, new RegExp(`main color \\(buttons, banners, links\\): ${PINK}`));
-  assert.match(prompt, /font-family="Georgia, Times, serif"/);
-  assert.doesNotMatch(buildUserPrompt({ details: 'x' }), /Brand/);
-
-  const mjml =
-    '<mjml><mj-body><mj-section background-color="#ffffff"><mj-column>' +
-    '<mj-text font-family="Arial, Helvetica, sans-serif" font-size="28px" font-weight="bold" color="#000000">Spring sale</mj-text>' +
-    '<mj-button href="https://example.com" background-color="#2977bc" color="#ffffff" font-family="Arial, Helvetica, sans-serif">Shop</mj-button>' +
-    '</mj-column></mj-section><mj-section><mj-column><mj-text font-family="Arial, Helvetica, sans-serif" font-size="12px" color="#6d7484">' +
-    'Shop · [Company address]<br /><a href="{{ unsubscribe }}" style="color:#6d7484;">Unsubscribe</a></mj-text></mj-column></mj-section></mj-body></mjml>';
-  const requests = [];
-  const generator = createEmailGenerator({
-    model: async (request) => {
-      requests.push(request.messages[0].content);
-      return JSON.stringify({ name: 'Sale', subject: 'Spring sale', preheader: 'Ten days of offers on the whole shop.', mjml });
-    },
-  });
-  const email = await generator.generate({ details: 'Spring sale', brand: { ...BRAND, primary: 'not a color', logoUrl: LOGO } });
-  assert.doesNotMatch(requests[0], /not a color|logo\.png/);
-  const blue = await generator.generate({ details: 'Spring sale', brand: BRAND });
-  const button = nodesOf(blue.mjml).find((n) => n.tag === 'mj-button');
-  assert.equal(button.attributes['background-color'], PINK);
-  assert.equal(nodesOf(blue.mjml).find((n) => n.tag === 'mj-text').attributes.color, '#1a1a2e');
-  assert.match(email.mjml, /#2977bc/, 'without a main color the model\'s own stays');
 });

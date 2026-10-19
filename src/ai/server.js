@@ -9,7 +9,7 @@
  *
  *   createEmailBuilderHandler({
  *     …,
- *     generator: createEmailGenerator({ model: claudeEmailModel({ client: new Anthropic() }), compile: compileMjml }),
+ *     generator: createEmailGenerator({ model: claudeEmailModel({ client: new Anthropic() }) }),
  *   });
  *
  * Or any provider of `AI_PROVIDERS`, by its key — free ones included:
@@ -19,19 +19,19 @@
  * Or an AI agent the application already has, with its tools and its rights
  * (agent.js — the protocol, the agent's side, and a check):
  *
- *   createEmailGenerator({ model: agentEmailModel({ url, headers: ({ user }) => ({ … }) }), compile: compileMjml })
+ *   createEmailGenerator({ model: agentEmailModel({ url, headers: ({ user }) => ({ … }) }) })
  *
  * No React here, and nothing of it in `best-email-builder/server`: a server
  * without AI does not load it.
  */
 
-export { createEmailGenerator, cleanGenerateInput, MAX_DETAILS_LENGTH } from './generator.js';
+export { createEmailGenerator } from './generator.js';
 export { claudeEmailModel, DEFAULT_CLAUDE_MODEL } from './claude.js';
 export { AI_PROVIDERS, failureCode, listProviderModels, providerEmailModel, resolveProvider } from './providers.js';
-export { EmailGenerationError, GENERATION_ERRORS, normalizeGeneratedMjml, parseDraft, reviewDraft } from './draft.js';
-export { EMAIL_PURPOSES, PURPOSE_CATEGORIES, purposeById, purposesByCategory } from './purposes.js';
-export { SYSTEM_PROMPT, EMAIL_DRAFT_SCHEMA, buildUserPrompt } from './prompt.js';
+export { EmailGenerationError, GENERATION_ERRORS } from './errors.js';
 export { REWRITE_ACTIONS, REWRITE_LANGUAGES, REWRITE_SYSTEM_PROMPT, createRewriter, reviewRewrite } from './rewrite.js';
+export { PROOFREAD_SYSTEM_PROMPT, createProofreader, reviewFix } from './proofread.js';
+export { diffWords } from './diff.js';
 export { SUBJECTS_SYSTEM_PROMPT, createSubjectSuggester, emailWords, reviewSubjects } from './subjects.js';
 export { AI_MESSAGES } from './i18n/index.js';
 export { agentEmailModel, AGENT_PROTOCOL, AGENT_ERROR_CODES } from './agent.js';

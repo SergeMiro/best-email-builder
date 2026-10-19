@@ -4,11 +4,12 @@ The AI is an optional module with its own entry point,
 `best-email-builder/ai`. If your application does not import it, there is no
 AI button anywhere, and none of the AI's code or texts end up in your bundle.
 
-Given to the editor, the module adds three things:
+Given to the editor, the module adds four things:
 
 | Feature | Where | What it does |
 |---|---|---|
-| **Generate** | the toolbar | Writes a complete email, subject and preview text included, from what the email is for. |
+| **Proofread** | the toolbar | Finds the spelling, grammar and punctuation mistakes of every text in the email, and shows each correction word by word, to apply. |
+| **Write with AI** | the properties of a text | Writes that text anew on a topic you give, to fit the rest of the email. |
 | **Rewrite with AI** | the properties of a text or a button | Rewrites that one text: shorter, longer, fixed, friendlier, more formal, translated, or as you describe. |
 | **Suggest subjects** | under the subject | Proposes three other subject lines drawn from the email. |
 
@@ -18,9 +19,10 @@ import { createAi } from 'best-email-builder/ai';
 <EmailBuilder storage={storage} ai={createAi(/* where the model runs, below */)} />
 ```
 
-Pass `generate: false`, `rewrite: false` or `suggestSubjects: false` to leave
-a feature out, along with its button. You can also pass functions of your own
-for any of them.
+Pass `proofread: false`, `rewrite: false` or `suggestSubjects: false` to leave
+a feature out, along with its button (`rewrite: false` removes *Write* and
+*Rewrite with AI* both). You can also pass functions of your own for any of
+them.
 
 ## Where the model runs
 
@@ -32,29 +34,29 @@ The key stays on your server. This is the right choice for production.
 
 ```js
 // server
-import { createEmailBuilderHandler, compileMjml } from 'best-email-builder/server';
+import { createEmailBuilderHandler } from 'best-email-builder/server';
 import { createEmailGenerator, providerEmailModel } from 'best-email-builder/ai/server';
 
 const handler = createEmailBuilderHandler({
   /* … */
   generator: createEmailGenerator({
     model: providerEmailModel({ provider: 'openrouter', apiKey: process.env.OPENROUTER_API_KEY }),
-    compile: compileMjml, // MJML's own warnings go back to the model
   }),
-  rateLimits: { generatePerHour: 30, rewritePerHour: 200, subjectsPerHour: 100 }, // per user (defaults)
+  rateLimits: { proofreadPerHour: 60, rewritePerHour: 200, subjectsPerHour: 100 }, // per user (defaults)
 });
 ```
 
 ```jsx
-// browser: the handler's /generate, /rewrite and /subjects routes
+// browser: the handler's /proofread, /rewrite and /subjects routes
 <EmailBuilder storage={createHttpStorage()} ai={createAi()} />
 ```
 
 `createAi({ baseUrl, headers })` points at the same routes somewhere else, or
 sends the user's credentials. Without a `generator`, those routes answer 501.
 
-A generation takes from 20 seconds to a minute or two. Give the route that
-long: `maxDuration` on Vercel, or your proxy's timeout.
+Most answers take a few seconds; proofreading a long email with a slow model
+can take a minute. Give the routes that long: `maxDuration` on Vercel, or your
+proxy's timeout.
 
 ### In the page, with each user's own key
 
@@ -123,8 +125,8 @@ const ai = createAi({ provider: 'groq', apiKey });
 ### Your own AI agent
 
 The assistant your application already has (its model, its tools, its
-knowledge base, its users' rights) can become the builder's AI. *Generate*,
-*Rewrite with AI* and *Suggest subjects* then go through it. The agent
+knowledge base, its users' rights) can become the builder's AI. *Proofread*,
+*Write with AI*, *Rewrite with AI* and *Suggest subjects* then go through it. The agent
 speaks a small HTTP protocol, `best-email-builder/agent@1`: one POST per
 model turn, with `{ task, system, messages, schema }` in and `{ text }` out.
 The builder still writes the prompts and checks every answer, so the agent
@@ -136,7 +138,6 @@ generator: createEmailGenerator({
     url: 'http://agent.internal:8800/email-builder',
     headers: ({ user }) => ({ 'X-Auth-User': signFor(user) }), // who asks: the user authorize returned
   }),
-  compile: compileMjml,
 }),
 ```
 
@@ -176,10 +177,10 @@ Good to know:
 - **Model names change often.** The defaults were current at this release.
   Pass `model` to be sure of yours.
 - **`openrouter/free` costs nothing but is slow.** Most free models reason
-  before they write, so an email takes two to six minutes, and some days a
-  free model is busy upstream. The builder asks OpenRouter for less reasoning
+  before they answer, so a proofread takes one to a few minutes, and some
+  days a free model is busy upstream. The builder asks OpenRouter for less reasoning
   (`reasoning: { effort: 'low' }`) and gives it room for it
-  (`maxTokens: 32000`; 16 000 elsewhere). For drafts in seconds, use a free
+  (`maxTokens: 32000`; 16 000 elsewhere). For answers in seconds, use a free
   tier with its own key (Gemini, Groq, Cerebras) or a paid model.
 - **Listing models.** `listProviderModels({ provider, apiKey })` lists the
   models a provider offers for writing, as the dialog does (`{ id, name, free }`,
@@ -213,8 +214,8 @@ Good to know:
 
 On your server, use `claudeEmailModel({ client: new Anthropic() })` with the
 Anthropic SDK (`npm install @anthropic-ai/sdk`). It uses `claude-opus-5-5` by
-default, with `effort: 'medium'` and structured output, and streams so that a
-long email does not hit a request timeout. You can also reach Claude through
+default, with `effort: 'low'` (pass `effort` for more care) and structured
+output, and streams so that a long proofread does not hit a request timeout. You can also reach Claude through
 OpenRouter with an `anthropic/…` model and one key for every model.
 
 With `askKey`, Claude is one more provider to choose, with the user's own
@@ -238,34 +239,49 @@ A model is a function `({ system, messages, schema, signal, task }) => Promise<s
 that returns the JSON text. Pass it as `createEmailGenerator({ model })` on
 the server, or `createAi({ model })` in the page.
 
-## Generate
+## Proofread
 
-*Generate* asks one thing: what the email is for. The user picks a badge among
-68 purposes, grouped into sales, holidays, events, news, account, orders,
-relationship and organization, and can add a line of details. The email is
-written in the interface's language, with the builder's sender and
-variables. It replaces the email being edited, and the dialog says so
-before, not after.
+*Proofread*, in the toolbar, reads every text the reader sees in one call:
+the subject, the preview text, the text blocks, the buttons and the menu
+links. It lists the texts that have a mistake, with the old words struck out
+and the new ones next to them. Each correction is applied on its own, or all
+at once with *Apply all*, and nothing changes before. The corrections applied
+together are one step of the history, so Ctrl+Z brings the texts back. A text
+edited after it was read is left as it is, because its correction was for the
+old words. *Check again* reads the email anew.
 
-The model's answer is never trusted as it is:
+The model's answer is never trusted as it is. A correction is kept only when:
 
-- shorthand padding is expanded;
-- elements the builder does not edit (`mj-hero`, `mj-wrapper`, `mj-head`…)
-  become sections and columns;
-- stock photos are removed (the user picks real images; the alt text stays);
-- unknown variables become visible `[placeholders]`;
-- the result must pass the same validation as a saved template.
+- it changes words (markup moved alone is dropped, since it may lose bold or
+  a link);
+- it keeps the same markup, links and merge tags, and passes the validator;
+- it stays small: words touched in at most a third of the text (three in a
+  short one). More would be a rewrite, not a correction.
 
-When a problem remains, the model gets one more turn with the list of
-problems. The prompt (`SYSTEM_PROMPT`, `buildUserPrompt`) and the purposes
-(`EMAIL_PURPOSES`) are exported from `best-email-builder/ai/server`.
+What fails goes back to the model once, with the list of problems. What fails
+again is left out, and the other corrections still come back.
 
-## Rewrite with AI
+- On a server, it is `POST {base}/proofread` (`generator.proofread`), 60 per
+  user per hour. The request is `{ texts: [{ id, kind, format, text }], language }`
+  (up to 120 texts, 30 000 characters in all); the answer is
+  `{ fixes: [{ id, text }] }`, only the texts with a mistake.
+- A model of your own gets `task: 'rewrite'`, so an agent written for 0.9
+  answers it too.
+- `PROOFREAD_SYSTEM_PROMPT`, `createProofreader` and `reviewFix` are exported
+  from `best-email-builder/ai/server`, and `diffWords` (the word-by-word
+  difference the dialog shows) from both entries.
 
-The same generator rewrites one text. Select a text block or a button, and its
-properties show a *Rewrite with AI* section: *Shorter*, *Longer*, *Fix
-mistakes*, *Friendlier*, *More formal*, *Translate* (13 languages, each under
-its own name), and a field to say what to change.
+## Write and rewrite with AI
+
+The same generator writes or rewrites one text. Select a text block, and its
+properties show *Write with AI*: a field for the topic ("the sale ends
+Sunday"). The text is written anew to fit the rest of the email, a title as
+one line. Where a fact is missing (a date, a price, a name), the model writes a
+`[placeholder]` instead of inventing it.
+
+Under it, and for a button too, *Rewrite with AI* offers *Shorter*,
+*Longer*, *Fix mistakes*, *Friendlier*, *More formal*, *Translate* (13
+languages, each under its own name), and a field to say what to change.
 
 The answer replaces the text at once, as one step of the history. Ctrl+Z
 brings the previous text back, so there is nothing to accept or compare.
@@ -278,9 +294,8 @@ the text in the meantime, their words win and the answer is dropped.
   none added) must survive, and the HTML must pass the validator. A fallback
   after `|` may be translated. Otherwise the model gets one more turn, and
   then nothing changes. A button label comes back as plain words.
-- `claudeEmailModel` asks for `rewriteEffort: 'low'` here, which takes a few
-  seconds. A model of your own gets `task: 'rewrite'` in its request, to tell
-  the two apart.
+- A model of your own gets `task: 'rewrite'` in its request; a text written
+  on a topic is `{ action: 'write', instruction: topic, context }`.
 - `REWRITE_ACTIONS`, `REWRITE_LANGUAGES` and `REWRITE_SYSTEM_PROMPT` are
   exported.
 
@@ -299,8 +314,7 @@ new ones, and *Done* closes the list.
   the current subject and from each other. They may contain merge tags only
   from the server's catalog. Otherwise the model gets one more turn. Fewer
   than three good ones are still shown.
-- `claudeEmailModel` uses `rewriteEffort` here too (`task: 'subjects'`).
-  `emailWords(mjml)` (the words a reader sees) and `SUBJECTS_SYSTEM_PROMPT`
+- A model of your own gets `task: 'subjects'`. `emailWords(mjml)` (the words a reader sees) and `SUBJECTS_SYSTEM_PROMPT`
   are exported.
 
 ## The live demo

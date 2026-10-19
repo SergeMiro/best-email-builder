@@ -27,8 +27,8 @@ your database.
 | `POST` | `{base}/render` | read | Preview: render on the server and run the quality checks. |
 | `POST` | `{base}/test` | write | Send a test email (needs `transport`). |
 | `POST` | `{base}/assets` | write | Upload an image (multipart, field `file`). |
-| `POST` | `{base}/generate` | write | Write an email from a purpose (needs `generator`, see [AI](AI.md)). |
-| `POST` | `{base}/rewrite` | write | Rewrite one text of an email (needs `generator`). |
+| `POST` | `{base}/proofread` | write | Find the mistakes of an email's texts (needs `generator`, see [AI](AI.md)). |
+| `POST` | `{base}/rewrite` | write | Write or rewrite one text of an email (needs `generator`). |
 | `POST` | `{base}/subjects` | write | Suggest three other subject lines (needs `generator`). |
 | `GET` | `{base}/variables` | read | List the custom variables. |
 | `POST` | `{base}/variables` | write | Create a custom variable. |
@@ -79,7 +79,7 @@ const handler = createEmailBuilderHandler({
 |---|---|
 | `testPerHour` | 20 |
 | `uploadsPerHour` | 100 |
-| `generatePerHour` | 30 |
+| `proofreadPerHour` | 60 |
 | `rewritePerHour` | 200 |
 | `subjectsPerHour` | 100 |
 | `brandImportsPerHour` | 20 |

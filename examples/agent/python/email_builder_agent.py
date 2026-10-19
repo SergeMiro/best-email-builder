@@ -35,7 +35,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 PROTOCOL = "best-email-builder/agent@1"
-TASKS = ("generate", "rewrite", "subjects")
+TASKS = ("rewrite", "subjects")
 # The failures the builder explains, and the status each goes out with.
 ERROR_STATUS = {
     "REFUSED": 422,
@@ -45,7 +45,7 @@ ERROR_STATUS = {
     "MODEL_BUSY": 503,
     "MODEL_ERROR": 502,
 }
-# A repair turn carries the last answer: a whole email at most.
+# A repair turn carries the last answer: the texts of an email at most.
 MAX_BODY_BYTES = 2 * 1024 * 1024
 MAX_MESSAGES = 20
 

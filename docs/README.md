@@ -14,7 +14,7 @@ read them in any order.
 | [Editor and library](EDITOR.md) | The editor, the template library or both. Every prop, and theming. |
 | [Server](SERVER.md) | The routes, the handler's options, the storage contract and your database. |
 | [Variables and sending](VARIABLES.md) | Merge tags, variables your users create, and personalizing at send time. |
-| [AI](AI.md) | *Generate*, *Rewrite with AI*, *Suggest subjects*. Where the model runs, and the providers. |
+| [AI](AI.md) | *Proofread*, *Write with AI*, *Rewrite with AI*, *Suggest subjects*. Where the model runs, and the providers. |
 | [Your own AI agent](AGENT.md) | Use the assistant your application already has, through the `agent@1` protocol. |
 | [Brand](BRAND.md) | The *Brand* dialog: read a website's logo, colors and font, and repaint emails. |
 | [Languages](LANGUAGES.md) | The seven built-in languages, your own strings, and adding a language. |

@@ -163,6 +163,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   getRootId: () => string|null,
  *   updateProperties: (id: string, attributes: Record<string, string|null>) => void,
  *   setContent: (id: string, content: string) => void,
+ *   setContents?: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
  *   insertLink: (href: string, label: string) => boolean,
  *   undo: () => void,
@@ -227,6 +228,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   getRootId: () => string|null,
  *   updateProperties: (values: Record<string, string|null>, id?: string|null) => void,
  *   setContent: (content: string, id?: string|null) => void,
+ *   setContents: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
  *   insertLink: (href: string, label: string) => boolean,
  *   undo: () => void,
@@ -499,6 +501,17 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
     setContent(content, id = null) {
       requireReady('setContent');
       adapter.setContent(targetOf(id, 'setContent'), content);
+    },
+
+    /** Several texts at once (a proofread email), as ONE step of the history when the engine can. */
+    setContents(entries) {
+      requireReady('setContents');
+      const list = (Array.isArray(entries) ? entries : [])
+        .filter((entry) => entry && typeof entry.id === 'string' && entry.id)
+        .map(({ id, content }) => ({ id, content: String(content ?? '') }));
+      if (!list.length) return;
+      if (adapter.setContents) adapter.setContents(list);
+      else for (const { id, content } of list) adapter.setContent(id, content);
     },
 
     insertText(text) {

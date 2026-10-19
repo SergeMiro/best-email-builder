@@ -6,6 +6,59 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+The AI no longer writes whole emails: it checks and writes their texts.
+This breaks code that used *Generate* (see *Removed*).
+
+### Added
+- **Proofread**, in the toolbar: the spelling, grammar and punctuation
+  mistakes of every text the reader sees (subject, preview text, text
+  blocks, buttons, menu links), found in one call. The dialog lists the
+  texts with a mistake, the old words struck out and the new ones next to
+  them; each correction is applied on its own or all at once, and the
+  corrections applied together are one step of the history. A text edited
+  since it was read is left as it is. A correction is kept only when it
+  changes words, keeps the markup, links and merge tags, and touches at most
+  a third of the text; otherwise the model gets one repair turn, then it is
+  left out.
+- `ai.proofread`, `generator.proofread` and the handler's
+  `POST {base}/proofread` (60 per user per hour, `rateLimits.proofreadPerHour`).
+  `PROOFREAD_SYSTEM_PROMPT`, `createProofreader` and `reviewFix` are exported
+  from `best-email-builder/ai/server`, `diffWords` from both AI entries.
+- **Write with AI**, in the properties of a text block: a topic ("the sale
+  ends Sunday"), and the text is written anew to fit the rest of the email,
+  a title as one line, a `[placeholder]` where a fact is missing. It is the
+  `write` action of `rewrite` (`{ action: 'write', instruction, context }`).
+- `editor.setContents([{ id, content }])`: the contents of several
+  elements changed in one step of the history.
+
+### Changed
+- `claudeEmailModel` uses `effort: 'low'` for every task by default (every
+  answer is a short one now); `effort` changes it. `rewriteEffort` still
+  works as its old name.
+- The agent protocol (`best-email-builder/agent@1`) has two tasks,
+  `rewrite` and `subjects`: a proofread is sent as `rewrite`, so agents
+  written for 0.9 keep working. `checkAgent` tries a proofread, a rewrite
+  and subject ideas.
+- The live demo explains Proofread and Write with AI.
+
+### Removed
+- **Generate**: the toolbar button, `ai.generate`, `generator.generate`, the
+  handler's `POST {base}/generate` (now 404) and `rateLimits.generatePerHour`.
+  `createAi({ generate: fn })` throws; `generate: false` is still accepted.
+- The 68 purposes and the email prompt: `EMAIL_PURPOSES`,
+  `PURPOSE_CATEGORIES`, `purposeById`, `purposesByCategory`, `SYSTEM_PROMPT`,
+  `EMAIL_DRAFT_SCHEMA`, `buildUserPrompt`, `cleanGenerateInput`,
+  `MAX_DETAILS_LENGTH`, `normalizeGeneratedMjml`, `parseDraft` and
+  `reviewDraft`.
+- The `compile` option of `createEmailGenerator` and `checkAgent`: nothing
+  compiles MJML any more.
+
+### Fixed
+- The gallery's *Welcome*, *Event invitation* and *Newsletter* were
+  translated only when the AI module was loaded (its dictionary had the same
+  words). The core has them now, and `npm run check:i18n` checks the
+  gallery's names and descriptions.
+
 ## [0.9.0] — 2026-10-16
 
 ### Added

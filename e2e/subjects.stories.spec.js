@@ -116,19 +116,18 @@ test.describe('Suggest subjects', () => {
     await expect(radios.first()).toContainText(`${IDEAS[0]}!`);
   });
 
-  test('the email replaced (Generate) while the list is open: the list closes, nothing of the old email comes back', async ({ page }) => {
+  test('the email replaced (a template) while the list is open: the list closes, nothing of the old email comes back', async ({ page }) => {
     await openBuilder(page);
     await subject(page).fill('Spring news');
     await panel(page).getByRole('button', { name: 'Suggest subjects' }).click();
     await expect(ideas(page).getByRole('radio')).toHaveCount(4);
 
-    await page.getByRole('button', { name: 'Generate', exact: true }).click();
-    const dialog = page.getByTestId('eb-generate');
-    await dialog.locator('[data-purpose="password-reset"]').click();
-    await dialog.getByTestId('eb-generate-submit').click();
-    await expect(dialog).toBeHidden({ timeout: 15_000 });
-    await expect(subject(page)).toHaveValue('Reset your password');
+    await page.getByRole('button', { name: 'Templates' }).click();
+    await page.getByTestId('eb-template-gallery').locator('[data-template-id="welcome"]').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Replace' }).click();
+    expect(await page.evaluate(() => window.__emailEditor.exportMjml())).toContain('Get started');
     await expect(ideas(page)).toBeHidden();
+    await expect(subject(page)).toHaveValue('Spring news');
     await expect(panel(page).getByRole('button', { name: 'Suggest subjects' })).toBeEnabled();
   });
 

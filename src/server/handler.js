@@ -16,9 +16,9 @@
  *   POST   {base}/render                          read    preview (server rendering)
  *   POST   {base}/test                            write   test send (needs `transport`)
  *   POST   {base}/assets                          write   image upload (multipart, field `file`)
- *   POST   {base}/generate                        write   write an email from a purpose (needs `generator`,
+ *   POST   {base}/rewrite                         write   write or rewrite one text of an email (needs `generator`,
  *                                                         the AI module: best-email-builder/ai/server)
- *   POST   {base}/rewrite                         write   rewrite one text of an email (needs `generator`)
+ *   POST   {base}/proofread                       write   the mistakes of an email's texts (needs `generator`)
  *   POST   {base}/subjects                        write   three other subject lines (needs `generator`)
  *   GET    {base}/variables                       read    custom variables
  *   POST   {base}/variables                       write   create a custom variable
@@ -67,7 +67,7 @@ import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
  *   publicUrl?: string|null,
  *   transport?: import('./sendTest.js').EmailTransport|null,
  *   generator?: {
- *     generate?: (input: import('../ai/generator.js').GenerateInput, options?: {signal?: AbortSignal, user?: User}) => Promise<import('../ai/generator.js').GeneratedEmail>,
+ *     proofread?: (input: import('../ai/proofread.js').ProofreadInput, options?: {signal?: AbortSignal, user?: User}) => Promise<{fixes: import('../ai/proofread.js').ProofreadFix[]}>,
  *     rewrite?: (input: import('../ai/rewrite.js').RewriteInput, options?: {signal?: AbortSignal, user?: User}) => Promise<{text: string}>,
  *     suggestSubjects?: (input: import('../ai/subjects.js').SubjectsInput, options?: {signal?: AbortSignal, user?: User}) => Promise<{subjects: string[]}>,
  *     messages?: Record<string, Record<string, string>>,
@@ -82,7 +82,7 @@ import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
  *   previewUnsubscribeUrl?: string,
  *   maxVersions?: number,
  *   maxTestRecipients?: number,
- *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, generatePerHour?: number, rewritePerHour?: number, subjectsPerHour?: number, brandImportsPerHour?: number},
+ *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, proofreadPerHour?: number, rewritePerHour?: number, subjectsPerHour?: number, brandImportsPerHour?: number},
  *   onError?: (error: unknown, request: Request) => void,
  * }} HandlerOptions
  */
@@ -167,7 +167,7 @@ export function createEmailBuilderHandler(options) {
   const brand = createBrandService({ repository: options.brandStore || null, t });
   const testLimiter = createLimiter(rateLimits.testPerHour ?? 20);
   const uploadLimiter = createLimiter(rateLimits.uploadsPerHour ?? 100);
-  const generateLimiter = createLimiter(rateLimits.generatePerHour ?? 30);
+  const proofreadLimiter = createLimiter(rateLimits.proofreadPerHour ?? 60);
   const rewriteLimiter = createLimiter(rateLimits.rewritePerHour ?? 200);
   const subjectsLimiter = createLimiter(rateLimits.subjectsPerHour ?? 100);
   const brandImportLimiter = createLimiter(rateLimits.brandImportsPerHour ?? 20);
@@ -319,19 +319,13 @@ export function createEmailBuilderHandler(options) {
       return json({ data: result });
     }
 
-    if (section === 'generate' && !id && method === 'POST') {
+    if (section === 'proofread' && !id && method === 'POST') {
       const user = await userFor(request, 'write');
-      const generate = generator?.generate;
-      if (typeof generate !== 'function') throw new HttpError(501, t('Email generation is not configured'), 'NO_GENERATOR');
-      if (!generateLimiter(userKey(user))) {
-        throw new HttpError(429, t('Too many generated emails — try again later'), 'RATE_LIMITED');
-      }
+      const proofread = generator?.proofread;
+      if (typeof proofread !== 'function') throw new HttpError(501, t('Proofreading is not configured'), 'NO_GENERATOR');
+      if (!proofreadLimiter(userKey(user))) throw new HttpError(429, t('Too many proofreadings — try again later'), 'RATE_LIMITED');
       const body = await readJson(request);
-      // The variables are the server's catalog, whatever the browser sent.
-      const catalog = await customVariables.catalog();
-      return askModel(request, () =>
-        generate.call(generator, { ...body, language: languageOr(body?.language), variables: catalog }, { signal: request.signal, user })
-      );
+      return askModel(request, () => proofread({ ...body, language: languageOr(body?.language) }, { signal: request.signal, user }));
     }
 
     if (section === 'rewrite' && !id && method === 'POST') {

@@ -13,8 +13,7 @@
  */
 
 import { DEFAULT_VARIABLES } from '../features/variables/catalog.js';
-import { EmailGenerationError } from './draft.js';
-import { languageName } from './prompt.js';
+import { EmailGenerationError, languageName } from './errors.js';
 
 export const SUBJECT_COUNT = 3;
 export const MAX_SUBJECT_LENGTH = 150;
@@ -115,8 +114,16 @@ const entity = (whole, body) => {
  * @param {string} mjml
  */
 export function emailWords(mjml) {
-  return String(mjml || '')
-    .replace(/<mj-head[\s\S]*?<\/mj-head>/gi, ' ')
+  return visibleText(String(mjml || '').replace(/<mj-head[\s\S]*?<\/mj-head>/gi, ' ')).slice(0, MAX_EMAIL_WORDS);
+}
+
+/**
+ * The words of a piece of markup as a reader sees them: one line per
+ * paragraph, entities decoded, styles and scripts left out.
+ * @param {string} markup
+ */
+export function visibleText(markup) {
+  return String(markup || '')
     .replace(/<(style|script|mj-style|mj-raw)[\s\S]*?<\/\1>/gi, ' ')
     .replace(/<\/(p|div|li|h[1-6]|mj-text|mj-button|mj-navbar-link|mj-social-element)>|<br\s*\/?>/gi, '\n')
     .replace(/<[^>]*>/g, ' ')
@@ -124,8 +131,7 @@ export function emailWords(mjml) {
     .replace(/&(#\d{1,8}|#x[0-9a-f]{1,8}|[a-z]{2,8});/gi, entity)
     .replace(/[ \t]+/g, ' ')
     .replace(/\s*\n\s*/g, '\n')
-    .trim()
-    .slice(0, MAX_EMAIL_WORDS);
+    .trim();
 }
 
 /**

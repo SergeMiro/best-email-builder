@@ -1,163 +1,52 @@
 // @ts-check
 /**
- * EMAIL GENERATOR — from a purpose (and optional details) to an email the
- * builder opens block by block.
+ * THE EMAIL AI — what the model does for the texts of an email:
  *
- *   const generator = createEmailGenerator({ model: claudeEmailModel({ client: new Anthropic() }) });
- *   const { name, subject, preheader, mjml } = await generator.generate({ purpose: 'password-reset', language: 'fr' });
+ *   rewrite          one text rewritten (shorter, longer, fixed, another tone,
+ *                    translated, changed as the user says), or written anew
+ *                    on a topic — see rewrite.js;
+ *   suggestSubjects  three other subject lines — see subjects.js;
+ *   proofread        the mistakes of every text of the email, each with its
+ *                    corrected text — see proofread.js.
+ *
+ *   const ai = createEmailGenerator({ model: claudeEmailModel({ client: new Anthropic() }) });
+ *   const { text } = await ai.rewrite({ action: 'shorter', text: '<p>…</p>' });
  *
  * The MODEL is any function `({system, messages, schema, signal}) => text`:
- * `claudeEmailModel` (claude.js) for Claude, or a few lines of your own for
- * another provider. Its answer is read, cleaned (`draft.js`) and checked; when
+ * `claudeEmailModel` (claude.js) for Claude, `providerEmailModel`
+ * (providers.js) for the others, `agentEmailModel` (agent.js) for an agent of
+ * your own — or a few lines of your own. Its answer is read and checked; when
  * a problem remains, the model gets ONE more turn with the list of problems
  * (`maxAttempts`, 2 by default) — a slow model call is the cost of a retry.
- *
- * Never trusted as is: the MJML that comes out has passed `validateMjml`, the
- * same check the server runs before compiling and saving.
- *
- * The same model also REWRITES one text of an email (`rewrite`, see
- * rewrite.js): shorter, longer, fixed, another tone, translated; and SUGGESTS
- * three other subject lines (`suggestSubjects`, see subjects.js).
  */
 
-import { DEFAULT_VARIABLES } from '../features/variables/catalog.js';
-import { isSafeUrl } from '../validation/urls.js';
-import { EmailGenerationError, normalizeGeneratedMjml, parseDraft, reviewDraft, withoutIllegalAttributes } from './draft.js';
-import { applyBrand, cleanBrand } from '../features/brand/brand.js';
-import { EMAIL_DRAFT_SCHEMA, SYSTEM_PROMPT, buildRepairPrompt, buildUserPrompt } from './prompt.js';
-import { purposeById } from './purposes.js';
+import { createProofreader } from './proofread.js';
 import { createRewriter } from './rewrite.js';
 import { createSubjectSuggester } from './subjects.js';
 import { AI_MESSAGES } from './i18n/index.js';
 
 /**
  * @typedef {{role: 'user'|'assistant', content: string}} ModelMessage
- * @typedef {(request: {system: string, messages: ModelMessage[], schema: object, signal?: AbortSignal, task?: 'generate'|'rewrite'|'subjects', user?: any}) => Promise<string>} EmailModel
- *   `task`: a whole email, one text rewritten or subject ideas (lighter jobs:
- *   a model may answer them with less effort). `user`: on the server, the one
- *   the handler's `authorize` returned (agent.js forwards who asks).
+ * @typedef {(request: {system: string, messages: ModelMessage[], schema: object, signal?: AbortSignal, task?: 'rewrite'|'subjects', user?: any}) => Promise<string>} EmailModel
+ *   `task`: what is asked — one text (`rewrite`: a rewrite, a text written on
+ *   a topic, the email proofread) or subject ideas (`subjects`); short jobs a
+ *   model may answer with little effort. `user`: on the server, the one the
+ *   handler's `authorize` returned (agent.js forwards who asks).
  *
- * @typedef {{
- *   purpose?: string|null,
- *   details?: string,
- *   language?: string,
- *   sender?: {name?: string, address?: string, logoUrl?: string},
- *   brand?: {primary?: string, heading?: string, font?: string},
- *   variables?: {key: string, label?: string}[],
- * }} GenerateInput
- *   `brand`: the colors and font the email is written in (features/brand).
- *
- * @typedef {import('./draft.js').EmailDraft & {warnings: string[], attempts: number}} GeneratedEmail
  * @typedef {import('./rewrite.js').RewriteInput} RewriteInput
  * @typedef {import('./subjects.js').SubjectsInput} SubjectsInput
+ * @typedef {import('./proofread.js').ProofreadInput} ProofreadInput
  */
-
-export const MAX_DETAILS_LENGTH = 2000;
-const MAX_VARIABLES = 200;
-
-/** @param {unknown} value @param {number} max */
-const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 
 /**
- * The input as the generator uses it: bounded strings, a known purpose or
- * none, an https logo or none, the brand's colors and font or none.
- * @param {GenerateInput} input
+ * @param {{model: EmailModel, maxAttempts?: number}} options
  */
-export function cleanGenerateInput(input) {
-  const source = input && typeof input === 'object' ? input : {};
-  const purpose = purposeById(typeof source.purpose === 'string' ? source.purpose : null);
-  const details = text(source.details, MAX_DETAILS_LENGTH);
-  const language = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(String(source.language || '')) ? String(source.language) : 'en';
-  const sender = source.sender && typeof source.sender === 'object' ? source.sender : {};
-  const logoUrl = text(sender.logoUrl, 2000);
-  const variables = (Array.isArray(source.variables) ? source.variables : DEFAULT_VARIABLES)
-    .filter((variable) => variable && /^[A-Za-z][\w.]*$/.test(String(variable.key)))
-    .slice(0, MAX_VARIABLES)
-    .map((variable) => ({ key: String(variable.key), label: text(variable.label, 80) }));
-  const { primary, heading, font } = cleanBrand(source.brand);
-  return {
-    purpose,
-    details,
-    language,
-    sender: {
-      name: text(sender.name, 120),
-      address: text(sender.address, 300),
-      logoUrl: logoUrl && /^https:\/\//i.test(logoUrl) && isSafeUrl(logoUrl, 'image') ? logoUrl : '',
-    },
-    brand: { ...(primary ? { primary } : {}), ...(heading ? { heading } : {}), ...(font ? { font } : {}) },
-    variables,
-  };
-}
-
-/**
- * @param {{
- *   model: EmailModel,
- *   maxAttempts?: number,
- *   compile?: (mjml: string) => Promise<{warnings?: {message: string}[]}>,
- * }} options
- *   `compile`: compiles the MJML and returns MJML's own warnings, fed back to
- *   the model (the server passes `compileMjml`).
- */
-export function createEmailGenerator({ model, maxAttempts = 2, compile } = /** @type {any} */ ({})) {
+export function createEmailGenerator({ model, maxAttempts = 2 } = /** @type {any} */ ({})) {
   if (typeof model !== 'function') throw new Error('createEmailGenerator: `model` must be a function');
-
-  /**
-   * @param {GenerateInput} input
-   * @param {{signal?: AbortSignal, user?: any}} [options]
-   * @returns {Promise<GeneratedEmail>}
-   */
-  async function generate(input, { signal, user } = {}) {
-    const request = cleanGenerateInput(input);
-    if (!request.purpose && !request.details) {
-      throw new EmailGenerationError('NOTHING_TO_GENERATE');
-    }
-    const kind = request.purpose?.kind || 'marketing';
-    const keepImages = request.sender.logoUrl ? [request.sender.logoUrl] : [];
-
-    /** @type {ModelMessage[]} */
-    const messages = [{ role: 'user', content: buildUserPrompt(request) }];
-    /** @type {GeneratedEmail|null} */
-    let usable = null;
-    let lastProblem = '';
-
-    for (let attempt = 1; attempt <= Math.max(1, maxAttempts); attempt += 1) {
-      signal?.throwIfAborted();
-      const answer = await model({ system: SYSTEM_PROMPT, messages, schema: EMAIL_DRAFT_SCHEMA, signal, task: 'generate', user });
-      /** @type {string[]} */
-      let problems;
-      try {
-        const draft = parseDraft(answer);
-        draft.mjml = normalizeGeneratedMjml(draft.mjml, { variables: request.variables, keepImages });
-        // The model was told the brand; whatever it chose instead is repainted.
-        draft.mjml = applyBrand(draft.mjml, request.brand);
-        let compileWarnings = compile ? (await compile(draft.mjml)).warnings || [] : [];
-        const legal = withoutIllegalAttributes(draft.mjml, compileWarnings);
-        if (legal && compile) {
-          draft.mjml = legal;
-          compileWarnings = (await compile(draft.mjml)).warnings || [];
-        }
-        const { blocking, advice } = reviewDraft(draft, { kind, compileWarnings });
-        if (!blocking.length) {
-          usable = { ...draft, warnings: advice, attempts: attempt };
-          if (!advice.length) return usable;
-        }
-        problems = [...blocking, ...advice];
-      } catch (error) {
-        if (!(error instanceof EmailGenerationError)) throw error;
-        problems = [error.detail];
-      }
-      lastProblem = problems[0];
-      messages.push({ role: 'assistant', content: String(answer) }, { role: 'user', content: buildRepairPrompt(problems) });
-    }
-
-    if (usable) return usable;
-    throw new EmailGenerationError('INVALID_OUTPUT', lastProblem);
-  }
-
   return {
-    generate,
     rewrite: createRewriter({ model, maxAttempts }),
     suggestSubjects: createSubjectSuggester({ model, maxAttempts }),
+    proofread: createProofreader({ model, maxAttempts }),
     // Its error messages in the server's language (the handler merges them).
     messages: AI_MESSAGES,
   };

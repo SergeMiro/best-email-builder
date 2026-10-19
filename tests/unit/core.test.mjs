@@ -222,3 +222,32 @@ test('the builder version written into every template is the published package v
   const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
   assert.equal(EMAIL_BUILDER_VERSION, pkg.version);
 });
+
+test('setContents: several texts in one call to an engine that can (one step of its history), one by one otherwise', async () => {
+  const entries = [
+    { id: 'a', content: '<p>One</p>' },
+    { id: '', content: 'no id' },
+    null,
+    { id: 'b', content: undefined },
+  ];
+  const plain = fakeAdapter();
+  const editor = createEmailEditor({ adapter: plain, blocks: createRegistry('emailBlocks', [TEXT_BLOCK]) });
+  assert.throws(() => editor.setContents(entries), /before the editor was initialized/);
+  await editor.initialize({ container });
+  editor.setContents(entries);
+  editor.setContents([]);
+  assert.deepEqual(plain.calls.filter(([name]) => name === 'setContent'), [
+    ['setContent', 'a', '<p>One</p>'],
+    ['setContent', 'b', ''],
+  ]);
+
+  const batched = Object.assign(fakeAdapter(), { setContents: (list) => batched.calls.push(['setContents', list]) });
+  const one = createEmailEditor({ adapter: batched, blocks: createRegistry('emailBlocks', [TEXT_BLOCK]) });
+  await one.initialize({ container });
+  one.setContents(entries);
+  assert.deepEqual(batched.calls.filter(([name]) => name.startsWith('setContent')), [
+    ['setContents', [{ id: 'a', content: '<p>One</p>' }, { id: 'b', content: '' }]],
+  ]);
+  one.destroy();
+  editor.destroy();
+});

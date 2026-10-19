@@ -16,14 +16,14 @@ A small preview follows every change.
   is ticked by default. Repainting is one step of the history, so Ctrl+Z
   brings the previous look back.
 - **New emails start in the brand.** This covers new templates, gallery
-  templates, inserted blocks and AI-generated emails. The logo (or the name)
+  templates and inserted blocks. The logo (or the name)
   goes at the top and the name in the footer. Buttons and banners take the
   main color, and headings take the headings color.
 
 ## How emails are repainted
 
 Emails are repainted by **role**, not by exact color. So it works on any
-email: a gallery template, a generated one, or one built by hand.
+email: a gallery template, an old one, or one built by hand.
 
 - Filled buttons and colored banners take the main color. Their text switches
   to white or dark, whichever is easier to read.

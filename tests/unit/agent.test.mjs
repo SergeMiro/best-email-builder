@@ -7,15 +7,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  compileMjml,
   createEmailBuilderHandler,
   createMemoryAssetRepository,
   createMemoryTemplateRepository,
-  validateMjml,
 } from '../../src/server/index.js';
 import {
   AGENT_PROTOCOL,
-  EMAIL_DRAFT_SCHEMA,
   agentEmailModel,
   checkAgent,
   createAgentEndpoint,
@@ -26,19 +23,9 @@ import fs from 'node:fs';
 const ORIGIN = 'http://localhost';
 const AGENT_URL = 'http://agent.test/email-builder';
 
-const GOOD_MJML =
-  '<mjml><mj-body background-color="#eceff4" width="600px">' +
-  '<mj-section background-color="#ffffff" padding-top="24px" padding-bottom="24px"><mj-column>' +
-  '<mj-text font-family="Arial, Helvetica, sans-serif" font-size="28px" line-height="36px" color="#212e5a" font-weight="bold" padding-left="32px" padding-right="32px">Welcome {{contact.firstname|there}}</mj-text>' +
-  '<mj-button href="https://example.com/start" background-color="#2977bc" color="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="15px" line-height="20px" font-weight="bold" border-radius="6px" inner-padding="12px 28px">Get started</mj-button>' +
-  '</mj-column></mj-section>' +
-  '<mj-section padding-top="20px" padding-bottom="28px"><mj-column>' +
-  '<mj-text font-family="Arial, Helvetica, sans-serif" font-size="12px" line-height="18px" color="#6d7484" align="center">Acme · [Company address]<br /><a href="{{ unsubscribe }}" style="color:#6d7484;text-decoration:underline;">Unsubscribe</a></mj-text>' +
-  '</mj-column></mj-section>' +
-  '</mj-body></mjml>';
-
-const EMAIL = { name: 'Welcome', subject: 'Welcome to Acme', preheader: 'Everything you need to get started.', mjml: GOOD_MJML };
-const REQUEST = { system: 'You write emails.', messages: [{ role: 'user', content: 'A welcome email.' }], schema: EMAIL_DRAFT_SCHEMA };
+const PROOFREAD_SCHEMA = { type: 'object', properties: { fixes: { type: 'array' } }, required: ['fixes'] };
+const FIXES = { fixes: [{ id: 'subject', text: 'Our summer sale' }] };
+const REQUEST = { system: 'You proofread emails.', messages: [{ role: 'user', content: '<text id="subject">Our sumer sale</text>' }], schema: PROOFREAD_SCHEMA };
 
 /** A fake agent behind fetch: answers in turn, records what it was sent. */
 function fakeAgent(...answers) {
@@ -46,7 +33,7 @@ function fakeAgent(...answers) {
   /** @type {typeof fetch} */
   const fetch = async (url, init) => {
     calls.push({ url: String(url), headers: { ...init.headers }, body: JSON.parse(init.body) });
-    const next = answers.shift() ?? { body: { text: JSON.stringify(EMAIL) } };
+    const next = answers.shift() ?? { body: { text: JSON.stringify(FIXES) } };
     const body = typeof next.body === 'string' ? next.body : JSON.stringify(next.body);
     return new Response(body, { status: next.status ?? 200, headers: { 'Content-Type': 'application/json' } });
   };
@@ -64,9 +51,9 @@ test('agentEmailModel: one POST per turn — the protocol, the task, the instruc
     fetch,
     headers: (context) => (seen.push(context), { Authorization: `Bearer ${context.user.token}` }),
   });
-  const text = await model({ ...REQUEST, task: 'generate', user: { id: 7, token: 'secret-7' } });
+  const text = await model({ ...REQUEST, task: 'subjects', user: { id: 7, token: 'secret-7' } });
 
-  assert.deepEqual(JSON.parse(text), EMAIL);
+  assert.deepEqual(JSON.parse(text), FIXES);
   assert.equal(model.url, AGENT_URL);
   assert.equal(calls.length, 1);
   const [{ url, headers, body }] = calls;
@@ -75,18 +62,18 @@ test('agentEmailModel: one POST per turn — the protocol, the task, the instruc
   assert.equal(headers['Content-Type'], 'application/json');
   assert.deepEqual(Object.keys(body).sort(), ['messages', 'protocol', 'schema', 'system', 'task']);
   assert.equal(body.protocol, AGENT_PROTOCOL);
-  assert.equal(body.task, 'generate');
-  assert.match(body.system, /^You write emails\.\n\n# Answer format\nAnswer with ONE JSON object/, 'a model given system as it is answers right');
+  assert.equal(body.task, 'subjects');
+  assert.match(body.system, /^You proofread emails\.\n\n# Answer format\nAnswer with ONE JSON object/, 'a model given system as it is answers right');
   assert.deepEqual(body.messages, REQUEST.messages);
-  assert.deepEqual(body.schema, EMAIL_DRAFT_SCHEMA);
+  assert.deepEqual(body.schema, PROOFREAD_SCHEMA);
   assert.doesNotMatch(JSON.stringify(body), /secret-7/, 'the user is never in the body');
-  assert.deepEqual(seen, [{ task: 'generate', user: { id: 7, token: 'secret-7' } }]);
+  assert.deepEqual(seen, [{ task: 'subjects', user: { id: 7, token: 'secret-7' } }]);
 
-  // Plain headers; the task defaults to "generate".
+  // Plain headers; the task defaults to "rewrite".
   const plain = fakeAgent();
   await agentEmailModel({ url: AGENT_URL, fetch: plain.fetch, headers: { 'X-Key': 'k' } })(REQUEST);
   assert.equal(plain.calls[0].headers['X-Key'], 'k');
-  assert.equal(plain.calls[0].body.task, 'generate');
+  assert.equal(plain.calls[0].body.task, 'rewrite');
 });
 
 test('agentEmailModel: the answer as text, as an object, or as the whole body', async () => {
@@ -218,7 +205,7 @@ test('the whole way: the handler’s three AI routes, through the agent — who 
   const endpoint = createAgentEndpoint({
     complete: async ({ task, request, messages }) => {
       seen.push({ task, who: request.headers.get('x-auth-user'), turns: messages.length });
-      if (task === 'generate') return JSON.stringify(EMAIL);
+      if (task === 'rewrite' && /<text id=/.test(messages[0].content)) return JSON.stringify(FIXES);
       if (task === 'rewrite') return { text: 'Summer sale: 30% off for three days. <a href="https://example.com/sale">See the offers</a>.' };
       return { subjects: ['Three days, 30% off', 'Your summer sale is here', 'Last call: 30% off ends soon'] };
     },
@@ -229,7 +216,6 @@ test('the whole way: the handler’s three AI routes, through the agent — who 
     authorize: (request) => (request.headers.get('authorization') === 'Bearer ok' ? { id: 7, name: 'ana', token: 'signed-for-7' } : null),
     generator: createEmailGenerator({
       model: agentEmailModel({ url: AGENT_URL, fetch: fetchTo(endpoint), headers: ({ user }) => ({ 'X-Auth-User': user.token }) }),
-      compile: compileMjml,
     }),
     onError: (error) => assert.fail(error),
   });
@@ -244,10 +230,9 @@ test('the whole way: the handler’s three AI routes, through the agent — who 
     return [response.status, (await response.json()).data];
   };
 
-  const [status, email] = await post('generate', { purpose: 'welcome', language: 'en' });
+  const [status, checked] = await post('proofread', { texts: [{ id: 'subject', kind: 'subject', text: 'Our sumer sale' }], language: 'en' });
   assert.equal(status, 200);
-  assert.equal(email.subject, 'Welcome to Acme');
-  assert.ok(validateMjml(email.mjml).ok);
+  assert.deepEqual(checked.fixes, FIXES.fixes);
   const [, rewritten] = await post('rewrite', {
     action: 'shorter',
     format: 'html',
@@ -259,35 +244,40 @@ test('the whole way: the handler’s three AI routes, through the agent — who 
 
   assert.deepEqual(
     seen.map(({ task, who }) => `${task} ${who}`),
-    ['generate signed-for-7', 'rewrite signed-for-7', 'subjects signed-for-7']
+    ['rewrite signed-for-7', 'rewrite signed-for-7', 'subjects signed-for-7']
   );
 });
 
-test('checkAgent: a good agent passes the three tasks; a broken one says which and why', async () => {
+test('checkAgent: a good agent passes the three checks; a broken one says which and why', async () => {
   const good = createAgentEndpoint({
-    complete: async ({ task }) =>
-      task === 'generate'
-        ? EMAIL
-        : task === 'rewrite'
-          ? { text: 'Summer sale: 30% off until Wednesday. <a href="https://example.com/sale">See the offers</a>.' }
-          : { subjects: ['Three days, 30% off', 'Your summer sale is here', 'Last call: 30% off'] },
+    complete: async ({ task, messages }) =>
+      task === 'subjects'
+        ? { subjects: ['Three days, 30% off', 'Your summer sale is here', 'Last call: 30% off'] }
+        : /<text id=/.test(messages[0].content)
+          ? {
+              fixes: [
+                { id: 'subject', text: 'Our summer sale starts on Monday' },
+                { id: 'text-2', text: '<p>We hope to see you there. <b>Every</b> product is on sale.</p>' },
+              ],
+            }
+          : { text: 'Summer sale: 30% off until Wednesday. <a href="https://example.com/sale">See the offers</a>.' },
   });
-  const report = await checkAgent({ url: AGENT_URL, fetch: fetchTo(good), compile: compileMjml });
+  const report = await checkAgent({ url: AGENT_URL, fetch: fetchTo(good) });
   assert.equal(report.ok, true, JSON.stringify(report));
-  assert.deepEqual(report.results.map((r) => [r.task, r.ok, r.attempts]), [['generate', true, 1], ['rewrite', true, 1], ['subjects', true, 1]]);
-  assert.equal(report.results[0].sample.subject, 'Welcome to Acme');
+  assert.deepEqual(report.results.map((r) => [r.task, r.ok, r.attempts]), [['proofread', true, 1], ['rewrite', true, 1], ['subjects', true, 1]]);
+  assert.deepEqual(report.results[0].sample.map((fix) => fix.id), ['subject', 'text-2']);
 
-  // Prose instead of an email, a rewrite that drops the link, and no subjects at all.
+  // Prose instead of corrections, a rewrite that drops the link, and no subjects at all.
   const broken = createAgentEndpoint({
-    complete: async ({ task }) => {
+    complete: async ({ task, messages }) => {
       if (task === 'subjects') throw Object.assign(new Error('I cannot'), { code: 'REFUSED' });
-      return task === 'generate' ? 'Sure! Here is your email: hello.' : { text: 'Summer sale: 30% off.' };
+      return /<text id=/.test(messages[0].content) ? 'Sure! The email looks fine.' : { text: 'Summer sale: 30% off.' };
     },
   });
   const failed = await checkAgent({ url: AGENT_URL, fetch: fetchTo(broken) });
   assert.equal(failed.ok, false);
   assert.deepEqual(failed.results.map((r) => [r.task, r.ok, r.code]), [
-    ['generate', false, 'INVALID_OUTPUT'],
+    ['proofread', false, 'INVALID_ANSWER'],
     ['rewrite', false, 'REWRITE_UNUSABLE'],
     ['subjects', false, 'SUBJECTS_REFUSED'],
   ]);

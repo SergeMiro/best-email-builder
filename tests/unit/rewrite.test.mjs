@@ -62,6 +62,37 @@ test('input: an action, a language for translate, the user words for custom; emp
   assert.ok(prompt.includes(`<text>\n${GREETING}\n</text>`));
 });
 
+test('write: a topic is enough (the text may be empty); the shape, the language and the email around it are asked for', () => {
+  const block = cleanRewriteInput({ action: 'write', text: '', instruction: ' the sale ends Sunday ', language: 'fr' });
+  assert.match(block.change, /^Write a new text about: the sale ends Sunday/);
+  assert.match(block.change, /a few short sentences/);
+  assert.match(block.change, /Write in French, unless the topic is written in another language/);
+  assert.match(block.change, /\[placeholder in square brackets\]/);
+
+  const title = cleanRewriteInput({ action: 'write', text: 'Old title', instruction: 'Spring sale', role: 'heading', context: 'Bonjour, nos soldes…' });
+  assert.ok(title.heading);
+  assert.match(title.change, /a title: one short line/);
+  assert.match(title.change, /Write in the language of the email/);
+  const prompt = buildRewritePrompt(title);
+  assert.ok(prompt.includes('The rest of the email, for context only:\n<email>\nBonjour, nos soldes…\n</email>'));
+  assert.ok(prompt.endsWith('<text>\nOld title\n</text>'));
+
+  assert.match(cleanRewriteInput({ action: 'write', text: 'Shop', instruction: 'book a seat', format: 'plain' }).change, /a button label/);
+  assert.throws(() => cleanRewriteInput({ action: 'write', text: 'Hi', instruction: '  ' }), (error) => error.code === 'NOTHING_TO_REWRITE');
+  assert.doesNotMatch(buildRewritePrompt(cleanRewriteInput({ action: 'fix', text: 'Hi' })), /<email>/);
+});
+
+test('write: a title comes back without its paragraph; the links and merge tags of the old text stay', async () => {
+  const { model } = fakeModel(['<p>Spring sale: 30% off</p>']);
+  const { text } = await createEmailGenerator({ model }).rewrite({ action: 'write', text: '', instruction: 'spring sale', role: 'heading' });
+  assert.equal(text, 'Spring sale: 30% off');
+
+  const lost = fakeModel(['<p>Our sale ends Sunday.</p>', '<p>Our sale ends Sunday, {{contact.firstname|there}}: <a href="https://example.com/news">see it</a>.</p>']);
+  const result = await createEmailGenerator({ model: lost.model }).rewrite({ action: 'write', text: GREETING, instruction: 'the sale ends Sunday' });
+  assert.equal(result.attempts, 2);
+  assert.match(lost.requests[1].messages[2].content, /contact\.firstname\}\} is missing/);
+});
+
 test('parseRewrite: the JSON field, fenced or bare; a bare answer is the text itself', () => {
   assert.equal(parseRewrite('{"text":"Hi"}'), 'Hi');
   assert.equal(parseRewrite('```json\n{"text":" Hi "}\n```'), 'Hi');
@@ -120,7 +151,7 @@ test('rewriter: a button label comes back as plain words; refusal and aborts go 
 
   const refused = createEmailGenerator({
     model: async () => {
-      const { EmailGenerationError } = await import('../../src/ai/draft.js');
+      const { EmailGenerationError } = await import('../../src/ai/errors.js');
       throw new EmailGenerationError('REFUSED');
     },
   });
@@ -131,7 +162,7 @@ test('rewriter: a button label comes back as plain words; refusal and aborts go 
   await assert.rejects(createEmailGenerator({ model }).rewrite({ action: 'fix', text: 'Hi' }, { signal: controller.signal }), { name: 'AbortError' });
 });
 
-test('claudeEmailModel: a rewrite asks for less effort than an email', async () => {
+test('claudeEmailModel: low effort by default, for every task; `effort` and its old name `rewriteEffort` change it', async () => {
   const efforts = [];
   const client = {
     messages: {
@@ -142,10 +173,11 @@ test('claudeEmailModel: a rewrite asks for less effort than an email', async () 
     },
   };
   const model = claudeEmailModel({ client });
-  await model({ system: '', messages: [], schema: {}, task: 'generate' });
   await model({ system: '', messages: [], schema: {}, task: 'rewrite' });
+  await model({ system: '', messages: [], schema: {}, task: 'subjects' });
+  await claudeEmailModel({ client, effort: 'high' })({ system: '', messages: [], schema: {}, task: 'rewrite' });
   await claudeEmailModel({ client, rewriteEffort: 'medium' })({ system: '', messages: [], schema: {}, task: 'rewrite' });
-  assert.deepEqual(efforts, ['medium', 'low', 'medium']);
+  assert.deepEqual(efforts, ['low', 'low', 'high', 'medium']);
 });
 
 test('route POST /rewrite: 501 without a rewriter, rate limit, errors translated', async () => {
@@ -167,7 +199,7 @@ test('route POST /rewrite: 501 without a rewriter, rate limit, errors translated
       );
   };
   assert.equal((await make({})({ action: 'fix', text: 'Hi' })).status, 501);
-  assert.equal((await make({ generator: { generate: async () => ({}) } })({ action: 'fix', text: 'Hi' })).status, 501);
+  assert.equal((await make({ generator: { proofread: async () => ({}) } })({ action: 'fix', text: 'Hi' })).status, 501);
 
   const post = make({ generator: createEmailGenerator({ model: fakeModel(['Hello']).model }), rateLimits: { rewritePerHour: 2 }, locale: 'fr' });
   assert.equal((await post({ action: 'fix', text: 'Hi' }, { auth: false })).status, 401);

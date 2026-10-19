@@ -1,14 +1,14 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * REWRITE WITH AI, driven like a user on the `Builder / Interface` story:
- * select a text or a button, click what to do, the text changes in place;
- * Ctrl+Z brings it back.
+ * WRITE AND REWRITE WITH AI, driven like a user on the `Builder / Interface`
+ * story: select a text or a button, say what it is about or click what to
+ * do, the text changes in place; Ctrl+Z brings it back.
  *
  * No model: the story's storage runs the real rewriter (checks, repair turn)
  * around a fake model that answers `window.__rewriteAnswers` in turn, else
- * the text with "Rewritten:" in front. `window.__rewritten` records what was
- * asked.
+ * the text with "Rewritten:" in front ("Written about" the topic for a text
+ * written anew). `window.__rewritten` records what was asked.
  *
  * Run: npm run test:stories
  */
@@ -23,6 +23,7 @@ async function openBuilder(page, { lang } = {}) {
 const mjml = (page) => page.evaluate(() => window.__emailEditor.exportMjml());
 const panel = (page) => page.getByTestId('eb-properties');
 const rewrite = (page) => page.getByTestId('eb-rewrite');
+const write = (page) => page.getByTestId('eb-write');
 const canvas = (page) => page.frameLocator('.eb-canvas-frame');
 const asked = (page) => page.evaluate(() => window.__rewritten || []);
 
@@ -136,5 +137,64 @@ test.describe('Rewrite with AI', () => {
     await page.evaluate(() => (window.__rewriteDelay = 50));
     await box.getByRole('button', { name: 'Plus court', exact: true }).click();
     await expect(canvas(page).getByText('Rewritten: Titre du message', { exact: true })).toBeVisible();
+  });
+});
+
+test.describe('Write with AI', () => {
+  test('a title written on a topic: one line, fitting the email around it; Ctrl+Z brings the old one back', async ({ page }) => {
+    await openBuilder(page);
+    // A button has a label to rewrite, nothing to write.
+    await canvas(page).getByText('Learn more', { exact: true }).click();
+    await expect(panel(page).getByRole('heading', { name: 'Button' })).toBeVisible();
+    await expect(write(page)).toHaveCount(0);
+    await expect(rewrite(page)).toBeVisible();
+
+    await canvas(page).getByText('Your headline', { exact: true }).click();
+    const box = write(page);
+    await expect(box.getByText('Write with AI')).toBeVisible();
+    const topic = box.getByRole('textbox', { name: 'What the text is about' });
+    await expect(box.getByRole('button', { name: 'Write', exact: true })).toBeDisabled();
+    await topic.fill('the sale ends Sunday');
+    await page.evaluate(() => (window.__rewriteDelay = 800));
+    await topic.press('Enter');
+    await expect(rewrite(page).getByRole('status')).toContainText('Writing…');
+    await expect(canvas(page).getByText('Written about the sale ends Sunday.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Text written. Ctrl+Z brings back the previous one.')).toBeVisible();
+    await expect(topic).toHaveValue('');
+    // A title: no paragraph around it.
+    expect(await mjml(page)).toMatch(/font-size="24px"[^>]*>Written about the sale ends Sunday\.<\/mj-text>/);
+
+    const [asked] = await page.evaluate(() => window.__rewritten);
+    expect(asked).toMatchObject({ action: 'write', instruction: 'the sale ends Sunday', role: 'heading', language: 'en', text: 'Your headline', format: 'html' });
+    // The rest of the email for context, without the title itself.
+    expect(asked.context).toContain('Your text.');
+    expect(asked.context).not.toContain('Your headline');
+
+    await page.keyboard.press('Control+z');
+    await expect(canvas(page).getByText('Your headline', { exact: true })).toBeVisible();
+  });
+
+  test('a text block keeps its merge tags: an answer without them is asked again; in French, the text is asked in French', async ({ page }) => {
+    await openBuilder(page);
+    await canvas(page).getByText(/Your text\./).click();
+    await page.evaluate(() => {
+      window.__rewriteDelay = 50;
+      window.__rewriteAnswers = ['<p>Our sale ends Sunday.</p>', '<p>Hello {{contact.firstname}}, our sale ends Sunday.</p>'];
+    });
+    await write(page).getByRole('textbox', { name: 'What the text is about' }).fill('the sale ends Sunday');
+    await write(page).getByRole('button', { name: 'Write', exact: true }).click();
+    await expect(canvas(page).getByText(/our sale ends Sunday/)).toBeVisible();
+    expect(await mjml(page)).toContain('Hello {{contact.firstname}}, our sale ends Sunday.');
+    expect((await asked(page))[0]).toMatchObject({ action: 'write', role: 'text' });
+
+    await openBuilder(page, { lang: 'fr' });
+    await canvas(page).getByText('Titre du message', { exact: true }).click();
+    const box = write(page);
+    await expect(box.getByText("Écrire avec l'IA")).toBeVisible();
+    await page.evaluate(() => (window.__rewriteDelay = 50));
+    await box.getByRole('textbox', { name: 'Le sujet du texte' }).fill('les soldes finissent dimanche');
+    await box.getByRole('button', { name: 'Écrire', exact: true }).click();
+    await expect(canvas(page).getByText('Written about les soldes finissent dimanche.', { exact: true })).toBeVisible();
+    expect((await asked(page)).at(-1)).toMatchObject({ action: 'write', language: 'fr' });
   });
 });

@@ -9,9 +9,10 @@
  * application): its key, its proxy, its retries. Nothing here imports it.
  *
  * The answer comes as structured output (`output_config.format`): the JSON
- * schema of a draft, so the model cannot answer anything else. Streaming, read
- * to the end with `finalMessage()`: an email with the model's reasoning can
- * take a minute or more, longer than a plain request may stay open.
+ * schema of the answer asked for, so the model cannot answer anything else.
+ * Streaming, read to the end with `finalMessage()`: a whole email proofread,
+ * with the model's reasoning, can take longer than a plain request may stay
+ * open.
  *
  * In the page, with each user's own key, Claude is a provider of `createAi`:
  *
@@ -22,7 +23,7 @@
  *   });
  */
 
-import { EmailGenerationError } from './draft.js';
+import { EmailGenerationError } from './errors.js';
 import { failureCode } from './providers.js';
 
 export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
@@ -38,22 +39,23 @@ export const DEFAULT_CLAUDE_MODEL = 'claude-opus-5-5';
 
 /**
  * @param {{client: any} & ClaudeOptions} options
- *   `effort`: how much the model thinks before writing an email — `low`
- *   answers faster, `high` takes more care. `rewriteEffort`: the same for
- *   the light jobs the user waits on — one text rewritten, subject ideas.
+ *   `effort`: how much the model thinks before it answers — `low` (the
+ *   default: the user waits on each answer) is faster, `high` takes more
+ *   care. `rewriteEffort`: its name before 0.10, still read.
  * @returns {import('./generator.js').EmailModel}
  */
 export function claudeEmailModel({
   client,
   model = DEFAULT_CLAUDE_MODEL,
-  effort = 'medium',
-  rewriteEffort = 'low',
+  effort = 'low',
+  rewriteEffort,
   maxTokens = 32000,
 } = /** @type {any} */ ({})) {
   if (!client?.messages?.stream) {
     throw new Error('claudeEmailModel: pass an Anthropic client — `new Anthropic()` from @anthropic-ai/sdk');
   }
-  return async ({ system, messages, schema, signal, task }) => {
+  const level = rewriteEffort ?? effort;
+  return async ({ system, messages, schema, signal }) => {
     let message;
     try {
       message = await client.messages
@@ -63,7 +65,7 @@ export function claudeEmailModel({
             max_tokens: maxTokens,
             system,
             messages,
-            output_config: { effort: task === 'rewrite' || task === 'subjects' ? rewriteEffort : effort, format: { type: 'json_schema', schema } },
+            output_config: { effort: level, format: { type: 'json_schema', schema } },
           },
           { signal }
         )

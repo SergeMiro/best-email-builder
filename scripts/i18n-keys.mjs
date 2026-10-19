@@ -8,8 +8,8 @@
  *
  * A key is the first argument of a `t('…')` call, or a user-visible field of
  * the block, variable and feature registries (label, description, group,
- * placeholder, option labels), the purposes of "Generate", the rewrite
- * actions, the error messages and the brand messages.
+ * placeholder, option labels), the gallery's names and descriptions, the
+ * rewrite actions, the error messages and the brand messages.
  *
  * Two dictionaries per locale: the core's (`src/i18n/`) and the AI module's
  * (`src/ai/i18n/`), which an application without the AI never loads. A key
@@ -61,17 +61,17 @@ export async function collectKeys() {
       for (const option of property.options || []) if (/[a-z]/i.test(option.label) && !option.value.includes(',')) core.add(option.label);
     }
   }
+  const { TEMPLATE_GALLERY } = await import(pathToUrl('src/features/templates/gallery.js'));
+  for (const template of TEMPLATE_GALLERY) [template.name, template.description].filter(Boolean).forEach((k) => core.add(k));
   const { DEFAULT_VARIABLES } = await import(pathToUrl('src/features/variables/catalog.js'));
   for (const variable of DEFAULT_VARIABLES) [variable.label, variable.group].forEach((k) => core.add(k));
   const { BRAND_IMPORT_ERRORS, BRAND_NOTES } = await import(pathToUrl('src/features/brand/messages.js'));
   for (const [, message] of Object.values(BRAND_IMPORT_ERRORS)) core.add(message);
   for (const message of Object.values(BRAND_NOTES)) core.add(message);
 
-  const { EMAIL_PURPOSES, PURPOSE_CATEGORIES } = await import(pathToUrl('src/ai/purposes.js'));
-  for (const entry of [...EMAIL_PURPOSES, ...PURPOSE_CATEGORIES]) ai.add(entry.label);
   const { REWRITE_ACTIONS } = await import(pathToUrl('src/ai/rewrite.js'));
   for (const action of REWRITE_ACTIONS) ai.add(action.label);
-  const { GENERATION_ERRORS } = await import(pathToUrl('src/ai/draft.js'));
+  const { GENERATION_ERRORS } = await import(pathToUrl('src/ai/errors.js'));
   for (const error of Object.values(GENERATION_ERRORS)) ai.add(error.message);
   const { AI_PROVIDERS } = await import(pathToUrl('src/ai/providers.js'));
   for (const provider of Object.values(AI_PROVIDERS)) if (provider.free) ai.add(provider.free);

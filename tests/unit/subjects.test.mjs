@@ -116,7 +116,7 @@ test('suggester: one call when fine (task "subjects"); one repair turn; fewer th
   await assert.rejects(refused.suggestSubjects({ text: 'Hi' }), (error) => error.code === 'SUBJECTS_REFUSED' && error.status === 422);
 });
 
-test('claudeEmailModel: subject ideas ask for the light effort', async () => {
+test('claudeEmailModel: subject ideas at the effort asked, low by default', async () => {
   const efforts = [];
   const client = {
     messages: {
@@ -127,7 +127,7 @@ test('claudeEmailModel: subject ideas ask for the light effort', async () => {
     },
   };
   await claudeEmailModel({ client })({ system: '', messages: [], schema: {}, task: 'subjects' });
-  await claudeEmailModel({ client, effort: 'high' })({ system: '', messages: [], schema: {}, task: 'generate' });
+  await claudeEmailModel({ client, effort: 'high' })({ system: '', messages: [], schema: {}, task: 'subjects' });
   assert.deepEqual(efforts, ['low', 'high']);
 });
 
@@ -150,7 +150,7 @@ test('route POST /subjects: 501 without a suggester, the server catalog, rate li
       );
   };
   assert.equal((await make({})({ text: 'Hi' })).status, 501);
-  assert.equal((await make({ generator: { generate: async () => ({}) } })({ text: 'Hi' })).status, 501);
+  assert.equal((await make({ generator: { proofread: async () => ({}) } })({ text: 'Hi' })).status, 501);
 
   const fake = fakeModel([['{{secret.token}} for you', 'A', 'B', 'C']]);
   const post = make({ generator: createEmailGenerator({ model: fake.model }), rateLimits: { subjectsPerHour: 2 }, locale: 'fr', lang: 'fr' });

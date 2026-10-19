@@ -5,9 +5,9 @@
  * Demo only. A real application compiles on its server: the browser must never
  * be trusted with the HTML that gets stored or sent.
  *
- * "Generate", "Rewrite with AI" and "Suggest subjects" run in the browser too, with the VISITOR's
- * own OpenRouter key (asked once, kept in this browser's localStorage, sent only
- * to OpenRouter). An application can do the same, or call the model on its
+ * "Proofread", "Write with AI", "Rewrite with AI" and "Suggest subjects" run in the
+ * browser too, with the VISITOR's own key (asked once, kept in this browser's
+ * localStorage, sent only to the provider they choose). An application can do the same, or call the model on its
  * server, where its own key stays (`best-email-builder/ai/server`, see the README).
  */
 

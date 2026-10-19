@@ -58,7 +58,7 @@ test('block B alone: the builder entry does not reach the library', async () => 
 });
 
 /** Words only the AI module has: its buttons, its prompts. */
-const AI_MARKERS = ['Suggest subjects', 'Rewrite with AI', 'Generate an email', 'Suggérer des objets', 'You write email subject lines'];
+const AI_MARKERS = ['Suggest subjects', 'Rewrite with AI', 'Proofread the email', 'Suggérer des objets', 'You write email subject lines', 'You proofread an email'];
 
 for (const entry of ['src/index.js', 'src/builder.js', 'src/library.js', 'src/server/index.js']) {
   test(`without the AI module: ${entry} reaches none of its code, texts or SDK`, async () => {
@@ -71,7 +71,7 @@ for (const entry of ['src/index.js', 'src/builder.js', 'src/library.js', 'src/se
 
 test('the AI module: its buttons and their texts, without the builder or the library', async () => {
   const { inputs, text } = await graph('src/ai/index.js');
-  for (const file of ['src/ai/createAi.js', 'src/ai/GenerateButton.jsx', 'src/ai/RewriteText.jsx', 'src/ai/SubjectIdeas.jsx', 'src/ai/i18n/fr.js']) {
+  for (const file of ['src/ai/createAi.js', 'src/ai/ProofreadButton.jsx', 'src/ai/RewriteText.jsx', 'src/ai/SubjectIdeas.jsx', 'src/ai/i18n/fr.js']) {
     assert.ok(inputs.includes(file), file);
   }
   assert.deepEqual(AI_MARKERS.filter((marker) => !text.includes(marker)), []);

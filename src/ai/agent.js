@@ -1,8 +1,9 @@
 // @ts-check
 /**
  * YOUR OWN AI AGENT — the assistant an application already has (its tools,
- * its knowledge, its rights) writes the builder's emails, rewrites its texts
- * and suggests its subjects, instead of a model called directly.
+ * its knowledge, its rights) writes and rewrites the builder's texts,
+ * proofreads its emails and suggests their subjects, instead of a model
+ * called directly.
  *
  *   // On the server: the handler's AI routes, the agent behind them.
  *   createEmailBuilderHandler({
@@ -12,7 +13,6 @@
  *         url: 'http://agent.internal/email-builder',
  *         headers: ({ user }) => ({ Authorization: `Bearer ${user.token}` }),
  *       }),
- *       compile: compileMjml,
  *     }),
  *   });
  *   // and in the page: createAi({ baseUrl: '/api/email-builder' })
@@ -23,7 +23,8 @@
  * THE PROTOCOL, `best-email-builder/agent@1`: one POST per model turn.
  *
  *   → { protocol, task, system, messages, schema }
- *       task      'generate' | 'rewrite' | 'subjects'
+ *       task      'rewrite' (one text written or rewritten, or the email's
+ *                 texts proofread) | 'subjects' (subject ideas)
  *       system    the instructions, the answer format included: a model
  *                 given `system` and `messages` as they are answers right
  *       messages  [{ role: 'user'|'assistant', content }]; a repair turn adds
@@ -34,8 +35,8 @@
  *
  * The agent decides how to answer: one model call, or its own tools first (a
  * knowledge base, the customer's data). Its answer is then treated as any
- * model's — read, cleaned, checked, and sent back once for repair when it
- * has problems — so the agent needs to know nothing of MJML.
+ * model's — read, checked, and sent back once for repair when it has
+ * problems — so the agent needs to know nothing of email markup.
  *
  * WHO ASKS is never in the body (an agent must not trust it): on the server,
  * `headers({ task, user })` gets the user the handler's `authorize` returned,
@@ -46,7 +47,7 @@
  * `checkAgent` to try an agent with the builder's own checks.
  */
 
-import { EmailGenerationError } from './draft.js';
+import { EmailGenerationError } from './errors.js';
 import { answerInstruction } from './providers.js';
 
 export const AGENT_PROTOCOL = 'best-email-builder/agent@1';
@@ -58,7 +59,7 @@ export const AGENT_ERROR_CODES = Object.freeze(['REFUSED', 'TRUNCATED', 'MODEL_U
 const DEFAULT_TIMEOUT = 180_000;
 
 /**
- * @typedef {{task: 'generate'|'rewrite'|'subjects', user?: any}} AgentCallContext
+ * @typedef {{task: 'rewrite'|'subjects', user?: any}} AgentCallContext
  * @typedef {Record<string, string> | ((context: AgentCallContext) => Record<string, string> | Promise<Record<string, string>>)} AgentHeaders
  */
 
@@ -97,7 +98,7 @@ export function agentEmailModel(options) {
   }
 
   /** @type {import('./generator.js').EmailModel} */
-  const emailModel = async ({ system, messages, schema, signal, task = 'generate', user }) => {
+  const emailModel = async ({ system, messages, schema, signal, task = 'rewrite', user }) => {
     const call = fetchImpl || globalThis.fetch;
     const own = typeof headers === 'function' ? await headers({ task, user }) : headers;
     signal?.throwIfAborted();

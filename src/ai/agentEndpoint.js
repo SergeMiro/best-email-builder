@@ -12,22 +12,22 @@
  *   });
  *   // Next.js: export const POST = endpoint;   Express: app.post('/email-builder', toNodeListener(endpoint))
  *
- *   const report = await checkAgent({ url: 'http://localhost:8800/email-builder', headers, compile: compileMjml });
- *   // { ok, results: [{ task: 'generate', ok, ms, attempts, sample }, …] }
+ *   const report = await checkAgent({ url: 'http://localhost:8800/email-builder', headers });
+ *   // { ok, results: [{ task: 'proofread', ok, ms, attempts, sample }, …] }
  */
 
 import { AGENT_ERROR_CODES, AGENT_PROTOCOL, agentEmailModel } from './agent.js';
-import { GENERATION_ERRORS } from './draft.js';
+import { GENERATION_ERRORS } from './errors.js';
 import { createEmailGenerator } from './generator.js';
 
-const TASKS = ['generate', 'rewrite', 'subjects'];
-/** A repair turn carries the last answer: a whole email at most. */
+const TASKS = ['rewrite', 'subjects'];
+/** A repair turn carries the last answer: the texts of an email at most. */
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_MESSAGES = 20;
 
 /**
  * @typedef {{
- *   task: 'generate'|'rewrite'|'subjects',
+ *   task: 'rewrite'|'subjects',
  *   system: string,
  *   messages: {role: 'user'|'assistant', content: string}[],
  *   schema: object,
@@ -123,8 +123,16 @@ const SAMPLE_TEXT =
   '<p>Our summer sale starts on Monday: 30% off everything in store, for three days only. ' +
   'It ends on Wednesday at midnight. <a href="https://example.com/sale">See the offers</a>.</p>';
 
+/** An email with three mistakes to find, and one text without. @type {import('./proofread.js').ProofreadText[]} */
+const SAMPLE_EMAIL = [
+  { id: 'subject', kind: 'subject', format: 'plain', text: 'Our sumer sale starts on Monday' },
+  { id: 'text-1', kind: 'text', format: 'html', text: SAMPLE_TEXT },
+  { id: 'text-2', kind: 'text', format: 'html', text: '<p>We hope to see you their. <b>Every</b> product are on sale.</p>' },
+  { id: 'button-1', kind: 'button', format: 'plain', text: 'See the offers' },
+];
+
 /**
- * Tries an agent with the builder's own checks: one email written, one text
+ * Tries an agent with the builder's own checks: an email proofread, one text
  * rewritten, subject ideas — in turn, each as the builder would ask it (with
  * its repair turn). Three to six calls to the agent.
  * @param {{
@@ -133,20 +141,17 @@ const SAMPLE_TEXT =
  *   user?: any,
  *   fetch?: typeof fetch,
  *   timeout?: number,
- *   compile?: (mjml: string) => Promise<{warnings?: {message: string}[]}>,
  *   language?: string,
  * }} options
  *   `user`: what `headers` gets, as the handler's `authorize` would give it.
- *   `compile`: `compileMjml` (best-email-builder/server), for MJML's own
- *   warnings as on the server.
  * @returns {Promise<{ok: boolean, results: {task: string, ok: boolean, ms: number, attempts?: number, sample?: unknown, code?: string, error?: string}[]}>}
  */
-export async function checkAgent({ url, headers, user, fetch: fetchImpl, timeout, compile, language = 'en' }) {
+export async function checkAgent({ url, headers, user, fetch: fetchImpl, timeout, language = 'en' }) {
   const model = agentEmailModel({ url, headers, fetch: fetchImpl, timeout });
-  const generator = createEmailGenerator({ model, compile });
+  const generator = createEmailGenerator({ model });
   /** @type {[string, () => Promise<any>, (result: any) => unknown][]} */
   const steps = [
-    ['generate', () => generator.generate({ purpose: 'welcome', language }, { user }), (r) => ({ subject: r.subject, warnings: r.warnings })],
+    ['proofread', () => generator.proofread({ texts: SAMPLE_EMAIL, language }, { user }), (r) => r.fixes],
     ['rewrite', () => generator.rewrite({ action: 'shorter', text: SAMPLE_TEXT, format: 'html' }, { user }), (r) => r.text],
     [
       'subjects',

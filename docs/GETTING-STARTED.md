@@ -123,7 +123,7 @@ middleware.
 ## Next steps
 
 - [Variables and sending](VARIABLES.md): personalize the stored HTML for each recipient.
-- [AI](AI.md): add *Generate*, *Rewrite with AI* and *Suggest subjects*.
+- [AI](AI.md): add *Proofread*, *Write with AI*, *Rewrite with AI* and *Suggest subjects*.
 - [Brand](BRAND.md): start every email with your logo, colors and font.
 - [Languages](LANGUAGES.md): show the interface in another language.
 - [Server](SERVER.md): all the handler's options and the storage contract.

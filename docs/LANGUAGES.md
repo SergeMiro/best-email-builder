@@ -41,8 +41,10 @@ an application without the AI does not load them. When you give the module
 to the editor, its texts are merged under your `messages`, so `messages` can
 override them too.
 
-The AI writes in the interface's language: *Generate* writes the email in it,
-and *Suggest subjects* uses the language of the email.
+The AI follows the email's language: *Proofread* corrects each text in its
+own, and *Write with AI* and *Suggest subjects* use the language of the email.
+*Write with AI* falls back on the interface's language for an email with no
+words yet.
 
 ## On the server
 

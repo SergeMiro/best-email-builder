@@ -21,7 +21,7 @@ const MAX_AVOID = 12;
  *
  * "Yours" is what the user wrote: typed in the field while the list is open
  * (or while ideas are on their way), it becomes the new "yours". When the
- * email itself is replaced (Generate, a template), the list closes.
+ * email itself is replaced (another template opened), the list closes.
  *
  * Keyboard: the list is a radio group — one Tab stop, the arrows move and
  * pick. Focus goes to the list when it opens, back to the button after Done or

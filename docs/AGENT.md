@@ -2,8 +2,8 @@
 
 An application that already has an AI assistant (its own model, its tools,
 its knowledge base, its users' rights) can make it the builder's AI:
-**Generate**, **Rewrite with AI** and **Suggest subjects** then go through
-that agent instead of a model called directly.
+**Proofread**, **Write with AI**, **Rewrite with AI** and **Suggest subjects**
+then go through that agent instead of a model called directly.
 
 The agent only answers questions. The builder still writes the prompts, reads
 the answers, cleans and checks them, and gives the agent one repair turn when
@@ -23,7 +23,7 @@ browser ──► your server: createEmailBuilderHandler({ generator })   ← au
 On the server, where `authorize` already knows the user:
 
 ```js
-import { compileMjml, createEmailBuilderHandler } from 'best-email-builder/server';
+import { createEmailBuilderHandler } from 'best-email-builder/server';
 import { agentEmailModel, createEmailGenerator } from 'best-email-builder/ai/server';
 
 const handler = createEmailBuilderHandler({
@@ -38,13 +38,12 @@ const handler = createEmailBuilderHandler({
       // Who asks, in the form your agent trusts (here, a token signed for that user).
       headers: async ({ user, task }) => ({ 'X-Auth-User': await signFor(user.session) }),
     }),
-    compile: compileMjml,
   }),
 });
 ```
 
 ```jsx
-// The page: the handler's /generate, /rewrite and /subjects routes.
+// The page: the handler's /proofread, /rewrite and /subjects routes.
 <EmailBuilder storage={storage} ai={createAi({ baseUrl: '/api/email-builder' })} />
 ```
 
@@ -70,7 +69,7 @@ reach the agent through a route of your application that adds the session:
 
 ## The protocol
 
-There is one `POST` for each model turn. Generating one email takes one turn,
+There is one `POST` for each model turn. Proofreading an email takes one turn,
 or two when a repair is needed.
 
 **Request** (`Content-Type: application/json`):
@@ -78,16 +77,16 @@ or two when a repair is needed.
 ```json
 {
   "protocol": "best-email-builder/agent@1",
-  "task": "generate",
-  "system": "You write emails… # Answer format\nAnswer with ONE JSON object…",
-  "messages": [{ "role": "user", "content": "Write the email…" }],
-  "schema": { "type": "object", "properties": { "name": {}, "subject": {}, "preheader": {}, "mjml": {} } }
+  "task": "rewrite",
+  "system": "You proofread an email before it is sent… # Answer format\nAnswer with ONE JSON object…",
+  "messages": [{ "role": "user", "content": "…<text id=\"subject\" kind=\"subject line\">\nOur sumer sale\n</text>…" }],
+  "schema": { "type": "object", "properties": { "fixes": {} } }
 }
 ```
 
 | Field | |
 |---|---|
-| `task` | `generate` (a whole email), `rewrite` (one text) or `subjects` (three subject lines). `rewrite` and `subjects` are lighter jobs, so a smaller or faster model can answer them |
+| `task` | `rewrite` (one text written or rewritten, or the texts of an email proofread) or `subjects` (three subject lines). Both are short jobs, so a small, fast model can answer them. Before 0.10 there was also `generate` (a whole email); an agent that still accepts it does no harm |
 | `system` | the instructions, including the answer format. Given to a chat model exactly as they are, together with `messages`, they produce a valid answer |
 | `messages` | `user` / `assistant` turns. A repair turn adds the previous answer and the list of problems found in it |
 | `schema` | the JSON schema of the answer, for models that take structured output |
@@ -103,7 +102,7 @@ A `code` from this list is shown to the user in their language:
 
 | `code` | shown as |
 |---|---|
-| `REFUSED` | the AI declined (the dialog suggests other details) |
+| `REFUSED` | the AI declined |
 | `TRUNCATED` | the answer was cut, so ask for a shorter one |
 | `MODEL_UNAVAILABLE` | the model is not there |
 | `MODEL_CREDITS` | no credits left |
@@ -133,7 +132,7 @@ async def complete(task, system, messages, schema, request):
     user_token = request.headers["x-auth-user"]
     convo = [{"role": "system", "content": system}, *messages]
     # Your agent: one model call, or its tools first (search, the customer's data).
-    return await your_llm(convo, user_token, use_tools=(task == "generate"))
+    return await your_llm(convo, user_token)
 
 app.include_router(email_builder_router(complete, dependencies=[Depends(require_user)]))
 ```
@@ -163,22 +162,20 @@ use `toNodeListener` from `best-email-builder/server`.
 
 ## Trying an agent
 
-`checkAgent` asks for one email, one rewrite and three subject lines, the way
-the builder does (with the repair turn), and checks the answers with the
+`checkAgent` asks for a proofread, one rewrite and three subject lines, the
+way the builder does (with the repair turn), and checks the answers with the
 builder's own checks:
 
 ```js
 import { checkAgent } from 'best-email-builder/ai/server';
-import { compileMjml } from 'best-email-builder/server';
 
 const report = await checkAgent({
   url: 'http://localhost:8800/email-builder',
   headers: () => ({ 'X-Auth-User': token }),
-  compile: compileMjml,
   language: 'fr',
 });
-// { ok: true, results: [{ task: 'generate', ok: true, ms: 25900, attempts: 1, sample: { subject: … } }, …] }
+// { ok: true, results: [{ task: 'proofread', ok: true, ms: 2900, attempts: 1, sample: [{ id: 'subject', text: … }] }, …] }
 ```
 
-A failed task reports its code and the reason, for example `INVALID_OUTPUT`
-(prose instead of an email) or `REWRITE_UNUSABLE` (a link was lost).
+A failed task reports its code and the reason, for example `INVALID_ANSWER`
+(prose instead of JSON) or `REWRITE_UNUSABLE` (a link was lost).

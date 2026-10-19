@@ -53,7 +53,7 @@ function fakeFetch(answer = () => ({ status: 200, body: { data: { ok: true } } }
   return { fetch, calls };
 }
 
-const PARTS = ['generate', 'rewrite', 'suggestSubjects'];
+const PARTS = ['proofread', 'rewrite', 'suggestSubjects'];
 const on = (ai) => PARTS.filter((part) => typeof ai[part] === 'function');
 
 test('createAi(): the three parts over HTTP, at the handler’s routes, with the host’s headers and the signal', async () => {
@@ -62,20 +62,21 @@ test('createAi(): the three parts over HTTP, at the handler’s routes, with the
   const ai = createAi({ baseUrl: '/api/mail/', headers: () => ({ Authorization: `Bearer ${token}` }), fetch });
   assert.deepEqual(on(ai), PARTS);
   const signal = new AbortController().signal;
-  assert.deepEqual(await ai.generate({ purpose: 'sale' }, { signal }), { url: '/api/mail/generate' });
+  const texts = [{ id: 'subject', text: 'Hi' }];
+  assert.deepEqual(await ai.proofread({ texts }, { signal }), { url: '/api/mail/proofread' });
   token = 'b';
   await ai.rewrite({ action: 'fix', text: 'Hi' });
   await ai.suggestSubjects({ text: 'Hi' });
   assert.deepEqual(
     calls.map((c) => [c.url, c.init.method, c.init.headers.Authorization, c.init.headers['Content-Type']]),
     [
-      ['/api/mail/generate', 'POST', 'Bearer a', 'application/json'],
+      ['/api/mail/proofread', 'POST', 'Bearer a', 'application/json'],
       ['/api/mail/rewrite', 'POST', 'Bearer b', 'application/json'],
       ['/api/mail/subjects', 'POST', 'Bearer b', 'application/json'],
     ]
   );
   assert.equal(calls[0].init.signal, signal);
-  assert.deepEqual(calls[0].body, { purpose: 'sale' });
+  assert.deepEqual(calls[0].body, { texts });
   // Without any option: the handler's default base path.
   const plain = fakeFetch();
   const ai2 = createAi({ fetch: plain.fetch });
@@ -101,25 +102,27 @@ test('createAi(): a server error comes back with its message, status and code', 
 
 test('createAi(): only the parts asked for — false leaves one out, functions of one’s own are the only ones on', async () => {
   const { fetch, calls } = fakeFetch();
-  const noGenerate = createAi({ fetch, generate: false });
-  assert.deepEqual(on(noGenerate), ['rewrite', 'suggestSubjects']);
-  assert.equal(noGenerate.generate, null);
+  const noProofread = createAi({ fetch, proofread: false });
+  assert.deepEqual(on(noProofread), ['rewrite', 'suggestSubjects']);
+  assert.equal(noProofread.proofread, null);
+  // `generate: false` (0.9) still reads: there is nothing left to turn off.
+  assert.deepEqual(on(createAi({ fetch, generate: false })), PARTS);
 
   const rewrite = async () => ({ text: 'Hello' });
   const own = createAi({ rewrite });
   assert.deepEqual(on(own), ['rewrite']);
   assert.equal(own.rewrite, rewrite);
-  assert.equal(own.generate, null);
+  assert.equal(own.proofread, null);
   assert.equal(own.suggestSubjects, null);
 
   // A function of one's own next to the server: that part is the host's, the others the server's.
   const mixed = createAi({ fetch, rewrite });
   assert.deepEqual(on(mixed), PARTS);
   assert.equal(mixed.rewrite, rewrite);
-  await mixed.generate({ purpose: 'sale' });
-  assert.equal(calls.at(-1).url, '/api/email-builder/generate');
+  await mixed.proofread({ texts: [{ id: 'subject', text: 'Hi' }] });
+  assert.equal(calls.at(-1).url, '/api/email-builder/proofread');
 
-  const none = createAi({ fetch, generate: false, rewrite: false, suggestSubjects: false });
+  const none = createAi({ fetch, proofread: false, rewrite: false, suggestSubjects: false });
   assert.deepEqual(on(none), []);
 });
 
@@ -134,13 +137,14 @@ test('createAi({ model }): the generator runs in the page — the model is asked
   const { subjects } = await ai.suggestSubjects({ subject: 'Spring news', text: 'Our spring collection is here.' });
   assert.deepEqual(subjects, ['First idea', 'Second idea', 'Third idea']);
   assert.deepEqual(asked, ['subjects']);
-  assert.deepEqual(on(createAi({ model, suggestSubjects: false })), ['generate', 'rewrite']);
+  assert.deepEqual(on(createAi({ model, suggestSubjects: false })), ['proofread', 'rewrite']);
 });
 
 test('createAi(): wrong options are refused at once, with what to do', () => {
   assert.throws(() => createAi({ model: async () => '', baseUrl: '/api' }), /not both/);
   assert.throws(() => createAi({ model: 'claude' }), /`model` must be a function/);
-  assert.throws(() => createAi({ generate: 'yes' }), /`generate` must be a function, true or false/);
+  assert.throws(() => createAi({ proofread: 'yes' }), /`proofread` must be a function, true or false/);
+  assert.throws(() => createAi({ generate: async () => ({}) }), /`generate` was removed in 0\.10/);
   assert.throws(() => createAi(null), /options must be an object/);
 });
 
@@ -149,9 +153,9 @@ test('createAi(): what the builder reads — frozen, its three components, its o
   assert.ok(Object.isFrozen(ai) && Object.isFrozen(ai.components));
   assert.throws(() => {
     'use strict';
-    ai.generate = async () => ({});
+    ai.proofread = async () => ({});
   }, TypeError);
-  for (const name of ['Generate', 'Rewrite', 'Subjects']) assert.equal(typeof ai.components[name], 'function', name);
+  for (const name of ['Proofread', 'Rewrite', 'Subjects']) assert.equal(typeof ai.components[name], 'function', name);
   assert.deepEqual(ai.messages, AI_MESSAGES);
   assert.equal(ai.messages.fr['Suggest subjects'], 'Suggérer des objets');
 });
@@ -161,7 +165,7 @@ test('dictionaries: the AI’s texts are in its own, not in the core’s; the co
   for (const [locale, core] of Object.entries(LOCALES)) {
     if (locale === 'en') continue;
     const ai = AI_MESSAGES[locale];
-    for (const key of ['Suggest subjects', 'Rewrite with AI', 'Generate an email', 'More ideas', 'Done', 'No usable subject came back. Try again.']) {
+    for (const key of ['Suggest subjects', 'Rewrite with AI', 'Write with AI', 'Proofread the email', 'More ideas', 'Done', 'No usable subject came back. Try again.']) {
       assert.ok(key in ai, `${locale}: ${key} in the AI's dictionary`);
       assert.ok(!(key in core), `${locale}: ${key} not shipped without the AI`);
     }
@@ -219,7 +223,7 @@ function server(options = {}) {
 test('server without the AI: every AI route answers 501 NO_GENERATOR, the rest works', async () => {
   const post = server();
   for (const [route, body] of [
-    ['generate', { purpose: 'sale' }],
+    ['proofread', { texts: [{ id: 'subject', text: 'Hi' }] }],
     ['rewrite', { action: 'fix', text: 'Hi' }],
     ['subjects', { text: 'Hi' }],
   ]) {
@@ -229,7 +233,8 @@ test('server without the AI: every AI route answers 501 NO_GENERATOR, the rest w
   }
   // A generator with one part only: the others stay 501.
   const partial = server({ generator: { rewrite: async ({ text }) => ({ text: `${text}!` }) } });
-  assert.equal((await partial('generate', { purpose: 'sale' })).status, 501);
+  assert.equal((await partial('proofread', { texts: [{ id: 'subject', text: 'Hi' }] })).status, 501);
+  assert.equal((await partial('generate', { purpose: 'sale' })).status, 404, 'no route to write whole emails any more');
   assert.equal((await partial('subjects', { text: 'Hi' })).status, 501);
   assert.deepEqual((await partial('rewrite', { action: 'fix', text: 'Hi' })).data, { text: 'Hi!' });
 });

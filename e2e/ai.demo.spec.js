@@ -4,8 +4,9 @@ import { test, expect } from '@playwright/test';
  * THE AI in the static demo: the visitor's own key, with the provider they
  * choose in the builder's Connect dialog
  * (`createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'], askKey: true })`).
- * The providers are answered by `page.route` — nothing leaves the machine; the
- * tests check what the browser would have sent.
+ * Proofread makes the calls: a typo in the subject, corrected. The providers
+ * are answered by `page.route` — nothing leaves the machine; the tests check
+ * what the browser would have sent.
  */
 
 const HOME = '/best-email-builder/';
@@ -17,16 +18,9 @@ const KEY = 'sk-or-test-0000';
 const STORED = 'best-email-builder:ai-key:openrouter';
 const CHOICE = 'best-email-builder:ai-provider';
 
-const DRAFT = {
-  name: 'Autumn sale',
-  subject: 'Autumn sale: 20% off everything',
-  preheader: 'Three days only, from Friday.',
-  mjml: `<mjml><mj-body width="600px"><mj-section padding-top="32px" padding-bottom="32px"><mj-column>
-<mj-text font-family="Arial, sans-serif" font-size="28px">Autumn sale</mj-text>
-<mj-button href="https://example.com" font-family="Arial, sans-serif">Shop now</mj-button>
-<mj-text font-family="Arial, sans-serif" font-size="12px"><a href="{{ unsubscribe }}">Unsubscribe</a></mj-text>
-</mj-column></mj-section></mj-body></mjml>`,
-};
+/** A typo in the subject, and what the model answers for it. */
+const TYPO = 'Our sumer sale';
+const FIXES = { fixes: [{ id: 'subject', text: 'Our summer sale' }] };
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST' };
 
@@ -79,12 +73,21 @@ async function reopenEditor(page) {
   await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
 }
 
-async function generateSale(page, label = 'Generate') {
-  await page.getByRole('button', { name: label, exact: true }).click();
-  const box = page.getByTestId('eb-generate');
-  await box.locator('[data-purpose="sale"]').click();
-  await box.getByTestId('eb-generate-submit').click();
-  return box;
+const subjectField = (page, lang = 'en') => page.getByTestId('eb-properties').getByLabel(lang === 'fr' ? 'Objet' : 'Subject', { exact: true });
+
+/** The typo in the subject, then Proofread: its dialog. */
+async function proofreadSubject(page, lang = 'en') {
+  await subjectField(page, lang).fill(TYPO);
+  await page.getByRole('button', { name: lang === 'fr' ? 'Relire' : 'Proofread', exact: true }).click();
+  return page.getByTestId('eb-proofread');
+}
+
+/** The model's correction listed, then applied: the subject corrected, the dialog closed. */
+async function applyCorrection(page, box) {
+  await expect(box.getByTestId('eb-proofread-fix')).toHaveCount(1, { timeout: 30_000 });
+  await box.getByTestId('eb-proofread-apply-all').click();
+  await expect(box).toBeHidden();
+  await expect(subjectField(page)).toHaveValue(FIXES.fixes[0].text);
 }
 
 const connect = (page) => page.getByTestId('eb-ai-connect');
@@ -157,7 +160,7 @@ const modelStatus = (page) => connect(page).getByTestId('eb-ai-connect-models-st
 const modelList = (page) => connect(page).getByRole('listbox', { name: /^(Model|Modèle)$/ });
 
 test('without a key: the Connect dialog offers six providers and asks for a key; Cancel explains it, nothing is sent', async ({ page }) => {
-  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(DRAFT)));
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(FIXES)));
   // The page only: the canvas frame shares its storage, and would put the key back.
   await page.addInitScript(() => window === window.top && localStorage.setItem('best-email-builder-demo:anthropic-key', 'sk-ant-old'));
   await openEditor(page);
@@ -168,7 +171,7 @@ test('without a key: the Connect dialog offers six providers and asks for a key;
   // The key of the demo's Anthropic days is no longer kept.
   expect(await page.evaluate(() => localStorage.getItem('best-email-builder-demo:anthropic-key'))).toBeNull();
 
-  const box = await generateSale(page);
+  const box = await proofreadSubject(page);
   const dialog = connect(page);
   await expect(dialog.getByLabel('API key')).toBeFocused();
   // Six providers, the first one chosen; no icons on the cards.
@@ -233,17 +236,15 @@ test('without a key: the Connect dialog offers six providers and asks for a key;
   expect(await stored(page, CHOICE)).toBeNull();
 });
 
-test('with a key: OpenRouter is asked from the browser, the email opens in the editor; the key can be forgotten', async ({ page }) => {
-  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(DRAFT)));
+test('with a key: OpenRouter is asked from the browser, the correction is applied; the key can be forgotten', async ({ page }) => {
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(FIXES)));
   await openEditor(page);
-  const box = await generateSale(page);
+  const box = await proofreadSubject(page);
   await choose(page, 'OpenRouter');
   await connect(page).getByLabel('API key').fill(KEY);
   await page.keyboard.press('Enter');
   await expect(connect(page)).toBeHidden();
-  await expect(box).toBeHidden({ timeout: 30_000 });
-  await expect(page.frameLocator('.eb-canvas-frame').getByText('Autumn sale', { exact: true })).toBeVisible();
-  await expect(page.getByTestId('eb-properties').getByRole('textbox', { name: 'Subject' })).toHaveValue(DRAFT.subject);
+  await applyCorrection(page, box);
 
   // One request, straight to OpenRouter, with the visitor's key.
   expect(seen).toHaveLength(1);
@@ -252,11 +253,11 @@ test('with a key: OpenRouter is asked from the browser, the email opens in the e
   expect(headers['x-title']).toBe('Best Email Builder');
   expect(body.model).toBe('openrouter/free');
   expect(body.response_format.type).toBe('json_schema');
-  expect(body.response_format.json_schema.schema.required).toEqual(['name', 'subject', 'preheader', 'mjml']);
+  expect(body.response_format.json_schema.schema.required).toEqual(['fixes']);
   expect(body.messages[0].role).toBe('system');
-  expect(body.messages[1].content).toContain('sale');
+  expect(body.messages[1].content).toContain(`<text id="subject" kind="subject line">\n${TYPO}\n</text>`);
 
-  // Kept for the next generation, with the choice, until the visitor forgets it.
+  // Kept for the next request, with the choice, until the visitor forgets it.
   expect(await stored(page, STORED)).toBe(KEY);
   expect(await stored(page, CHOICE)).toBe('openrouter');
   await expect(page.getByTestId('demo-ai-note')).toContainText('Connected to OpenRouter · openrouter/free.');
@@ -268,12 +269,12 @@ test('with a key: OpenRouter is asked from the browser, the email opens in the e
   expect(await stored(page, STORED)).toBeNull();
 });
 
-test('a key OpenRouter refuses: the dialog asks again and says so; a good key finishes the email', async ({ page }) => {
+test('a key OpenRouter refuses: the dialog asks again and says so; a good key gets the answer', async ({ page }) => {
   const seen = await fakeOpenRouter(page, (request) =>
-    request.headers().authorization === 'Bearer sk-or-good' ? completion(JSON.stringify(DRAFT)) : refused
+    request.headers().authorization === 'Bearer sk-or-good' ? completion(JSON.stringify(FIXES)) : refused
   );
   await openEditor(page);
-  const box = await generateSale(page);
+  const box = await proofreadSubject(page);
   await choose(page, 'OpenRouter');
   await connect(page).getByLabel('API key').fill('sk-or-wrong');
   await connect(page).getByRole('button', { name: 'Connect' }).click();
@@ -283,27 +284,27 @@ test('a key OpenRouter refuses: the dialog asks again and says so; a good key fi
   expect(await stored(page, STORED)).toBeNull();
   await connect(page).getByLabel('API key').fill('sk-or-good');
   await connect(page).getByRole('button', { name: 'Connect' }).click();
-  await expect(box).toBeHidden({ timeout: 30_000 });
-  await expect(page.frameLocator('.eb-canvas-frame').getByText('Autumn sale', { exact: true })).toBeVisible();
+  await applyCorrection(page, box);
   expect(seen.map((request) => request.headers.authorization)).toEqual(['Bearer sk-or-wrong', 'Bearer sk-or-good']);
 });
 
-test('rewrite with AI: the same key, no second question, the selected text replaced', async ({ page }) => {
+test('write and rewrite with AI: the same key, no second question, the selected text replaced', async ({ page }) => {
   const seen = await fakeOpenRouter(page, (request) => {
-    const rewriting = request.postDataJSON().messages[1].content.includes('<text>');
-    return completion(JSON.stringify(rewriting ? { text: 'Big autumn sale' } : DRAFT));
+    const content = request.postDataJSON().messages[1].content;
+    if (content.includes('<text id=')) return completion(JSON.stringify(FIXES));
+    return completion(JSON.stringify({ text: content.includes('Write a new text about') ? 'The sale ends Sunday' : 'Big news' }));
   });
   await openEditor(page);
-  const box = await generateSale(page);
+  const box = await proofreadSubject(page);
   await choose(page, 'OpenRouter');
   await connect(page).getByLabel('API key').fill(KEY);
   await page.keyboard.press('Enter');
-  await expect(box).toBeHidden({ timeout: 30_000 });
+  await applyCorrection(page, box);
 
   const canvas = page.frameLocator('.eb-canvas-frame');
-  await canvas.getByText('Autumn sale', { exact: true }).click();
+  await canvas.getByText('Your headline', { exact: true }).click();
   await page.getByTestId('eb-rewrite').getByRole('button', { name: 'Shorter', exact: true }).click();
-  await expect(canvas.getByText('Big autumn sale', { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(canvas.getByText('Big news', { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(connect(page)).toBeHidden();
 
   expect(seen).toHaveLength(2);
@@ -311,13 +312,21 @@ test('rewrite with AI: the same key, no second question, the selected text repla
   expect(headers.authorization).toBe(`Bearer ${KEY}`);
   expect(body.response_format.json_schema.name).toBe('rewrite');
   expect(body.response_format.json_schema.schema.required).toEqual(['text']);
-  expect(body.messages[1].content).toContain('<text>\nAutumn sale\n</text>');
+  expect(body.messages[1].content).toContain('<text>\nYour headline\n</text>');
+
+  // A text written anew, on a topic.
+  const write = page.getByTestId('eb-write');
+  await write.getByLabel('What the text is about').fill('the sale ends Sunday');
+  await write.getByRole('button', { name: 'Write', exact: true }).click();
+  await expect(canvas.getByText('The sale ends Sunday', { exact: true })).toBeVisible({ timeout: 30_000 });
+  expect(seen).toHaveLength(3);
+  expect(seen[2].body.messages[1].content).toContain('Write a new text about: the sale ends Sunday');
 });
 
 test('in French: the Connect dialog and its texts', async ({ page }) => {
-  await fakeOpenRouter(page, () => completion(JSON.stringify(DRAFT)));
+  await fakeOpenRouter(page, () => completion(JSON.stringify(FIXES)));
   await openEditor(page, 'fr');
-  const box = await generateSale(page, 'Générer');
+  const box = await proofreadSubject(page, 'fr');
   const dialog = connect(page);
   await expect(dialog.getByRole('radiogroup', { name: "Fournisseur d'IA" })).toBeVisible();
   await choose(page, 'OpenRouter');
@@ -330,24 +339,23 @@ test('in French: the Connect dialog and its texts', async ({ page }) => {
 });
 
 test('Gemini, then Mistral: each provider its own key; the choice is remembered; "Change provider" in the note', async ({ page }) => {
-  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(DRAFT)));
-  const mistral = await fakeApi(page, MISTRAL, () => completion(JSON.stringify(DRAFT)));
+  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(FIXES)));
+  const mistral = await fakeApi(page, MISTRAL, () => completion(JSON.stringify(FIXES)));
   await openEditor(page);
-  let box = await generateSale(page);
+  let box = await proofreadSubject(page);
   await choose(page, 'Google Gemini');
   await expect(connect(page).getByLabel('API key')).toHaveAttribute('placeholder', 'AIza…');
   await expect(connect(page).getByText('Free tier, with rate limits', { exact: true })).toBeVisible();
   await expect(connect(page).getByRole('link', { name: 'Get a key' })).toHaveAttribute('href', 'https://aistudio.google.com/apikey');
   await connect(page).getByLabel('API key').fill('AIza-test-gemini');
   await page.keyboard.press('Enter');
-  await expect(box).toBeHidden({ timeout: 30_000 });
-  await expect(page.frameLocator('.eb-canvas-frame').getByText('Autumn sale', { exact: true })).toBeVisible();
+  await applyCorrection(page, box);
 
   // Gemini's OpenAI-compatible endpoint, with Gemini's key.
   expect(gemini).toHaveLength(1);
   expect(gemini[0].headers.authorization).toBe('Bearer AIza-test-gemini');
   expect(gemini[0].body.model).toBe('gemini-3.5-flash-lite');
-  expect(gemini[0].body.messages[1].content).toContain('sale');
+  expect(gemini[0].body.messages[1].content).toContain(TYPO);
   expect(await stored(page, 'best-email-builder:ai-key:gemini')).toBe('AIza-test-gemini');
   expect(await stored(page, CHOICE)).toBe('gemini');
   const note = page.getByTestId('demo-ai-note');
@@ -355,8 +363,8 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
 
   // Back later: the same provider, its key, no question.
   await reopenEditor(page);
-  box = await generateSale(page);
-  await expect(box).toBeHidden({ timeout: 30_000 });
+  box = await proofreadSubject(page);
+  await applyCorrection(page, box);
   expect(gemini).toHaveLength(2);
 
   // "Change provider": Gemini in use, its key saved; Mistral needs its own.
@@ -379,8 +387,8 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
 
   // The next email: Mistral.
   await reopenEditor(page);
-  box = await generateSale(page);
-  await expect(box).toBeHidden({ timeout: 30_000 });
+  box = await proofreadSubject(page);
+  await applyCorrection(page, box);
   expect(mistral).toHaveLength(1);
   expect(mistral[0].headers.authorization).toBe('Bearer mistral-test-key');
   expect(mistral[0].body.model).toBe('mistral-small-latest');
@@ -395,14 +403,14 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
   expect(await stored(page, CHOICE)).toBe('gemini');
 });
 
-test('Claude: the Anthropic SDK in the browser; a refused key is asked again; the email is written', async ({ page }) => {
+test('Claude: the Anthropic SDK in the browser; a refused key is asked again; the email is read', async ({ page }) => {
   const seen = await fakeApi(page, ANTHROPIC, (request) =>
     request.headers()['x-api-key'] === 'sk-ant-good'
-      ? claudeStream(JSON.stringify(DRAFT))
+      ? claudeStream(JSON.stringify(FIXES))
       : { status: 401, contentType: 'application/json', body: JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }) }
   );
   await openEditor(page);
-  const box = await generateSale(page);
+  const box = await proofreadSubject(page);
   await choose(page, 'Claude');
   await expect(connect(page).getByLabel('API key')).toHaveAttribute('placeholder', 'sk-ant-…');
   await expect(connect(page).getByRole('link', { name: 'Get a key' })).toHaveAttribute('href', 'https://console.anthropic.com/settings/keys');
@@ -414,9 +422,7 @@ test('Claude: the Anthropic SDK in the browser; a refused key is asked again; th
   expect(await stored(page, 'best-email-builder:ai-key:anthropic')).toBeNull();
   await connect(page).getByLabel('API key').fill('sk-ant-good');
   await page.keyboard.press('Enter');
-  await expect(box).toBeHidden({ timeout: 30_000 });
-  await expect(page.frameLocator('.eb-canvas-frame').getByText('Autumn sale', { exact: true })).toBeVisible();
-  await expect(page.getByTestId('eb-properties').getByRole('textbox', { name: 'Subject' })).toHaveValue(DRAFT.subject);
+  await applyCorrection(page, box);
   await expect(page.getByTestId('demo-ai-note')).toContainText('Connected to Claude · claude-opus-5-5.');
 
   // Straight to Anthropic, the key in its own header, the answer streamed as structured output.
@@ -427,16 +433,17 @@ test('Claude: the Anthropic SDK in the browser; a refused key is asked again; th
   expect(body.model).toBe('claude-opus-5-5');
   expect(body.stream).toBe(true);
   expect(body.output_config.format.type).toBe('json_schema');
-  expect(body.output_config.format.schema.required).toEqual(['name', 'subject', 'preheader', 'mjml']);
+  expect(body.output_config.format.schema.required).toEqual(['fixes']);
+  expect(body.output_config.effort).toBe('low');
   expect(body.system).toBeTruthy();
-  expect(JSON.stringify(body.messages)).toContain('sale');
+  expect(JSON.stringify(body.messages)).toContain(TYPO);
 });
 
 test('the model: Gemini lists its models once the key is pasted; the one chosen is sent, remembered, and shown', async ({ page }) => {
   const lists = await fakeModels(page);
-  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(DRAFT)));
+  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(FIXES)));
   await openEditor(page);
-  let box = await generateSale(page);
+  let box = await proofreadSubject(page);
   await choose(page, 'Google Gemini');
   const dialog = connect(page);
   // No key yet: the provider's own model, and how to see the others.
@@ -481,7 +488,7 @@ test('the model: Gemini lists its models once the key is pasted; the one chosen 
   await expect(providerCard(page, 'Google Gemini')).toContainText('gemini-2.5-pro');
 
   await dialog.getByRole('button', { name: 'Connect' }).click();
-  await expect(box).toBeHidden({ timeout: 30_000 });
+  await applyCorrection(page, box);
   expect(gemini).toHaveLength(1);
   expect(gemini[0].body.model).toBe('gemini-2.5-pro');
   expect(await stored(page, 'best-email-builder:ai-model:gemini')).toBe('gemini-2.5-pro');
@@ -490,8 +497,8 @@ test('the model: Gemini lists its models once the key is pasted; the one chosen 
 
   // Back later: the same model. Then a model the list does not have, by its id.
   await reopenEditor(page);
-  box = await generateSale(page);
-  await expect(box).toBeHidden({ timeout: 30_000 });
+  box = await proofreadSubject(page);
+  await applyCorrection(page, box);
   expect(gemini[1].body.model).toBe('gemini-2.5-pro');
   await note.getByRole('button', { name: 'Change provider or model' }).click();
   await expect(modelStatus(page)).toHaveText('3 models.');
@@ -509,9 +516,9 @@ test('the model: Gemini lists its models once the key is pasted; the one chosen 
 
 test('the model: OpenRouter lists its models without a key, the free ones first, marked; "Free only"', async ({ page }) => {
   const lists = await fakeModels(page);
-  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(DRAFT)));
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(FIXES)));
   await openEditor(page);
-  await generateSale(page);
+  await proofreadSubject(page);
   await choose(page, 'OpenRouter');
   await expect(modelStatus(page)).toHaveText('4 models, the free ones first.');
   const asked = lists.filter((request) => request.url.includes('openrouter'));
@@ -551,7 +558,7 @@ test('the model in French; Claude\'s list through the Anthropic SDK', async ({ p
     localStorage.setItem('best-email-builder:ai-provider', 'openrouter');
   });
   await openEditor(page, 'fr');
-  const box = await generateSale(page, 'Générer');
+  const box = await proofreadSubject(page, 'fr');
   const dialog = connect(page);
   await choose(page, 'OpenRouter');
   await expect(dialog.getByText('Modèle', { exact: true })).toBeVisible();
@@ -573,11 +580,11 @@ test('the model in French; Claude\'s list through the Anthropic SDK', async ({ p
   await expect(box.getByRole('alert')).toBeVisible();
 });
 
-test('an OpenAI-compatible API of one\'s own: its address, no key, a model of its list; the email is written there', async ({ page }) => {
+test('an OpenAI-compatible API of one\'s own: its address, no key, a model of its list; the email is read there', async ({ page }) => {
   const OWN = 'https://llm.example.test/v1';
-  const seen = await fakeApi(page, `${OWN}/chat/completions`, () => completion(JSON.stringify(DRAFT)));
+  const seen = await fakeApi(page, `${OWN}/chat/completions`, () => completion(JSON.stringify(FIXES)));
   await openEditor(page);
-  const box = await generateSale(page);
+  const box = await proofreadSubject(page);
   await choose(page, 'OpenAI-compatible API');
   const dialog = connect(page);
   await expect(dialog.getByRole('heading', { name: 'Connect OpenAI-compatible API' })).toBeVisible();
@@ -604,7 +611,7 @@ test('an OpenAI-compatible API of one\'s own: its address, no key, a model of it
   await expect(modelField(page)).toContainText('qwen3-8b');
   await dialog.getByRole('button', { name: 'Connect' }).click();
   await expect(dialog).toBeHidden();
-  await expect(box).toBeHidden({ timeout: 30_000 });
+  await applyCorrection(page, box);
 
   expect(seen).toHaveLength(1);
   expect(seen[0].url).toBe(`${OWN}/chat/completions`);

@@ -42,9 +42,9 @@ fenced:
 
 ## AI
 
-- Generated emails pass the same MJML validation as saved ones.
-- A rewritten text must keep its links and variables, add none, and pass the
-  same validation.
+- A rewritten or corrected text must keep its links and variables, add none,
+  and pass the same MJML validation as a saved template. A correction applies
+  only when the user applies it.
 - Subject ideas may contain only merge tags from the server's catalog.
 - Every AI route needs the `write` permission, and each has a per-user limit:
-  30 generations, 200 rewrites and 100 subject requests per hour.
+  60 proofreadings, 200 rewrites and 100 subject requests per hour.

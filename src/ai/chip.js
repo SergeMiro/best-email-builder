@@ -1,7 +1,7 @@
 import { cn } from '../ui/primitives/cn.js';
 
 /**
- * A rounded badge button: the purposes of "Generate", the rewrite actions.
+ * A rounded badge button: the rewrite actions.
  * @param {boolean} [selected]
  */
 export const chipClassName = (selected = false) =>
