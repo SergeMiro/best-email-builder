@@ -6,9 +6,12 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
-The library loses its bases and gains tags. This breaks code that passed
-`sender` or `templates` to `TemplateLibrary`, or read `onCreate`'s argument
-(see *Changed* and *Removed*).
+## [0.11.0] — 2026-10-19
+
+The library loses its bases and gains tags, which also filter it; the
+editor's *Templates* dialog gains a search and tag filters. This breaks
+code that passed `sender` or `templates` to `TemplateLibrary`, or read
+`onCreate`'s argument (see *Changed* and *Removed*).
 
 ### Added
 - **Tags** on templates, in the library: up to three per template
