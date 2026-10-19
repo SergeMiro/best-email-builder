@@ -130,6 +130,10 @@ test('template gallery: every template validates, compiles cleanly and carries t
     assert.ok(!entry.mjml.includes('data:image'), `${entry.id}: no inline image saved`);
     if (entry.mjml.includes('<mj-image')) assert.ok(withThumbnailImages(entry.mjml).includes('data:image/svg+xml'), 'thumbnail frame');
   }
-  const fr = buildGallery({ t: (key) => (key === 'Newsletter' ? 'Lettre' : key) });
+  const fr = buildGallery({ t: (key) => ({ Newsletter: 'Lettre', News: 'Actualités' })[key] ?? key });
   assert.equal(fr.find((g) => g.id === 'newsletter').name, 'Lettre', 'names translated');
+  // Tags are the gallery's filters, translated too; an entry without any has none.
+  assert.ok(gallery.every((entry) => entry.tags.length > 0), 'every base has a tag');
+  assert.deepEqual(fr.find((g) => g.id === 'newsletter').tags, ['Marketing', 'Actualités']);
+  assert.deepEqual(buildGallery({ templates: [{ id: 'x', name: 'X', description: '', create: () => '' }] })[0].tags, []);
 });

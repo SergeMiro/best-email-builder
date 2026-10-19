@@ -12,12 +12,12 @@ The library loses its bases and gains tags. This breaks code that passed
 
 ### Added
 - **Tags** on templates, in the library: up to three per template
-  (`MAX_TEMPLATE_TAGS`), shown in the list after the template's type and
-  before its date, and found by the search. The *Tags* line of the details
-  opens a dialog to tick them and to create, rename, recolor or delete the
-  workspace's tags (a name of 24 characters at most, unique case aside, one
-  of the nine `TAG_COLORS`). Each change is saved at once; a deleted tag
-  leaves every template; a copy keeps its template's tags.
+  (`MAX_TEMPLATE_TAGS`), shown in the list before the template's date, and
+  found by the search. The *Tags* line of the details opens a dialog to tick
+  them and to create, rename, recolor or delete the workspace's tags (a name
+  of 24 characters at most, unique case aside, one of the twelve
+  `TAG_COLORS`). Each change is saved at once; a deleted tag leaves every
+  template; a copy keeps its template's tags.
 - The storage methods `listTags()`, `saveTag(tag, { create })`,
   `deleteTag(id)` and `setTemplateTags(id, tagIds)`, in the memory storage
   and in `createHttpStorage({ tags: true })`. `list()` and `load()` give each
@@ -32,6 +32,9 @@ The library loses its bases and gains tags. This breaks code that passed
   *Delete* staying in place, dimmed. For a public demo.
 - `createMemoryStorage({ compile })`: the templates keep their compiled HTML,
   as on the server, so the library shows *Copy HTML* and *Download*.
+- The editor's *Templates* dialog has a search (names, descriptions, tags)
+  and the bases' tags as filters: one or several (a base with any of them),
+  or *All*. A gallery entry takes `tags`, translated like its name.
 
 ### Changed
 - `TemplateLibrary` lists only the templates; a new one starts from a base
@@ -40,8 +43,13 @@ The library loses its bases and gains tags. This breaks code that passed
   keeps its *Templates* button.
 - The live demo opens on five templates of the gallery, three of them
   tagged; its *Delete* is turned off.
+- The *Templates* dialog's cards all have the same height: a name or a
+  description too long fades out at the card's edge, and the thumbnails show
+  no scrollbar. Only the cards scroll; the search and the tags stay.
 
 ### Removed
+- The *Builder* badge of every row of the library: the same on every
+  template, it only looked like a tag. The details still give the origin.
 - The *Bases* section of the library, its *Start from this base* button, and
   `TemplateLibrary`'s `sender` and `templates` props.
 - `TEMPLATE_GALLERY` and `buildGallery` from `best-email-builder/library`

@@ -8,7 +8,7 @@
  *
  * A key is the first argument of a `t('…')` call, or a user-visible field of
  * the block, variable and feature registries (label, description, group,
- * placeholder, option labels), the gallery's names and descriptions, the
+ * placeholder, option labels), the gallery's names, descriptions and tags, the
  * rewrite actions, the error messages and the brand messages.
  *
  * Two dictionaries per locale: the core's (`src/i18n/`) and the AI module's
@@ -62,7 +62,7 @@ export async function collectKeys() {
     }
   }
   const { TEMPLATE_GALLERY } = await import(pathToUrl('src/features/templates/gallery.js'));
-  for (const template of TEMPLATE_GALLERY) [template.name, template.description].filter(Boolean).forEach((k) => core.add(k));
+  for (const template of TEMPLATE_GALLERY) [template.name, template.description, ...(template.tags || [])].filter(Boolean).forEach((k) => core.add(k));
   const { DEFAULT_VARIABLES } = await import(pathToUrl('src/features/variables/catalog.js'));
   for (const variable of DEFAULT_VARIABLES) [variable.label, variable.group].forEach((k) => core.add(k));
   const { BRAND_IMPORT_ERRORS, BRAND_NOTES } = await import(pathToUrl('src/features/brand/messages.js'));

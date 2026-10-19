@@ -667,6 +667,11 @@ test.describe('Template gallery', () => {
       expect((await frame.getAttribute('srcdoc'))?.length).toBeGreaterThan(500);
     }
     await expect(gallery.locator('iframe').nth(2)).toHaveAttribute('srcdoc', /The news of the month/);
+    // A thumbnail is a picture: no scrollbar in it.
+    await expect(gallery.locator('iframe').nth(2)).toHaveAttribute('srcdoc', /html,body\{overflow:hidden!important/);
+    // Every card has the same height, a long description or not.
+    const heights = await cards.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
+    expect(new Set(heights).size).toBe(1);
 
     // Nothing modified yet: applied without a question.
     await gallery.locator('[data-template-id="newsletter"]').click();
@@ -696,11 +701,54 @@ test.describe('Template gallery', () => {
     await expect(panel(page).getByRole('textbox', { name: 'Subject' })).toHaveValue('My own subject');
   });
 
+  test('search and tags: one tag, several (any of them), All; Escape clears the search first', async ({ page }) => {
+    await openBuilder(page);
+    await page.getByRole('button', { name: 'Templates' }).click();
+    const gallery = page.getByTestId('eb-template-gallery');
+    const ids = () => gallery.locator('[data-template-id]').evaluateAll((els) => els.map((el) => el.dataset.templateId));
+    // The search has the focus: typing filters at once.
+    const search = gallery.getByRole('searchbox', { name: 'Search templates' });
+    await expect(search).toBeFocused();
+    const tags = gallery.getByRole('group', { name: 'Filter by tag' });
+    await expect(tags.getByRole('button')).toHaveText(['All', 'Basics', 'Marketing', 'News', 'Onboarding', 'Sales', 'Events']);
+    await expect(tags.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+
+    await tags.getByRole('button', { name: 'Sales' }).click();
+    await expect.poll(ids).toEqual(['promotion']);
+    await expect(tags.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false');
+    await tags.getByRole('button', { name: 'Events' }).click();
+    await expect.poll(ids).toEqual(['promotion', 'event']);
+    await tags.getByRole('button', { name: 'Sales' }).click();
+    await expect.poll(ids).toEqual(['event']);
+    await tags.getByRole('button', { name: 'All' }).click();
+    await expect(gallery.locator('[data-template-id]')).toHaveCount(6);
+
+    // The search reads names, descriptions and tags, accents aside; tags narrow it.
+    await search.fill('BUTTON');
+    await expect.poll(ids).toEqual(['simple', 'event']);
+    await tags.getByRole('button', { name: 'Basics' }).click();
+    await expect.poll(ids).toEqual(['simple']);
+    await search.fill('nothing like this');
+    await expect(gallery.getByText('Nothing matches “nothing like this”.')).toBeVisible();
+    await search.press('Escape');
+    await expect(search).toHaveValue('');
+    await expect(gallery).toBeVisible();
+    await expect.poll(ids).toEqual(['blank', 'simple']);
+
+    // Closed and opened again: everything shown.
+    await page.keyboard.press('Escape');
+    await expect(gallery).toBeHidden();
+    await page.getByRole('button', { name: 'Templates' }).click();
+    await expect(gallery.locator('[data-template-id]')).toHaveCount(6);
+  });
+
   test('French gallery: names and email texts translated', async ({ page }) => {
     await openBuilder(page, { lang: 'fr' });
     await page.getByRole('button', { name: 'Modèles' }).click();
     const gallery = page.getByTestId('eb-template-gallery');
     await expect(gallery.getByText('Invitation', { exact: true })).toBeVisible();
+    await gallery.getByRole('button', { name: 'Événements' }).click();
+    await expect(gallery.locator('[data-template-id]')).toHaveCount(1);
     await gallery.locator('[data-template-id="event"]').click();
     expect(await mjml(page)).toContain('Je réserve ma place');
   });

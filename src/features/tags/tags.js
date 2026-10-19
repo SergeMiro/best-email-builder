@@ -19,7 +19,7 @@ export const MAX_TEMPLATE_TAGS = 3;
 /** Tags in a workspace. */
 export const MAX_TAGS = 100;
 export const TAG_LIMITS = { label: 24 };
-export const TAG_COLORS = ['gray', 'red', 'orange', 'amber', 'green', 'teal', 'blue', 'violet', 'pink'];
+export const TAG_COLORS = ['gray', 'red', 'orange', 'amber', 'lime', 'green', 'teal', 'cyan', 'blue', 'violet', 'fuchsia', 'pink'];
 
 const sameName = (a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0;
 

@@ -121,10 +121,10 @@ The library needs `storage.list()`. The rest depends on what the storage has:
 The *Tags* line of the details opens a dialog. There the user ticks up to
 three tags for the template, and creates, renames, recolors or deletes the
 workspace's tags. A tag is a name of 24 characters at most, unique case
-aside, with one of nine colors (`TAG_COLORS`) that read well in both themes.
+aside, with one of twelve colors (`TAG_COLORS`) that read well in both themes.
 Each change is saved at once. A deleted tag leaves every template. The tags
-show in the list after the template's type and before its date, and the
-search finds a template by its tags too.
+show in the list before the template's date, and the search finds a
+template by its tags too.
 
 | Prop | Default | Description |
 |---|---|---|
@@ -152,7 +152,7 @@ search finds a template by its tags too.
 | `variables` | `DEFAULT_VARIABLES` | The merge tags offered in the *Variables* menu. Pass the same list to the server. |
 | `sender` | — | `{ name, address, logoUrl, logoWidth }`, used in the starter template's footer. |
 | `starterMjml` | — | Replaces the starter template entirely. |
-| `templates` | `TEMPLATE_GALLERY` | The ready-made emails behind the *Templates* button (blank, simple, newsletter, welcome, promotion, event invitation). Pass your own `{ id, name, description, create({ sender, t }), meta?(t) }` entries, or `[]` to hide the gallery. |
+| `templates` | `TEMPLATE_GALLERY` | The ready-made emails behind the *Templates* button (blank, simple, newsletter, welcome, promotion, event invitation). Pass your own `{ id, name, description, tags?, create({ sender, t }), meta?(t) }` entries, or `[]` to hide the gallery. The dialog has a search and the entries' `tags` as filters. |
 | `initialMjml`, `initialMeta` | — | Open a NEW template on given MJML and metadata (`{ name, subject, preheader, description }`), for example a template converted from another format. Ignored when `templateId` is set. |
 | `testRecipients` | `[]` | Addresses filled in advance in the *Send test* dialog. |
 | `onClose` | — | Shows a *Back* button. Called after the user confirms unsaved changes. |

@@ -13,7 +13,7 @@
  * send. Thumbnails replace them with a grey placeholder (`withThumbnailImages`).
  *
  * The list is plain data: pass your own to `<EmailBuilder templates>`, or `[]`
- * to hide the gallery.
+ * to hide the gallery. Each entry's `tags` are the gallery's filters.
  */
 
 import { identity } from '../../i18n/index.js';
@@ -30,6 +30,7 @@ import { SIDE, createStarterMjml, escapeXml, footerSectionMjml, senderHeaderMjml
  *   id: string,
  *   name: string,
  *   description: string,
+ *   tags?: string[],
  *   create: (options: {sender: StarterSender, t: Translate}) => string,
  *   meta?: (t: Translate) => {subject?: string, preheader?: string},
  * }} GalleryTemplate
@@ -122,18 +123,21 @@ export const TEMPLATE_GALLERY = [
     id: 'blank',
     name: 'Blank',
     description: 'An empty page to build from scratch',
+    tags: ['Basics'],
     create: () => email(''),
   },
   {
     id: 'simple',
     name: 'Simple',
     description: 'Logo, headline, text and a button',
+    tags: ['Basics'],
     create: ({ sender, t }) => createStarterMjml({ sender, t }),
   },
   {
     id: 'newsletter',
     name: 'Newsletter',
     description: 'Monthly news: banner, two articles, highlights',
+    tags: ['Marketing', 'News'],
     meta: (t) => ({
       subject: t('The news of the month'),
       preheader: t('What changed, what is coming, and two stories worth your time.'),
@@ -182,6 +186,7 @@ export const TEMPLATE_GALLERY = [
     id: 'welcome',
     name: 'Welcome',
     description: 'Greets a new customer and lists the first steps',
+    tags: ['Onboarding'],
     meta: (t) => ({ subject: t('Welcome aboard!'), preheader: t('Three steps to get started.') }),
     create: ({ sender, t }) =>
       email(
@@ -216,6 +221,7 @@ export const TEMPLATE_GALLERY = [
     id: 'promotion',
     name: 'Promotion',
     description: 'A sale with a discount code and two products',
+    tags: ['Marketing', 'Sales'],
     meta: (t) => ({ subject: t('30% off this weekend only'), preheader: t('With the code SPRING30, until Sunday midnight.') }),
     create: ({ sender, t }) =>
       email(
@@ -255,6 +261,7 @@ export const TEMPLATE_GALLERY = [
     id: 'event',
     name: 'Event invitation',
     description: 'Date, place and a button to book a seat',
+    tags: ['Events', 'Marketing'],
     meta: (t) => ({ subject: t("You're invited"), preheader: t('Save the date — seats are limited.') }),
     create: ({ sender, t }) =>
       email(
@@ -285,7 +292,7 @@ export const TEMPLATE_GALLERY = [
  * The gallery with its texts translated and the sender applied.
  *
  * @param {{templates?: GalleryTemplate[], sender?: StarterSender, t?: Translate}} [options]
- * @returns {{id: string, name: string, description: string, mjml: string, subject: string, preheader: string}[]}
+ * @returns {{id: string, name: string, description: string, tags: string[], mjml: string, subject: string, preheader: string}[]}
  */
 export function buildGallery({ templates = TEMPLATE_GALLERY, sender = {}, t = identity } = {}) {
   return templates.map((template) => {
@@ -294,6 +301,7 @@ export function buildGallery({ templates = TEMPLATE_GALLERY, sender = {}, t = id
       id: template.id,
       name: t(template.name),
       description: t(template.description),
+      tags: (template.tags || []).map((tag) => t(tag)),
       mjml: template.create({ sender, t }),
       subject: meta.subject || '',
       preheader: meta.preheader || '',

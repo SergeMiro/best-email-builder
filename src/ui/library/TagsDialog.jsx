@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, Loader2, Pencil, Tags, Trash2 } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, Tags, Trash2 } from 'lucide-react';
 import { MAX_TEMPLATE_TAGS, TAG_COLORS, TAG_LIMITS, sortTags, validateTag } from '../../features/tags/tags.js';
 import { useUi } from '../context.jsx';
 import { Button } from '../primitives/button.jsx';
@@ -21,7 +21,7 @@ const colorAfter = (tags) => TAG_COLORS[(TAG_COLORS.indexOf('blue') + tags.lengt
  *   │ ☐ [Events]                            ✎  🗑 │
  *   │                                     1 / 3   │
  *   │ New tag  [ Name                          ]  │
- *   │          ● ● ● ● ● ● ● ● ●       [ Create ] │
+ *   │        ● ● ● ● ● ● ● ● ● ● ● ● [ + Create ] │
  *   │                                    [ Done ] │
  *   └─────────────────────────────────────────────┘
  *
@@ -56,10 +56,13 @@ export default function TagsDialog({ open, onOpenChange, template, tags, storage
     red: t('Red'),
     orange: t('Orange'),
     amber: t('Yellow'),
+    lime: t('Lime'),
     green: t('Green'),
     teal: t('Teal'),
+    cyan: t('Cyan'),
     blue: t('Blue'),
     violet: t('Violet'),
+    fuchsia: t('Fuchsia'),
     pink: t('Pink'),
   };
 
@@ -231,8 +234,12 @@ export default function TagsDialog({ open, onOpenChange, template, tags, storage
               {errors.label}
             </p>
           )}
+          {/* The colors fill the row up to the buttons, shrinking a little in a
+              long language; the buttons go under them when the row is too
+              narrow (editing, a phone). A basis, not a width, so the colors
+              never make the dialog wider than a phone. */}
           <div className="eb:flex eb:flex-wrap eb:items-center eb:gap-3">
-            <div role="radiogroup" aria-label={t('Color')} className="eb:flex eb:flex-wrap eb:gap-1.5">
+            <div role="radiogroup" aria-label={t('Color')} className="eb:flex eb:min-w-0 eb:flex-[1_1_16rem] eb:items-center eb:justify-between eb:gap-1">
               {TAG_COLORS.map((color) => {
                 const picked = form.color === color;
                 return (
@@ -245,7 +252,7 @@ export default function TagsDialog({ open, onOpenChange, template, tags, storage
                     title={colorName[color]}
                     onClick={() => setForm((f) => ({ ...f, color }))}
                     className={cn(
-                      'eb:flex eb:size-6 eb:items-center eb:justify-center eb:rounded-full eb:text-white eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+                      'eb:flex eb:aspect-square eb:min-w-4 eb:shrink eb:basis-6 eb:items-center eb:justify-center eb:rounded-full eb:text-white eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
                       TAG_SWATCHES[color],
                       picked && 'eb:ring-2 eb:ring-foreground/60 eb:ring-offset-2 eb:ring-offset-background'
                     )}
@@ -262,7 +269,7 @@ export default function TagsDialog({ open, onOpenChange, template, tags, storage
                 </Button>
               )}
               <Button type="submit" size="sm" variant={editing ? 'default' : 'outline'} disabled={busy !== null}>
-                {busy === 'form' && <Loader2 className="eb:animate-spin" />}
+                {busy === 'form' ? <Loader2 className="eb:animate-spin" /> : !editing && <Plus />}
                 {editing ? t('Save') : t('Create')}
               </Button>
             </div>

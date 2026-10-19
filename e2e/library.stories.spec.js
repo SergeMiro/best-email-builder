@@ -110,8 +110,18 @@ test('tags: create, tick up to three, rename, delete — on the row at once', as
   await expect(dialog.getByRole('checkbox', { name: 'Marketing' })).toBeChecked();
   await expect(dialog.getByTestId('eb-tags-count')).toHaveText('1 / 3');
 
-  // A new tag is ticked at once, in the color picked.
+  // Twelve colors in one row, up to the Create button.
   const form = dialog.getByTestId('eb-tags-form');
+  const colors = form.getByRole('radio');
+  await expect(colors).toHaveCount(12);
+  const create = await form.getByRole('button', { name: 'Create' }).boundingBox();
+  const first = await colors.first().boundingBox();
+  const last = await colors.last().boundingBox();
+  expect(last.y).toBeCloseTo(first.y, 0);
+  expect(create.x - (last.x + last.width)).toBeLessThanOrEqual(16);
+  await expect(form.getByRole('button', { name: 'Create' }).locator('svg')).toHaveCount(1);
+
+  // A new tag is ticked at once, in the color picked.
   await form.getByLabel('New tag').fill('Events');
   await form.getByRole('radio', { name: 'Violet' }).click();
   await form.getByRole('button', { name: 'Create' }).click();

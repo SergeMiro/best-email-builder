@@ -118,14 +118,6 @@ function download(name, html) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function Badge({ children }) {
-  return (
-    <span className="eb:inline-flex eb:w-fit eb:shrink-0 eb:items-center eb:rounded-md eb:border eb:border-border eb:px-1.5 eb:py-0 eb:text-[10px] eb:whitespace-nowrap eb:text-foreground">
-      {children}
-    </span>
-  );
-}
-
 function Row({ entry, selected, favorite, onSelect }) {
   return (
     <button
@@ -144,12 +136,15 @@ function Row({ entry, selected, favorite, onSelect }) {
         {favorite && <Star className="eb:size-3.5 eb:shrink-0 eb:fill-current eb:text-warning" aria-hidden="true" />}
       </span>
       <span className="eb:mt-0.5 eb:block eb:truncate eb:font-mono eb:text-[11px] eb:text-foreground-lighter">{entry.code}</span>
-      <span className="eb:mt-1 eb:flex eb:flex-wrap eb:items-center eb:gap-1">
-        <Badge>{entry.badge}</Badge>
-        {entry.tags.map((tag) => (
-          <TagBadge key={tag.id} tag={tag} className="eb:max-w-[7.5rem]" />
-        ))}
-        {entry.date && <span className="eb:ml-auto eb:text-[10.5px] eb:text-foreground-muted">{entry.date}</span>}
+      {/* One line whatever the tags: too many fade out before the date, and
+          every row keeps the same height. */}
+      <span className="eb:mt-1 eb:flex eb:min-h-[18px] eb:items-center eb:gap-2">
+        <span className="eb:flex eb:min-w-0 eb:flex-1 eb:gap-1 eb:overflow-hidden eb:[mask-image:linear-gradient(to_right,#000_calc(100%-1.5rem),transparent)]">
+          {entry.tags.map((tag) => (
+            <TagBadge key={tag.id} tag={tag} className="eb:max-w-[7.5rem]" />
+          ))}
+        </span>
+        {entry.date && <span className="eb:shrink-0 eb:text-[10.5px] eb:text-foreground-muted">{entry.date}</span>}
       </span>
     </button>
   );
@@ -236,13 +231,12 @@ function Library({
       id: item.id,
       name: item.name,
       code: codeOf(item.name, `#${item.id}`),
-      badge: t('Builder'),
       tags: (item.tags || []).map((id) => byId.get(String(id))).filter(Boolean),
       date: formatDate(item.updatedAt || item.createdAt),
       subject: item.subject,
       item,
     }));
-  }, [items.list, tags, t, formatDate]);
+  }, [items.list, tags, formatDate]);
   const shown = templateEntries.filter((e) => matches(query, e.name, e.code, e.subject, ...e.tags.map((tag) => tag.label)));
   const favoriteEntries = shown.filter((e) => stars.favorites.has(e.key));
   const otherTemplates = shown.filter((e) => !stars.favorites.has(e.key));
