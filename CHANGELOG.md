@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] — 2026-10-19
+
 The AI no longer writes whole emails: it checks and writes their texts.
 This breaks code that used *Generate* (see *Removed*).
 
