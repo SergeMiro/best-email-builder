@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-10-20
+
 ### Changed
 - The tag filters of the library and of the *Templates* dialog have no
   *All* chip: with no tag picked, every template shows. A reset icon next to
