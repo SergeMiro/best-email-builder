@@ -6,6 +6,11 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- The tag filters of the library and of the *Templates* dialog have no
+  *All* chip: with no tag picked, every template shows. A reset icon next to
+  the tags unpicks them all (it rests, dimmed, while none is picked).
+
 ## [0.11.0] — 2026-10-19
 
 The library loses its bases and gains tags, which also filter it; the

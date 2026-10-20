@@ -701,7 +701,7 @@ test.describe('Template gallery', () => {
     await expect(panel(page).getByRole('textbox', { name: 'Subject' })).toHaveValue('My own subject');
   });
 
-  test('search and tags: one tag, several (any of them), All; Escape clears the search first', async ({ page }) => {
+  test('search and tags: one tag, several (any of them), none again with the reset; Escape clears the search first', async ({ page }) => {
     await openBuilder(page);
     await page.getByRole('button', { name: 'Templates' }).click();
     const gallery = page.getByTestId('eb-template-gallery');
@@ -710,18 +710,24 @@ test.describe('Template gallery', () => {
     const search = gallery.getByRole('searchbox', { name: 'Search templates' });
     await expect(search).toBeFocused();
     const tags = gallery.getByRole('group', { name: 'Filter by tag' });
-    await expect(tags.getByRole('button')).toHaveText(['All', 'Basics', 'Marketing', 'News', 'Onboarding', 'Sales', 'Events']);
-    await expect(tags.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    const reset = gallery.getByRole('button', { name: 'Clear the tag filters' });
+    // No tag chosen: every template, and the reset has nothing to clear.
+    await expect(tags.getByRole('button')).toHaveText(['Basics', 'Marketing', 'News', 'Onboarding', 'Sales', 'Events']);
+    await expect(tags.getByRole('button', { pressed: true })).toHaveCount(0);
+    await expect(gallery.locator('[data-template-id]')).toHaveCount(6);
+    await expect(reset).toBeDisabled();
 
     await tags.getByRole('button', { name: 'Sales' }).click();
     await expect.poll(ids).toEqual(['promotion']);
-    await expect(tags.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(reset).toBeEnabled();
     await tags.getByRole('button', { name: 'Events' }).click();
     await expect.poll(ids).toEqual(['promotion', 'event']);
     await tags.getByRole('button', { name: 'Sales' }).click();
     await expect.poll(ids).toEqual(['event']);
-    await tags.getByRole('button', { name: 'All' }).click();
+    await reset.click();
     await expect(gallery.locator('[data-template-id]')).toHaveCount(6);
+    await expect(tags.getByRole('button', { pressed: true })).toHaveCount(0);
+    await expect(reset).toBeDisabled();
 
     // The search reads names, descriptions and tags, accents aside; tags narrow it.
     await search.fill('BUTTON');

@@ -168,18 +168,23 @@ test('tags: create, tick up to three, rename, delete — on the row at once', as
   expect(stored.rows.map((r) => r.tags.length)).toEqual([2, 0]);
 });
 
-test('tag filters under the search: one tag, several (any of them), All, with the search; a deleted tag stops filtering', async ({ page }) => {
+test('tag filters under the search: one tag, several (any of them), none again with the reset, with the search; a deleted tag stops filtering', async ({ page }) => {
   await page.goto(STANDALONE);
   const filter = page.getByTestId('eb-library-tag-filter');
   const names = () => page.getByTestId('eb-library-templates').getByTestId('eb-library-template');
   const chip = (name) => filter.getByRole('button', { name, exact: true });
-  await expect(filter.getByRole('button')).toHaveText(['All', 'Marketing', 'Onboarding']);
-  await expect(chip('All')).toHaveAttribute('aria-pressed', 'true');
+  const reset = page.getByTestId('eb-library-tag-reset');
+  // No tag picked: every template, and the reset has nothing to clear.
+  await expect(filter.getByRole('button')).toHaveText(['Marketing', 'Onboarding']);
+  await expect(filter.getByRole('button', { pressed: true })).toHaveCount(0);
+  await expect(names()).toHaveCount(2);
+  await expect(reset).toHaveAccessibleName('Clear the tag filters');
+  await expect(reset).toBeDisabled();
 
   await chip('Marketing').click();
   await expect(names()).toHaveCount(1);
   await expect(names().first()).toContainText('October newsletter');
-  await expect(chip('All')).toHaveAttribute('aria-pressed', 'false');
+  await expect(reset).toBeEnabled();
   await chip('Onboarding').click();
   await expect(names()).toHaveCount(2);
   await chip('Marketing').click();
@@ -191,8 +196,10 @@ test('tag filters under the search: one tag, several (any of them), All, with th
   await search.fill('october');
   await expect(page.getByText('Nothing matches “october”.')).toBeVisible();
   await search.fill('');
-  await chip('All').click();
+  await reset.click();
   await expect(names()).toHaveCount(2);
+  await expect(filter.getByRole('button', { pressed: true })).toHaveCount(0);
+  await expect(reset).toBeDisabled();
 
   // A tag put on a template joins the filters; deleted, it stops filtering.
   await row(page, 'October newsletter').click();
@@ -202,15 +209,15 @@ test('tag filters under the search: one tag, several (any of them), All, with th
   await dialog.getByTestId('eb-tags-form').getByRole('button', { name: 'Create' }).click();
   await expect(dialog.getByRole('checkbox', { name: 'VIP' })).toBeChecked();
   await dialog.getByRole('button', { name: 'Done' }).click();
-  await expect(filter.getByRole('button')).toHaveText(['All', 'Marketing', 'Onboarding', 'VIP']);
+  await expect(filter.getByRole('button')).toHaveText(['Marketing', 'Onboarding', 'VIP']);
   await chip('VIP').click();
   await expect(names()).toHaveCount(1);
   await details(page).getByTestId('eb-library-tags-button').click();
   await dialog.getByRole('button', { name: 'Delete the tag “VIP”' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
   await dialog.getByRole('button', { name: 'Done' }).click();
-  await expect(filter.getByRole('button')).toHaveText(['All', 'Marketing', 'Onboarding']);
-  await expect(chip('All')).toHaveAttribute('aria-pressed', 'true');
+  await expect(filter.getByRole('button')).toHaveText(['Marketing', 'Onboarding']);
+  await expect(reset).toBeDisabled();
   await expect(names()).toHaveCount(2);
 });
 

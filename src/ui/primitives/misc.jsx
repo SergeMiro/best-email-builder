@@ -1,3 +1,4 @@
+import { RotateCcw } from 'lucide-react';
 import { Separator as SeparatorPrimitive, Tabs as TabsPrimitive, Tooltip as TooltipPrimitive } from 'radix-ui';
 import { cn } from './cn.js';
 
@@ -21,8 +22,8 @@ export function Skeleton({ className, as: Comp = 'div', ...props }) {
 }
 
 /**
- * A filter that is on or off (`aria-pressed`): the tags under a search. A
- * row of them starts with *All*, pressed while no other one is.
+ * A filter that is on or off (`aria-pressed`): the tags under a search. None
+ * on shows everything; `FilterReset` turns them all off.
  */
 export function FilterChip({ pressed, className, ...props }) {
   return (
@@ -38,6 +39,31 @@ export function FilterChip({ pressed, className, ...props }) {
       )}
       {...props}
     />
+  );
+}
+
+/**
+ * Turns every filter of a row off, so everything shows again. Inert while
+ * none is on, but still there (and focusable): the row never moves.
+ * `label` names it, for screen readers and on hover.
+ */
+export function FilterReset({ label, active, onClick, className, ...props }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      aria-disabled={!active}
+      onClick={(event) => active && onClick?.(event)}
+      className={cn(
+        'eb:inline-flex eb:size-7 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-full eb:border eb:border-border eb:bg-background eb:text-foreground-lighter eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+        active ? 'eb:cursor-pointer eb:hover:border-primary/50 eb:hover:bg-primary/5 eb:hover:text-primary' : 'eb:cursor-default eb:opacity-40',
+        className
+      )}
+      {...props}
+    >
+      <RotateCcw className="eb:size-3.5" aria-hidden="true" />
+    </button>
   );
 }
 

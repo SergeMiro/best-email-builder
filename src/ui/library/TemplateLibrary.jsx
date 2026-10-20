@@ -21,7 +21,7 @@ import { NoticeArea, UiProvider, useUi } from '../context.jsx';
 import { Button } from '../primitives/button.jsx';
 import { cn } from '../primitives/cn.js';
 import { Input } from '../primitives/fields.jsx';
-import { FilterChip, SectionLabel } from '../primitives/misc.jsx';
+import { FilterChip, FilterReset, SectionLabel } from '../primitives/misc.jsx';
 import { SEARCH_KEYS, SearchKeyHint, useSearchShortcut } from '../primitives/searchShortcut.jsx';
 import { useLayoutWidth } from '../useLayoutWidth.js';
 import { TAG_SWATCHES, TagBadge } from './TagBadge.jsx';
@@ -436,33 +436,40 @@ function Library({
           </div>
         </div>
         {usedTags.length > 0 && (
-          <div
-            role="group"
-            aria-label={t('Filter by tag')}
-            className="eb:-m-1 eb:flex eb:max-h-[4.75rem] eb:flex-wrap eb:gap-1 eb:overflow-y-auto eb:p-1"
-            data-testid="eb-library-tag-filter"
-          >
-            <FilterChip pressed={active.size === 0} onClick={() => setPicked(new Set())} className="eb:h-6 eb:px-2.5 eb:text-[11.5px]">
-              {t('All')}
-            </FilterChip>
-            {usedTags.map((tag) => (
-              <FilterChip
-                key={tag.id}
-                pressed={active.has(String(tag.id))}
-                onClick={() => togglePicked(String(tag.id))}
-                className="eb:h-6 eb:max-w-full eb:px-2.5 eb:text-[11.5px]"
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'eb:size-2 eb:shrink-0 eb:rounded-full',
-                    TAG_SWATCHES[tag.color] || TAG_SWATCHES.gray,
-                    active.has(String(tag.id)) && 'eb:ring-1 eb:ring-primary-foreground'
-                  )}
-                />
-                <span className="eb:truncate">{tag.label}</span>
-              </FilterChip>
-            ))}
+          <div className="eb:flex eb:items-start eb:gap-2.5">
+            {/* No tag picked: every template. */}
+            <div
+              role="group"
+              aria-label={t('Filter by tag')}
+              className="eb:-m-1 eb:flex eb:max-h-[4.75rem] eb:min-w-0 eb:flex-1 eb:flex-wrap eb:gap-1 eb:overflow-y-auto eb:p-1"
+              data-testid="eb-library-tag-filter"
+            >
+              {usedTags.map((tag) => (
+                <FilterChip
+                  key={tag.id}
+                  pressed={active.has(String(tag.id))}
+                  onClick={() => togglePicked(String(tag.id))}
+                  className="eb:h-6 eb:max-w-full eb:px-2.5 eb:text-[11.5px]"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'eb:size-2 eb:shrink-0 eb:rounded-full',
+                      TAG_SWATCHES[tag.color] || TAG_SWATCHES.gray,
+                      active.has(String(tag.id)) && 'eb:ring-1 eb:ring-primary-foreground'
+                    )}
+                  />
+                  <span className="eb:truncate">{tag.label}</span>
+                </FilterChip>
+              ))}
+            </div>
+            <FilterReset
+              label={t('Clear the tag filters')}
+              active={active.size > 0}
+              onClick={() => setPicked(new Set())}
+              className="eb:size-6"
+              data-testid="eb-library-tag-reset"
+            />
           </div>
         )}
       </div>

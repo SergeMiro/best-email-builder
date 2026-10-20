@@ -4,7 +4,7 @@ import { useUi } from '../../ui/context.jsx';
 import { Button } from '../../ui/primitives/button.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { Input } from '../../ui/primitives/fields.jsx';
-import { FilterChip } from '../../ui/primitives/misc.jsx';
+import { FilterChip, FilterReset } from '../../ui/primitives/misc.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
 import { withThumbnailImages } from './gallery.js';
 
@@ -208,15 +208,21 @@ export default function TemplateGalleryButton({ context }) {
               )}
             </div>
             {tags.length > 0 && (
-              <div role="group" aria-label={t('Filter by tag')} className="eb:flex eb:flex-wrap eb:gap-1.5" data-testid="eb-gallery-tags">
-                <FilterChip pressed={chosen.size === 0} onClick={() => setChosen(new Set())}>
-                  {t('All')}
-                </FilterChip>
-                {tags.map((tag) => (
-                  <FilterChip key={tag} pressed={chosen.has(tag)} onClick={() => toggle(tag)}>
-                    {tag}
-                  </FilterChip>
-                ))}
+              <div className="eb:flex eb:items-start eb:gap-1.5">
+                {/* No tag chosen: every template. */}
+                <div role="group" aria-label={t('Filter by tag')} className="eb:flex eb:min-w-0 eb:flex-1 eb:flex-wrap eb:gap-1.5" data-testid="eb-gallery-tags">
+                  {tags.map((tag) => (
+                    <FilterChip key={tag} pressed={chosen.has(tag)} onClick={() => toggle(tag)}>
+                      {tag}
+                    </FilterChip>
+                  ))}
+                </div>
+                <FilterReset
+                  label={t('Clear the tag filters')}
+                  active={chosen.size > 0}
+                  onClick={() => setChosen(new Set())}
+                  data-testid="eb-gallery-tag-reset"
+                />
               </div>
             )}
           </div>

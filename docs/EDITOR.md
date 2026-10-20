@@ -125,8 +125,9 @@ aside, with one of twelve colors (`TAG_COLORS`) that read well in both themes.
 Each change is saved at once. A deleted tag leaves every template. The tags
 show in the list before the template's date, and the search finds a
 template by its tags too. Under the search, the tags that some template
-carries filter the list: one or several (a template with any of them), or
-*All*.
+carries filter the list: one or several (a template with any of them). With
+none picked, every template shows; the reset icon next to them unpicks them
+all.
 
 | Prop | Default | Description |
 |---|---|---|
