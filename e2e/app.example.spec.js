@@ -30,7 +30,7 @@ test('create, save on the server, find in the list, reopen', async ({ page, requ
   const name = `E2E ${Date.now()}`;
   await openNew(page);
   await panel(page).getByLabel(/^Name/).fill(name);
-  await panel(page).getByLabel('Subject', { exact: true }).fill('Hello {{contact.firstname}}');
+  await panel(page).getByLabel('Subject', { exact: true }).fill('Spring news');
   await page.locator('[data-block-id="divider"]').click();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(page.getByText(/^Saved at/)).toBeVisible({ timeout: 30_000 });
@@ -41,7 +41,7 @@ test('create, save on the server, find in the list, reopen', async ({ page, requ
   const stored = (await (await request.get(`/api/email-builder/templates/${id}`)).json()).data;
   expect(stored.name).toBe(name);
   expect(stored.html).toMatch(/^<!doctype html>/i);
-  expect(stored.html).toContain('<title>Hello {{contact.firstname}}</title>');
+  expect(stored.html).toContain('<title>Spring news</title>');
 
   await page.getByRole('button', { name: 'Back' }).click();
   await page.getByTestId('template-list').getByRole('button', { name }).click();
@@ -67,7 +67,7 @@ test('server preview: real MJML compilation, variables filled, custom variable i
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Email preview' });
   const frame = dialog.frameLocator('iframe[title="Email preview"]');
-  await expect(frame.getByText('Hello Jane,')).toBeVisible({ timeout: 30_000 });
+  await expect(frame.getByText('Your text.')).toBeVisible({ timeout: 30_000 });
   // Subject personalized by the server.
   await expect(dialog.getByText('Order CMD-77')).toBeVisible();
 

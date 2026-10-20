@@ -67,7 +67,7 @@ const handler = createEmailBuilderHandler({
 | `publicUrl` | `null` | Your site's address. Image URLs in compiled emails become absolute with it. |
 | `transport` | `null` | `{ send({ to, subject, html, text }) }`. Turns on *Send test*. |
 | `generator` | `null` | The AI, `createEmailGenerator(…)` from `best-email-builder/ai/server`. Without it, the AI routes answer 501. |
-| `variables` | `DEFAULT_VARIABLES` | The system variables. Pass the same list to the editor. |
+| `variables` | `DEFAULT_VARIABLES` | The system variables: by default only the unsubscribe link. Pass the same list to the editor. |
 | `variableStore` | `null` | The repository of user-created variables. Without it, users cannot create variables. |
 | `brandStore` | `null` | `{ get(), save(brand) }`. Turns on the *Brand* button. |
 | `brandImporter` | `null` | `createBrandImporter()`. Turns on *Get my brand*. |

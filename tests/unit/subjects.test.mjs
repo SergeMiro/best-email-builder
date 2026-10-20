@@ -19,6 +19,10 @@ import {
   reviewSubjects,
 } from '../../src/ai/server.js';
 import { buildSubjectsPrompt, cleanSubjectsInput, parseSubjects } from '../../src/ai/subjects.js';
+import { DEFAULT_VARIABLES, EXAMPLE_VARIABLES } from '../../src/features/variables/catalog.js';
+
+/** What the builder sends: the application's variables (none by default but the unsubscribe link). */
+const VARIABLES = [...EXAMPLE_VARIABLES, ...DEFAULT_VARIABLES];
 
 const EMAIL =
   '<mjml><mj-head><mj-title>Hidden</mj-title><mj-style>.x{color:red}</mj-style></mj-head><mj-body><mj-section><mj-column>' +
@@ -45,19 +49,20 @@ test('emailWords: what a reader sees, one line per paragraph, no head, no markup
 
 test('cleanSubjectsInput: nothing to draw from is refused; link variables and unsubscribe are not offered', () => {
   assert.throws(() => cleanSubjectsInput({}), (error) => error.code === 'NOTHING_TO_SUGGEST' && error.status === 400);
-  const request = cleanSubjectsInput({ subject: '  "Spring news"  ', text: 'Hi', language: 'xx-!!', avoid: ['', 'Old one'] });
+  const request = cleanSubjectsInput({ subject: '  "Spring news"  ', text: 'Hi', language: 'xx-!!', avoid: ['', 'Old one'], variables: VARIABLES });
   assert.equal(request.subject, 'Spring news');
   assert.equal(request.language, 'en');
   assert.deepEqual(request.avoid, ['Old one']);
   const keys = request.variables.map((variable) => variable.key);
   assert.ok(keys.includes('contact.firstname'));
   assert.ok(!keys.includes('unsubscribe'));
-  // A subject alone is enough.
+  // A subject alone is enough; without variables, none is offered.
   assert.equal(cleanSubjectsInput({ subject: 'Spring news' }).text, '');
+  assert.deepEqual(cleanSubjectsInput({ subject: 'Spring news' }).variables, []);
 });
 
 test('buildSubjectsPrompt: the inbox, the ideas to avoid, the merge tags, the words', () => {
-  const prompt = buildSubjectsPrompt(cleanSubjectsInput({ subject: 'Spring news', preheader: 'Up to 30% off', text: 'Our sale', avoid: ['Old one'] }));
+  const prompt = buildSubjectsPrompt(cleanSubjectsInput({ subject: 'Spring news', preheader: 'Up to 30% off', text: 'Our sale', avoid: ['Old one'], variables: VARIABLES }));
   assert.match(prompt, /^Current subject: Spring news\nPreview text: Up to 30% off\nAlready suggested, do not repeat: "Old one"\n/);
   assert.match(prompt, /\{\{contact\.firstname\}\} \(First name\)/);
   assert.ok(prompt.endsWith('<email>\nOur sale\n</email>'));
@@ -83,7 +88,7 @@ test('parseSubjects: the JSON field, fenced; else one per line, list marks and q
 });
 
 test('reviewSubjects: repeats and unknown merge tags are left out and explained', () => {
-  const request = cleanSubjectsInput({ subject: 'Spring news', text: 'Hi', avoid: ['Old one'] });
+  const request = cleanSubjectsInput({ subject: 'Spring news', text: 'Hi', avoid: ['Old one'], variables: VARIABLES });
   assert.deepEqual(reviewSubjects(['A', 'B', '{{contact.firstname}}, C', 'D'], request), { usable: ['A', 'B', '{{contact.firstname}}, C'], problems: [] });
   const { usable, problems } = reviewSubjects(['spring NEWS', 'old one', '{{coupon}} inside', 'A', 'a'], request);
   assert.deepEqual(usable, ['A']);
@@ -211,7 +216,7 @@ test('emailWords: entities decoded once, hex and named ones too; an impossible o
 });
 
 test('reviewSubjects: capitals the email does not have, two "!", too long, the preview text, merge tags of other tools', () => {
-  const request = cleanSubjectsInput({ subject: 'Spring news', preheader: 'Up to 30% off', text: 'Our IKEA partner sale' });
+  const request = cleanSubjectsInput({ subject: 'Spring news', preheader: 'Up to 30% off', text: 'Our IKEA partner sale', variables: VARIABLES });
   const { usable, problems } = reviewSubjects(
     [
       'HUGE sale today',

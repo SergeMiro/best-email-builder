@@ -12,6 +12,15 @@ All notable changes are documented here. The format follows
   toolbar's *Variables* menu is gone. The bar now also offers the unsubscribe
   link, *New variable*, and a pencil to edit or delete a custom variable.
   The `{ }` buttons next to *Subject* and *Preview text* keep their search.
+- No variables by default: `DEFAULT_VARIABLES` holds only the unsubscribe
+  link, and users create the others with the bar's new **+** button (and edit
+  them with the pencil of their badge). The former five (first name, last
+  name, email address, company, campaign name) are exported as
+  `EXAMPLE_VARIABLES`: pass `[...EXAMPLE_VARIABLES, ...DEFAULT_VARIABLES]` to
+  `<EmailBuilder variables>` and `createEmailBuilderHandler({ variables })` to
+  keep them.
+- The starter template and the *Welcome* template hold no variable: the
+  greeting is "Hello," and the heading "Welcome aboard!".
 
 ## [0.13.1] — 2026-10-20
 

@@ -21,11 +21,11 @@ const BADGE =
  * edited, otherwise at the end of the selected text or button. The editor
  * replaces nothing: rendering does, per recipient.
  *
- * The unsubscribe link is inserted as a link (or becomes the URL of the
- * selected button), so it shows no typed preview. When the storage supports
- * it, users create their own variables here (*New variable*) and edit or
- * delete them with the pencil of their badge; they are shared by every
- * template.
+ * There are none by default: when the storage supports it, users create
+ * their own here (the + button) and edit or delete them with the pencil of
+ * their badge; they are shared by every template. The unsubscribe link is
+ * inserted as a link (or becomes the URL of the selected button), so it
+ * shows no typed preview.
  */
 export default function VariablesBar({ context }) {
   const { editor, ready, variables, storage, canManageVariables, reloadVariables } = context;
@@ -112,7 +112,7 @@ export default function VariablesBar({ context }) {
         >
           <Braces className="eb:size-3" aria-hidden="true" />
           {t('Email provider variables')}
-          <span className="eb:text-foreground-muted">{variables.length}</span>
+          {fields.length > 0 && <span className="eb:text-foreground-muted">{fields.length}</span>}
           <ChevronDown className={cn('eb:ml-auto eb:size-3.5 eb:transition-transform', expanded && 'eb:rotate-180')} aria-hidden="true" />
         </button>
         {/* Rows 0fr → 1fr: it grows to its content. Hidden once shrunk, so a closed bar takes no Tab. */}
@@ -130,19 +130,22 @@ export default function VariablesBar({ context }) {
               className="eb:flex eb:max-h-24 eb:flex-wrap eb:items-center eb:gap-1 eb:overflow-y-auto eb:px-3 eb:pt-0.5 eb:pb-2"
             >
               {fields.map(badge)}
-              {links.length > 0 && fields.length > 0 && <span className="eb:mx-1 eb:h-3.5 eb:w-px eb:bg-border" aria-hidden="true" />}
-              {links.map(badge)}
+              {!fields.length && <span className="eb:text-[11px] eb:text-foreground-muted">{t('No variables yet.')}</span>}
               {canManageVariables && (
-                <button
-                  type="button"
-                  disabled={!ready}
-                  onClick={() => setDialog({})}
-                  className={cn(BADGE, 'eb:border-dashed eb:bg-transparent eb:text-primary')}
-                >
-                  <Plus className="eb:size-3" aria-hidden="true" />
-                  {t('New variable')}
-                </button>
+                <TooltipWrap label={t('New variable')} delayDuration={100} hoverable={false}>
+                  <button
+                    type="button"
+                    disabled={!ready}
+                    aria-label={t('New variable')}
+                    onClick={() => setDialog({})}
+                    className={cn(BADGE, 'eb:w-5.5 eb:justify-center eb:border-dashed eb:bg-transparent eb:px-0 eb:text-primary')}
+                  >
+                    <Plus className="eb:size-3.5" aria-hidden="true" />
+                  </button>
+                </TooltipWrap>
               )}
+              {links.length > 0 && <span className="eb:mx-1 eb:h-3.5 eb:w-px eb:bg-border" aria-hidden="true" />}
+              {links.map(badge)}
             </div>
           </div>
         </div>

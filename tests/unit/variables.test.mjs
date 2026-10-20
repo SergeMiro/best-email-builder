@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_VARIABLES,
+  EXAMPLE_VARIABLES,
   defineVariables,
   keyFromLabel,
   mergeVariables,
@@ -22,12 +23,15 @@ import { STARTER_MJML } from '../../src/features/templates/starter.js';
 import { createMemoryStorage } from '../../src/storage/client.js';
 
 const CUSTOM = { key: 'order.number', label: 'Order number', group: 'Orders', sample: 'CMD-1', fallback: 'your order', custom: true };
-const CATALOG = mergeVariables(DEFAULT_VARIABLES, [CUSTOM]);
+/** An application's system variables: the ready-made set, then the default ones. */
+const SYSTEM = [...EXAMPLE_VARIABLES, ...DEFAULT_VARIABLES];
+const CATALOG = mergeVariables(SYSTEM, [CUSTOM]);
 
-test('catalog: unique keys, tags', () => {
-  assert.equal(new Set(DEFAULT_VARIABLES.map((v) => v.key)).size, DEFAULT_VARIABLES.length);
-  assert.equal(tokenOf(DEFAULT_VARIABLES[0]), '{{contact.firstname}}');
-  assert.equal(tokenOf(DEFAULT_VARIABLES.find((v) => v.key === 'unsubscribe')), '{{ unsubscribe }}');
+test('catalog: none by default but the unsubscribe link; unique keys, tags', () => {
+  assert.deepEqual(DEFAULT_VARIABLES.map((v) => v.key), ['unsubscribe']);
+  assert.equal(tokenOf(DEFAULT_VARIABLES[0]), '{{ unsubscribe }}');
+  assert.equal(new Set(SYSTEM.map((v) => v.key)).size, SYSTEM.length);
+  assert.equal(tokenOf(EXAMPLE_VARIABLES[0]), '{{contact.firstname}}');
   assert.throws(() => defineVariables([{ key: 'a' }, { key: 'a' }]), /duplicate/);
   assert.throws(() => defineVariables([{ key: 'A B' }]), /invalid key/);
 });
@@ -45,11 +49,11 @@ test('custom variables are validated', () => {
   assert.ok(validateCustomVariable({ label: '', key: 'x' }).errors.label);
   assert.ok(validateCustomVariable({ label: 'X', key: 'Bad key' }).errors.key);
   assert.ok(validateCustomVariable({ label: 'X', key: 'unsubscribe' }).errors.key);
-  assert.ok(validateCustomVariable({ label: 'X', key: 'contact.email' }, { existing: DEFAULT_VARIABLES }).errors.key);
+  assert.ok(validateCustomVariable({ label: 'X', key: 'contact.email' }, { existing: SYSTEM }).errors.key);
   // Editing keeps the key, whatever is sent.
   assert.equal(validateCustomVariable({ label: 'Y', key: 'hack' }, { editing: 'order.number' }).variable.key, 'order.number');
   // A custom variable never replaces a system one.
-  const merged = mergeVariables(DEFAULT_VARIABLES, [{ ...CUSTOM, key: 'contact.firstname', label: 'Fake' }]);
+  const merged = mergeVariables(SYSTEM, [{ ...CUSTOM, key: 'contact.firstname', label: 'Fake' }]);
   assert.equal(merged.find((v) => v.key === 'contact.firstname').label, 'First name');
 });
 
@@ -66,10 +70,12 @@ test('replacement: escaped values, inline and defined fallbacks, never a raw tag
 
 test('provider merge tags, used and unknown tags, samples', () => {
   assert.equal(
-    mapVariables('{{contact.firstname}} {{campaign.name}}', { 'contact.firstname': '{{ contact.FIRSTNAME }}' }),
+    mapVariables('{{contact.firstname}} {{campaign.name}}', { 'contact.firstname': '{{ contact.FIRSTNAME }}' }, CATALOG),
     '{{ contact.FIRSTNAME }} {{campaign.name}}'
   );
-  assert.deepEqual(usedVariables(STARTER_MJML), ['contact.firstname', 'unsubscribe']);
+  // The starter holds no variable: only the unsubscribe link.
+  assert.deepEqual(usedVariables(STARTER_MJML), ['unsubscribe']);
+  assert.deepEqual(unknownVariables(STARTER_MJML), []);
   assert.deepEqual(unknownVariables('{{contact.fistname}} {{ unsubscribe }} {{order.number|x}} {{other}}', CATALOG), [
     'contact.fistname',
     'other',
@@ -81,7 +87,12 @@ test('provider merge tags, used and unknown tags, samples', () => {
 });
 
 test('memory storage keeps custom variables', async () => {
-  const storage = createMemoryStorage();
+  // No system variable by default: any key but the reserved ones can be created.
+  const empty = createMemoryStorage();
+  await empty.saveVariable({ label: 'Email', key: 'contact.email' }, { create: true });
+  await assert.rejects(empty.saveVariable({ label: 'X', key: 'unsubscribe' }, { create: true }), (e) => e.status === 400);
+
+  const storage = createMemoryStorage({ systemVariables: SYSTEM });
   await storage.saveVariable({ label: 'Order number', key: 'order.number' }, { create: true });
   await assert.rejects(storage.saveVariable({ label: 'X', key: 'contact.email' }, { create: true }), (e) => e.status === 400);
   await storage.saveVariable({ key: 'order.number', label: 'Order no.', sample: '42' });

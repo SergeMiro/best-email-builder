@@ -47,6 +47,12 @@ test.describe('Proofread', () => {
   test('every text read; each correction shown word by word; Apply all corrects the email in one step', async ({ page }) => {
     await openBuilder(page);
     await typeMistakes(page);
+    // A merge tag in the greeting, from the variables bar: proofreading keeps it.
+    await canvas(page).getByText(/Your text\./).click();
+    const bar = page.getByTestId('eb-variables-bar');
+    await bar.hover();
+    await bar.getByRole('button', { name: 'First name', exact: true }).click();
+    await expect.poll(() => mjml(page)).toContain('{{contact.firstname}}');
     // And one in a text block, typed in the canvas.
     await canvas(page).getByText(/Your text\./).dblclick();
     await page.keyboard.press('Control+End');

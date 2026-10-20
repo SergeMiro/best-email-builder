@@ -27,6 +27,7 @@ export { createBrandImporter, isPublicAddress, BrandImportError, BRAND_IMPORT_LI
 export { applyBrand, cleanBrand } from '../features/brand/brand.js';
 export {
   DEFAULT_VARIABLES,
+  EXAMPLE_VARIABLES,
   defineVariables,
   mergeVariables,
   tokenOf,

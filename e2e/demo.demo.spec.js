@@ -35,7 +35,7 @@ test('build a template, preview it, find it again after a reload', async ({ page
   // Preview compiled in the browser (mjml-browser).
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   const preview = page.getByRole('dialog').filter({ hasText: 'Email preview' });
-  await expect(preview.frameLocator('iframe[title="Email preview"]').getByText('Hello Jane,')).toBeVisible({ timeout: 30_000 });
+  await expect(preview.frameLocator('iframe[title="Email preview"]').getByText('Your text.')).toBeVisible({ timeout: 30_000 });
   await page.keyboard.press('Escape');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
@@ -317,7 +317,7 @@ test('preview in dark mode: the page darkens, the text lightens, the button keep
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Email preview' });
   const frame = dialog.frameLocator('iframe[title="Email preview"]');
-  const greeting = frame.getByText('Hello Jane,');
+  const greeting = frame.getByText('Your text.');
   await expect(greeting).toBeVisible({ timeout: 30_000 });
   // The colors as the reader sees them: computed in the frame.
   const color = (locator, property) => locator.evaluate((el, name) => getComputedStyle(el)[name], property);
@@ -328,8 +328,8 @@ test('preview in dark mode: the page darkens, the text lightens, the button keep
   await dialog.getByRole('tab', { name: 'Dark mode' }).click();
   await expect(dialog.locator('[data-scheme="dark"]')).toBeVisible();
   await expect(dialog.getByTestId('eb-dark-hint')).toBeVisible();
-  await expect.poll(() => color(frame.getByText('Hello Jane,'), 'color')).not.toBe('rgb(43, 48, 56)');
-  const [r, g, b] = (await color(frame.getByText('Hello Jane,'), 'color')).match(/\d+/g).map(Number);
+  await expect.poll(() => color(frame.getByText('Your text.'), 'color')).not.toBe('rgb(43, 48, 56)');
+  const [r, g, b] = (await color(frame.getByText('Your text.'), 'color')).match(/\d+/g).map(Number);
   expect(Math.min(r, g, b)).toBeGreaterThan(180);
   // The pale page behind the email (#eceff4) is now dark, of the same cool hue.
   const behind = (await color(frame.locator('body'), 'backgroundColor')).match(/\d+/g).map(Number);
@@ -338,5 +338,5 @@ test('preview in dark mode: the page darkens, the text lightens, the button keep
   expect(await color(frame.locator('td[bgcolor]').filter({ hasText: 'Learn more' }).last(), 'backgroundColor')).toBe(lightButton);
 
   await dialog.getByRole('tab', { name: 'Light mode' }).click();
-  await expect.poll(() => color(frame.getByText('Hello Jane,'), 'color')).toBe('rgb(43, 48, 56)');
+  await expect.poll(() => color(frame.getByText('Your text.'), 'color')).toBe('rgb(43, 48, 56)');
 });

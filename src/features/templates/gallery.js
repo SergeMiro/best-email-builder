@@ -193,7 +193,7 @@ export const TEMPLATE_GALLERY = [
         header(sender, t) +
           section(
             column(
-              heading(esc(t('Welcome, {name}!', { name: '{{contact.firstname}}' })), { size: 28 }) +
+              heading(esc(t('Welcome aboard!')), { size: 28 }) +
                 paragraph(esc(t('Thank you for joining us. Here is how to get the most out of your account.')))
             ),
             { top: 16, bottom: 8 }

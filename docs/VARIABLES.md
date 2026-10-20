@@ -8,21 +8,39 @@ filled in on the server when you send. A raw tag never reaches a recipient.
 System variables come from your application. Users can insert them but
 cannot change them.
 
+There are none by default, apart from the unsubscribe link
+`{{ unsubscribe }}` (`DEFAULT_VARIABLES`), which the sending pipeline fills
+with `unsubscribeUrl`. Users then create their own from the variables bar
+(see [Custom variables](#custom-variables)).
+
+To give them a list of your own, define it with `defineVariables([...])`,
+keep the unsubscribe link, and pass the same list to both sides:
+
+```js
+import { DEFAULT_VARIABLES, defineVariables } from 'best-email-builder';
+
+const variables = defineVariables([
+  { key: 'contact.firstname', label: 'First name', group: 'Recipient', sample: 'Jane' },
+  ...DEFAULT_VARIABLES,
+]);
+
+<EmailBuilder variables={variables} />;               // the editor
+createEmailBuilderHandler({ variables, ... });        // the server
+```
+
+`EXAMPLE_VARIABLES` is a ready-made set to start from:
+
 | Tag | Sample |
 |---|---|
 | `{{contact.firstname}}`, `{{contact.lastname}}`, `{{contact.email}}` | Jane, Doe, jane.doe@example.com |
 | `{{company.name}}` | Example Inc. |
 | `{{campaign.name}}` | Newsletter |
-| `{{ unsubscribe }}` | the unsubscribe link (`unsubscribeUrl`) |
-
-To use your own list, define it with `defineVariables([...])` and pass the
-same list to both sides: `<EmailBuilder variables>` and
-`createEmailBuilderHandler({ variables })`.
 
 ## Custom variables
 
 Users create custom variables from the variables bar above the canvas, with
-*New variable*, and edit or delete them with the pencil of their badge.
+its **+** button (*New variable*), and edit or delete them with the pencil of
+their badge.
 A custom variable has:
 
 - a **name**, for example "Order number";
@@ -34,7 +52,8 @@ A custom variable has:
 
 Custom variables are shared by every template. The server keeps them in the
 `variableStore` repository (`createMemoryVariableRepository` is the
-reference).
+reference). Without it, the server answers 501 *Custom variables are not
+configured* when a user creates one.
 
 ## Inserting a variable
 
@@ -82,5 +101,5 @@ Some email providers do their own merge. For those, map the tags to the
 provider's syntax instead:
 
 ```js
-mapVariables(html, { 'contact.firstname': '{{ contact.FIRSTNAME }}' });
+mapVariables(html, { 'contact.firstname': '{{ contact.FIRSTNAME }}' }, variables);
 ```

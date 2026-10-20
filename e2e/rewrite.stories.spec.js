@@ -27,6 +27,15 @@ const write = (page) => page.getByTestId('eb-write');
 const canvas = (page) => page.frameLocator('.eb-canvas-frame');
 const asked = (page) => page.evaluate(() => window.__rewritten || []);
 
+/** A merge tag at the end of the selected text, added as a user does: its badge in the variables bar. */
+async function addFirstName(page) {
+  const bar = page.getByTestId('eb-variables-bar');
+  await bar.hover();
+  await bar.getByRole('button', { name: 'First name', exact: true }).click();
+  await expect.poll(() => mjml(page)).toContain('Your text. {{contact.firstname}}');
+  await page.mouse.move(10, 10);
+}
+
 test.describe('Rewrite with AI', () => {
   test('one click rewrites the selected text in place; Ctrl+Z brings it back', async ({ page }) => {
     await openBuilder(page);
@@ -71,6 +80,7 @@ test.describe('Rewrite with AI', () => {
     // The greeting holds {{contact.firstname}}: an answer without it is sent
     // back to the model, the second one is used.
     await canvas(page).getByText(/Your text\./).click();
+    await addFirstName(page);
     await page.evaluate(() => {
       window.__rewriteAnswers = ['Hi there, here is the news.', 'Hi {{contact.firstname}}, here is the news.'];
     });
@@ -101,6 +111,7 @@ test.describe('Rewrite with AI', () => {
   test('failures leave the text as it was and say why, where the user is', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText(/Your text\./).click();
+    await addFirstName(page);
     const before = await mjml(page);
     const box = rewrite(page);
 
@@ -177,6 +188,7 @@ test.describe('Write with AI', () => {
   test('a text block keeps its merge tags: an answer without them is asked again; in French, the text is asked in French', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText(/Your text\./).click();
+    await addFirstName(page);
     await page.evaluate(() => {
       window.__rewriteDelay = 50;
       window.__rewriteAnswers = ['<p>Our sale ends Sunday.</p>', '<p>Hello {{contact.firstname}}, our sale ends Sunday.</p>'];

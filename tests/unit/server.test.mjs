@@ -17,6 +17,8 @@ import {
   absoluteAssetUrls,
   isAssetPath,
   applyServiceLinks,
+  DEFAULT_VARIABLES,
+  EXAMPLE_VARIABLES,
 } from '../../src/server/index.js';
 import { createDocument } from '../../src/core/document.js';
 import { STARTER_MJML, createStarterMjml } from '../../src/features/templates/starter.js';
@@ -28,6 +30,8 @@ const PNG = Uint8Array.from(
   Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
 );
 const DOC = createDocument({ engine: 'grapesjs', engineVersion: '0.22.16', project: { pages: [] } });
+// The application's own variables: there are none by default but the unsubscribe link.
+const VARIABLES = [...EXAMPLE_VARIABLES, ...DEFAULT_VARIABLES];
 const MJML = '<mjml><mj-body><mj-section><mj-column><mj-text>Hello {{contact.firstname}}</mj-text></mj-column></mj-section></mj-body></mjml>';
 
 function setup(overrides = {}) {
@@ -36,6 +40,7 @@ function setup(overrides = {}) {
     templates: createMemoryTemplateRepository(),
     assets: createMemoryAssetRepository(),
     variableStore: createMemoryVariableRepository(),
+    variables: VARIABLES,
     authorize: (request) => (request.headers.get('authorization') === 'Bearer ok' ? { id: 7, name: 'ada' } : null),
     publicUrl: ORIGIN,
     transport: { send: async (email) => void sent.push(email) },
@@ -136,7 +141,7 @@ test('render: sample values, inert unsubscribe, relative images, quality report'
   const { call } = setup();
   const res = await call('POST', '/api/email-builder/render', { mjml: STARTER_MJML, subject: 'Hello' });
   const { html, quality } = (await res.json()).data;
-  assert.ok(html.includes('Hello Jane,'));
+  assert.ok(html.includes('Hello,'));
   assert.ok(!html.includes('{{'));
   assert.deepEqual(quality, []);
 });
@@ -154,7 +159,7 @@ test('test send: one address at a time, [TEST] subject, failures isolated, rate 
   assert.equal(sent.length, 1);
   assert.equal(sent[0].to, 'reviewer@example.com');
   assert.equal(sent[0].subject, '[TEST] Letter');
-  assert.ok(sent[0].text.includes('Hello Jane') && !sent[0].text.includes('<'));
+  assert.ok(sent[0].text.includes('Hello,') && !sent[0].text.includes('<'));
   const again = await call('POST', '/api/email-builder/test', { mjml: STARTER_MJML, emails: ['a@example.com'] });
   assert.equal(again.status, 429);
 });
@@ -241,9 +246,9 @@ test('links: uploaded images become absolute at send time only', async () => {
 });
 
 test('renderEmail: values escaped, missing value empty, never a raw tag', async () => {
-  const { html } = await renderEmail({ mjml: MJML, values: { 'contact.firstname': '<b>Jo</b>' } });
+  const { html } = await renderEmail({ mjml: MJML, values: { 'contact.firstname': '<b>Jo</b>' }, variables: VARIABLES });
   assert.ok(html.includes('Hello &lt;b&gt;Jo&lt;/b&gt;'));
-  assert.ok(!(await renderEmail({ mjml: MJML })).html.includes('{{'));
+  assert.ok(!(await renderEmail({ mjml: MJML, variables: VARIABLES })).html.includes('{{'));
 });
 
 test('starter template: sender, translated texts', () => {

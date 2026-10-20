@@ -13,8 +13,8 @@ import { test, expect } from '@playwright/test';
 
 const STORY = '/?story=builder--interface&mode=preview';
 
-async function openBuilder(page, { lang } = {}) {
-  await page.goto(lang ? `${STORY}&lang=${lang}` : STORY);
+async function openBuilder(page, { lang, variables } = {}) {
+  await page.goto(`${STORY}${lang ? `&lang=${lang}` : ''}${variables ? `&variables=${variables}` : ''}`);
   await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
 }
 
@@ -52,7 +52,7 @@ test.describe('Interface', () => {
     await openBuilder(page);
     await expect(page.getByText('No changes')).toBeVisible();
     const source = await mjml(page);
-    for (const fragment of ['Example Inc.', 'Your headline', '{{contact.firstname}}', '<mj-button', 'href="{{ unsubscribe }}"', '1 Main Street']) {
+    for (const fragment of ['Example Inc.', 'Your headline', 'Hello,', '<mj-button', 'href="{{ unsubscribe }}"', '1 Main Street']) {
       expect(source).toContain(fragment);
     }
     await expect(panel(page).getByRole('heading', { name: 'Email' })).toBeVisible();
@@ -203,7 +203,7 @@ test.describe('Element actions', () => {
 
   test('drag an element of the canvas to move it', async ({ page }) => {
     await openBuilder(page);
-    expect((await texts(page)).slice(1, 3)).toEqual(['Your headline', 'Hello {{contact.firstname}},Your text.']);
+    expect((await texts(page)).slice(1, 3)).toEqual(['Your headline', 'Hello,Your text.']);
     await canvas(page).getByText('Your headline').click();
     // The ✥ handle of the selection's toolbar.
     const handle = await canvas(page).locator('button[data-action="move"]').boundingBox();
@@ -222,7 +222,7 @@ test.describe('Element actions', () => {
     await expect.poll(async () => (await texts(page)).slice(1, 4)).toEqual([
       'Your headline',
       'Your headline',
-      'Hello {{contact.firstname}},Your text.',
+      'Hello,Your text.',
     ]);
     // The copy is selected (second headline): move it down, then up.
     await props.getByRole('button', { name: 'Move down' }).click();
@@ -475,6 +475,32 @@ test.describe('Variables', () => {
     await openBuilder(page);
     await expect(page.getByRole('button', { name: 'Variables', exact: true })).toHaveCount(0);
     await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: /^Email provider variables/ })).toBeVisible();
+  });
+
+  test('none by default but the unsubscribe link: the + creates the first one', async ({ page }) => {
+    await openBuilder(page, { variables: 'default' });
+    // The starter template holds no variable.
+    expect(await mjml(page)).not.toMatch(/\{\{(?! unsubscribe )/);
+    const badges = await openBar(page);
+    await expect(badges.locator('[data-variable]')).toHaveText(['Unsubscribe link']);
+    await expect(badges.getByText('No variables yet.')).toBeVisible();
+    const plus = badges.getByRole('button', { name: 'New variable' });
+    await plus.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('New variable');
+    await plus.click();
+
+    const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
+    // No system variable: a key the example set uses is free here.
+    await dialog.getByLabel('Name').fill('First name');
+    await dialog.getByLabel('Tag').fill('contact.firstname');
+    await dialog.getByRole('button', { name: 'Create' }).click();
+    await expect(notice(page, 'Variable “First name” created.')).toBeVisible();
+
+    await openBar(page);
+    await expect(badges.locator('[data-variable]')).toHaveText(['First name', 'Unsubscribe link']);
+    await expect(badges.getByText('No variables yet.')).toHaveCount(0);
+    await expect(badges.getByRole('button', { name: 'Edit “First name”' })).toBeVisible();
+    await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: /^Email provider variables/ })).toContainText('1');
   });
 
   test('unsubscribe on a selected button becomes its URL', async ({ page }) => {

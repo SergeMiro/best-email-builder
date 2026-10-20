@@ -43,6 +43,7 @@ export { EMAIL_BUILDER_VERSION, EMAIL_DOCUMENT_SCHEMA_VERSION, EMAIL_DEVICES } f
 /* ── Variables, templates, rendering helpers shared with the server ──────── */
 export {
   DEFAULT_VARIABLES,
+  EXAMPLE_VARIABLES,
   CUSTOM_GROUP,
   defineVariables,
   mergeVariables,

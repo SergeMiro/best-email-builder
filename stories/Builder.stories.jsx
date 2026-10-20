@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react';
-import { createEmailEditor, emailBlocks, emailBuilderFeatures, EmailBuilder, createMemoryStorage } from '../src/index.js';
+import {
+  createEmailEditor,
+  emailBlocks,
+  emailBuilderFeatures,
+  EmailBuilder,
+  createMemoryStorage,
+  DEFAULT_VARIABLES,
+  EXAMPLE_VARIABLES,
+} from '../src/index.js';
 import { createNativeAdapter } from '../src/engine/NativeAdapter.js';
 import { translatorFor } from '../src/i18n/index.js';
 import { createAi } from '../src/ai/createAi.js';
@@ -156,7 +164,15 @@ function benchAi(mode) {
   return createAi({ proofread: fakeProofread, rewrite: fakeRewrite, suggestSubjects: fakeSuggestSubjects });
 }
 
-function Session({ storage, templateId, initial, onClose, locale, ai }) {
+/**
+ * The bench's system variables: a ready-made set, or with `?variables=default`
+ * what an npm install starts with (none but the unsubscribe link).
+ */
+function benchVariables(mode) {
+  return mode === 'default' ? DEFAULT_VARIABLES : [...EXAMPLE_VARIABLES, ...DEFAULT_VARIABLES];
+}
+
+function Session({ storage, templateId, initial, onClose, locale, ai, variables }) {
   const adapter = useMemo(() => createNativeAdapter(), []);
   const editor = useMemo(
     () => createEmailEditor({ adapter, blocks: emailBlocks, features: emailBuilderFeatures, t: translatorFor(locale) }),
@@ -176,6 +192,7 @@ function Session({ storage, templateId, initial, onClose, locale, ai }) {
       onClose={onClose}
       locale={locale}
       ai={ai}
+      variables={variables}
       sender={{ name: 'Example Inc.', address: '1 Main Street, Springfield' }}
     />
   );
@@ -186,9 +203,17 @@ function Bench() {
   const locale = params.get('lang') || 'en';
   const aiMode = params.get('ai');
   const ai = useMemo(() => benchAi(aiMode), [aiMode]);
+  const variablesMode = params.get('variables');
+  const variables = useMemo(() => benchVariables(variablesMode), [variablesMode]);
   const storage = useMemo(
-    () => createMemoryStorage({ render: fakeRender, sendTest: fakeSendTest, importBrand: fakeImportBrand }),
-    []
+    () =>
+      createMemoryStorage({
+        render: fakeRender,
+        sendTest: fakeSendTest,
+        importBrand: fakeImportBrand,
+        systemVariables: variables,
+      }),
+    [variables]
   );
   const [session, setSession] = useState({ key: 0, templateId: null, open: true });
   const [closed, setClosed] = useState(0);
@@ -206,6 +231,7 @@ function Bench() {
           initial={session.initial}
           locale={locale}
           ai={ai}
+          variables={variables}
           onClose={() => {
             setClosed((n) => n + 1);
             setSession((s) => ({ ...s, open: false }));

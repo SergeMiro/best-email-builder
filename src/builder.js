@@ -13,6 +13,6 @@ export { default as EmailBuilderBoundary } from './ui/EmailBuilderBoundary.jsx';
 export { createHttpStorage, createMemoryStorage, StorageError } from './storage/client.js';
 export { createStarterMjml, STARTER_MJML } from './features/templates/starter.js';
 export { TEMPLATE_GALLERY, buildGallery } from './features/templates/gallery.js';
-export { DEFAULT_VARIABLES, CUSTOM_GROUP, defineVariables, mergeVariables } from './features/variables/catalog.js';
+export { DEFAULT_VARIABLES, EXAMPLE_VARIABLES, CUSTOM_GROUP, defineVariables, mergeVariables } from './features/variables/catalog.js';
 export { createTranslator, translatorFor, LOCALES } from './i18n/index.js';
 export { EMAIL_BUILDER_VERSION } from './core/constants.js';

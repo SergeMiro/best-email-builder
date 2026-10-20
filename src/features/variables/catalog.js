@@ -15,7 +15,8 @@
  *
  * Two kinds of variables:
  *   - SYSTEM variables, given by the application (`variables` prop / option),
- *     read-only in the interface — this list is the default;
+ *     read-only in the interface. None by default (`DEFAULT_VARIABLES` holds
+ *     the unsubscribe link only); `EXAMPLE_VARIABLES` is a ready-made set;
  *   - CUSTOM variables, created by users in the builder and kept by the
  *     storage (`listVariables` / `saveVariable` / `deleteVariable`), shared by
  *     every template.
@@ -42,13 +43,29 @@ import { identity } from '../../i18n/index.js';
  * }} EmailVariable
  */
 
-/** @type {EmailVariable[]} */
-export const DEFAULT_VARIABLES = [
+/**
+ * A ready-made set of system variables: the recipient's name, email address
+ * and company, the campaign's name. Not given by default; an application
+ * that wants them passes `[...EXAMPLE_VARIABLES, ...DEFAULT_VARIABLES]` to
+ * the builder and to the server.
+ *
+ * @type {EmailVariable[]}
+ */
+export const EXAMPLE_VARIABLES = [
   { key: 'contact.firstname', label: 'First name', group: 'Recipient', sample: 'Jane' },
   { key: 'contact.lastname', label: 'Last name', group: 'Recipient', sample: 'Doe' },
   { key: 'contact.email', label: 'Email address', group: 'Recipient', sample: 'jane.doe@example.com' },
   { key: 'company.name', label: 'Company', group: 'Recipient', sample: 'Example Inc.' },
   { key: 'campaign.name', label: 'Campaign name', group: 'Campaign', sample: 'Newsletter' },
+];
+
+/**
+ * The default system variables: the unsubscribe link only. The variables of
+ * the email provider are created by users in the builder.
+ *
+ * @type {EmailVariable[]}
+ */
+export const DEFAULT_VARIABLES = [
   {
     key: 'unsubscribe',
     label: 'Unsubscribe link',

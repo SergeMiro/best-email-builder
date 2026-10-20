@@ -87,7 +87,7 @@ export function createStarterMjml({ sender = {}, buttonUrl = DEFAULT_BUTTON_URL,
     '<mj-column>',
     `<mj-text ${TEXT} font-size="24px" line-height="32px" font-weight="bold" ${SIDE}>${escapeXml(t('Your headline'))}</mj-text>`,
     `<mj-text ${TEXT} font-size="15px" line-height="24px" ${SIDE}>` +
-      `${escapeXml(t('Hello {name},', { name: '{{contact.firstname}}' }))}<br /><br />${escapeXml(t('Your text.'))}</mj-text>`,
+      `${escapeXml(t('Hello,'))}<br /><br />${escapeXml(t('Your text.'))}</mj-text>`,
     `<mj-button href="${escapeXml(buttonUrl)}" background-color="${PALETTE.navy}" color="${PALETTE.white}" ` +
       `font-family="${FONT_STACK}" font-size="15px" font-weight="bold" border-radius="6px" ` +
       `inner-padding="12px 28px" align="left" ${SIDE}>${escapeXml(t('Learn more'))}</mj-button>`,
