@@ -339,10 +339,16 @@ function Library({
       destructive: true,
     });
     if (!ok) return;
+    // The next template of the list takes its place (the previous one at the end).
+    const visible = [...favoriteEntries, ...otherTemplates];
+    const at = visible.findIndex((e) => e.key === selection);
+    const next = at === -1 ? null : visible[at + 1] || visible[at - 1] || null;
     setBusy('delete');
     try {
       await storage.remove(template.id);
-      setSelection(null);
+      // Out of the list at once: the first selection must not pick it again before the reload.
+      setItems((s) => ({ ...s, list: s.list.filter((item) => String(item.id) !== String(template.id)) }));
+      setSelection(next?.key ?? null);
       setDetailsOpen(false);
       await reload();
       notify('success', t('Template deleted.'));

@@ -57,7 +57,7 @@ test('standalone: lists templates with their tags, previews, searches, hands Edi
   expect(seen).toEqual([{ type: 'edit', id: 1 }, { type: 'create' }]);
 });
 
-test('standalone: the five actions — Edit, Duplicate, Copy HTML, Download, Delete', async ({ page, context }) => {
+test('standalone: the five actions — Edit, Duplicate, Copy HTML, Download, Delete; the next template takes the place of one deleted', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto(STANDALONE);
   const mine = page.getByTestId('eb-library-templates');
@@ -83,6 +83,18 @@ test('standalone: the five actions — Edit, Duplicate, Copy HTML, Download, Del
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
   await expect(mine.getByTestId('eb-library-template')).toHaveCount(2);
   await expect(mine).not.toContainText('(copy)');
+  // The copy was first: the next one is selected, never a “not found”.
+  await expect(details(page).getByRole('heading', { name: 'Welcome series — day 1' })).toBeVisible();
+  await expect(row(page, 'Welcome series')).toHaveAttribute('aria-current', 'true');
+  await expect(details(page)).not.toContainText('Template not found');
+
+  // The last one deleted: the one before it is selected.
+  await row(page, 'October newsletter').click();
+  await details(page).getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+  await expect(mine.getByTestId('eb-library-template')).toHaveCount(1);
+  await expect(row(page, 'Welcome series')).toHaveAttribute('aria-current', 'true');
+  await expect(details(page).getByRole('heading', { name: 'Welcome series — day 1' })).toBeVisible();
 });
 
 test('deleteDisabled: Delete stays in place but only says why', async ({ page }) => {
