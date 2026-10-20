@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-10-20
+
 ### Changed
 - The *Email provider variables* bar above the canvas (formerly
   *Personalization fields*) is the one place to insert a variable: the
