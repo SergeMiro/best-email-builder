@@ -508,6 +508,70 @@ test.describe('Variables', () => {
     expect(await mjml(page)).toBe(before);
   });
 
+  test('personalization bar: a badge under the pointer types its tag into the selected button, wipes it out when it leaves; a click inserts it', async ({ page }) => {
+    await openBuilder(page);
+    const before = await mjml(page);
+    const bar = page.getByTestId('eb-variables-bar');
+    const title = bar.getByRole('button', { name: /^Personalization fields/ });
+    const fields = bar.getByRole('group', { name: 'Personalization fields' });
+    const preview = canvas(page).getByTestId('eb-canvas-preview');
+    const button = canvas(page).locator('.eb-tag-mj-button');
+    // A thin bar: its fields show under the pointer. Links stay in the Variables menu.
+    await expect(title).toHaveAttribute('aria-expanded', 'false');
+    await expect(fields).toBeHidden();
+    await bar.hover();
+    await expect(title).toHaveAttribute('aria-expanded', 'true');
+    await expect(fields.getByRole('button')).toHaveText(['First name', 'Last name', 'Email address', 'Company', 'Campaign name']);
+
+    // Nothing selected: the tooltip names the tag, nothing is typed; a click says what to do.
+    await fields.getByRole('button', { name: 'Company' }).hover();
+    await expect(page.getByRole('tooltip')).toHaveText('{{company.name}}');
+    await expect(preview).toHaveCount(0);
+    await fields.getByRole('button', { name: 'Company' }).click();
+    await expect(notice(page, 'Select a text or a button first.')).toBeVisible();
+
+    await canvas(page).getByText('Learn more').click();
+    await bar.hover();
+    const lastName = fields.getByRole('button', { name: 'Last name' });
+    await lastName.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('{{contact.lastname}}');
+    await expect(button).toContainText('Learn more {{contact.lastname}}');
+    // Another badge: only the end changes.
+    await fields.getByRole('button', { name: 'First name' }).hover();
+    await expect(button).toContainText('Learn more {{contact.firstname}}');
+    expect(await mjml(page)).toBe(before);
+    await page.mouse.move(700, 700, { steps: 8 });
+    await expect(preview).toHaveCount(0);
+    await expect(button).not.toContainText('{{');
+    await expect(title).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByTestId('email-builder').getByText('No changes')).toBeVisible();
+    expect(await mjml(page)).toBe(before);
+
+    await bar.hover();
+    await lastName.hover();
+    await lastName.click();
+    await expect.poll(() => mjml(page)).toMatch(/>Learn more \{\{contact\.lastname\}\}<\/mj-button>/);
+    await page.mouse.move(700, 700, { steps: 8 });
+    await expect(preview).toHaveCount(0);
+    await expect(button).toContainText('Learn more {{contact.lastname}}');
+  });
+
+  test('personalization bar on a text being edited: the tag shows at the caret, a click inserts it there', async ({ page }) => {
+    await openBuilder(page);
+    await canvas(page).getByText('Your headline').dblclick();
+    await page.keyboard.press('Home');
+    const before = await mjml(page);
+    const bar = page.getByTestId('eb-variables-bar');
+    await bar.hover();
+    const firstName = bar.getByRole('button', { name: 'First name' });
+    await firstName.hover();
+    await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveText('{{contact.firstname}}');
+    expect(await mjml(page)).toBe(before);
+    await firstName.click();
+    await expect.poll(() => mjml(page)).toMatch(/>\{\{contact\.firstname\}\}\s*Your headline<\/mj-text>/);
+    await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveCount(0);
+  });
+
   test('create a custom variable: tag from the name, inserted at the caret, kept by the storage', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Your headline').dblclick();

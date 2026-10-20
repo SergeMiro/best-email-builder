@@ -166,6 +166,8 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   setContents?: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
  *   insertLink: (href: string, label: string) => boolean,
+ *   previewText?: (text: string) => boolean,
+ *   clearPreview?: () => void,
  *   undo: () => void,
  *   redo: () => void,
  *   canUndo: () => boolean,
@@ -189,8 +191,9 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
 /**
  * Pluggable feature. `setup` receives the ready editor and may return a
  * teardown function, called on `destroy`. `toolbar`: React component placed in
- * the toolbar (it receives the screen context); `options`: its settings, read
- * by the screen; `isAvailable(context)`: hides the toolbar entry when the
+ * the toolbar (it receives the screen context); `canvasBar`: the same, as a
+ * thin bar above the canvas; `options`: its settings, read by the screen;
+ * `isAvailable(context)`: hides the toolbar entry and the bar when the
  * context cannot support it (e.g. a storage that cannot render).
  *
  * @typedef {{
@@ -200,6 +203,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   enabled?: boolean,
  *   setup?: (editor: EmailEditor) => (void | (() => void)),
  *   toolbar?: any,
+ *   canvasBar?: any,
  *   isAvailable?: (context: any) => boolean,
  *   options?: Record<string, any>,
  * }} EmailBuilderFeature
@@ -231,6 +235,8 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   setContents: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
  *   insertLink: (href: string, label: string) => boolean,
+ *   previewText: (text: string) => boolean,
+ *   clearPreview: () => void,
  *   undo: () => void,
  *   redo: () => void,
  *   canUndo: () => boolean,
@@ -526,6 +532,21 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
     insertLink(href, label) {
       requireReady('insertLink');
       return adapter.insertLink(String(href || ''), String(label || href || ''));
+    },
+
+    /**
+     * Shows a text where `insertText` would put it, without inserting it (a
+     * variable under the pointer). False if nothing would take it, or if the
+     * engine cannot preview. Not ready yet: nothing to show, no error.
+     */
+    previewText(text) {
+      if (status !== 'ready' || !adapter.previewText) return false;
+      return adapter.previewText(String(text ?? ''));
+    },
+
+    /** Takes the previewed text away. */
+    clearPreview() {
+      if (status === 'ready') adapter.clearPreview?.();
     },
 
     undo() {

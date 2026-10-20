@@ -382,6 +382,7 @@ export const de = {
   "Saving…": "Wird gespeichert…",
   "script not allowed": "unzulässiges Skript",
   "Search variables…": "Variablen durchsuchen…",
+  "Personalization fields": "Personalisierungsfelder",
   "Section": "Abschnitt",
   "Select a text or a button first.": "Wählen Sie zuerst einen Text oder eine Schaltfläche aus.",
   "Send": "Senden",

@@ -685,8 +685,17 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
       if (view.editingId()) return view.insertText(text);
       const node = selectedId ? findNode(root, selectedId) : null;
       if (!node || !TEXT_TAGS.has(node.tag)) return false;
+      view.settlePreview();
       commit(setContent(root, node.id, `${node.content || ''} ${escapeText(text)}`));
       return true;
+    },
+
+    previewText(text) {
+      return view ? view.previewText(text) : false;
+    },
+
+    clearPreview() {
+      view?.hidePreview();
     },
 
     insertLink(href, label) {

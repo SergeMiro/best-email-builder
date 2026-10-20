@@ -251,3 +251,29 @@ test('setContents: several texts in one call to an engine that can (one step of 
   one.destroy();
   editor.destroy();
 });
+
+test('previewText: shown by an engine that can, never an error before it is ready or when it cannot', async () => {
+  const plain = fakeAdapter();
+  const editor = createEmailEditor({ adapter: plain, blocks: createRegistry('emailBlocks', [TEXT_BLOCK]) });
+  // A badge under the pointer while the engine loads: nothing to show, no error.
+  assert.equal(editor.previewText('{{contact.firstname}}'), false);
+  editor.clearPreview();
+  await editor.initialize({ container });
+  assert.equal(editor.previewText('{{contact.firstname}}'), false);
+  editor.clearPreview();
+
+  const previewing = Object.assign(fakeAdapter(), {
+    previewText: (text) => (previewing.calls.push(['previewText', text]), true),
+    clearPreview: () => previewing.calls.push(['clearPreview']),
+  });
+  const one = createEmailEditor({ adapter: previewing, blocks: createRegistry('emailBlocks', [TEXT_BLOCK]) });
+  await one.initialize({ container });
+  assert.equal(one.previewText('{{contact.lastname}}'), true);
+  one.clearPreview();
+  assert.deepEqual(previewing.calls.filter(([name]) => name.includes('review')), [
+    ['previewText', '{{contact.lastname}}'],
+    ['clearPreview'],
+  ]);
+  one.destroy();
+  editor.destroy();
+});

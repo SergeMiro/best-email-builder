@@ -6,6 +6,19 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- A *Personalization fields* bar above the canvas. It is thin until the
+  pointer comes over it (or a click opens it), then lists the variables as
+  badges, whose tooltip names their tag. A badge under the pointer types its
+  tag into the selected text or button, as it will look, and wipes it out
+  when the pointer leaves; a click inserts it. The unsubscribe link stays in
+  the *Variables* menu.
+- `editor.previewText(text)` and `editor.clearPreview()`: show a text where
+  `insertText` would put it, without changing the email. An adapter opts in
+  with `previewText` and `clearPreview`.
+- A feature may declare `canvasBar`: a component shown as a bar above the
+  canvas, like `toolbar` in the toolbar.
+
 ## [0.12.0] — 2026-10-20
 
 ### Changed

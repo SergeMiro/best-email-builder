@@ -292,6 +292,7 @@ export function createCanvasView(options) {
     }
     syncAttributes(doc.body, parsed.body);
     morphChildren(doc.body, parsed.body, (element) => element === editingEl);
+    if (preview && !preview.el.isConnected) dropPreview();
     // The edited text may have been replaced (its element moved): find it again.
     if (editingId && editingEl && !editingEl.isConnected) {
       const again = editableOf(editingId);
@@ -455,6 +456,7 @@ export function createCanvasView(options) {
   function startEditing(id, at = null) {
     if (editingId === id) return;
     finishEditing();
+    dropPreview();
     const el = editableOf(id);
     if (!el) return;
     editingId = id;
@@ -473,11 +475,18 @@ export function createCanvasView(options) {
   }
 
   function contentOfEditing() {
-    return editingEl ? cleanRichText(editingEl.innerHTML, doc) : '';
+    if (!editingEl) return '';
+    let source = editingEl;
+    if (preview && editingEl.contains(preview.el)) {
+      source = /** @type {HTMLElement} */ (editingEl.cloneNode(true));
+      source.querySelectorAll(`.${PREVIEW_CLASS}`).forEach((el) => el.remove());
+    }
+    return cleanRichText(source.innerHTML, doc);
   }
 
   function finishEditing() {
     if (!editingId || !editingEl) return;
+    dropPreview();
     const id = editingId;
     const html = contentOfEditing();
     editingEl.removeAttribute('contenteditable');
@@ -534,6 +543,122 @@ export function createCanvasView(options) {
       selection.addRange(savedRange);
     } else placeCaret(null);
     return true;
+  }
+
+  /* ── Text preview ──────────────────────────────────────────────────────── */
+
+  /**
+   * A text shown where `insertText` would put it, before it is chosen (a
+   * variable under the pointer): typed in, then wiped out. At the caret of the
+   * text being edited, else at the end of the selected text or button. Never
+   * part of the email: the next render redraws the element it lives in, and
+   * the edited text is read without it.
+   */
+  /** @type {null | {el: HTMLElement, prefix: string, shown: string, target: string, timer: number}} */
+  let preview = null;
+  const PREVIEW_CLASS = 'eb-preview-text';
+
+  /** Where the text would go, or null when nothing takes it. */
+  function previewSpot() {
+    if (editingEl) {
+      const range = savedRange && editingEl.contains(savedRange.commonAncestorContainer) ? savedRange.cloneRange() : null;
+      if (range) {
+        range.collapse(false);
+        return { range, prefix: '' };
+      }
+      return { parent: editingEl, prefix: '' };
+    }
+    const tag = selectedId ? info(selectedId)?.tag : null;
+    if (!selectedId || (tag !== 'mj-text' && tag !== 'mj-button')) return null;
+    // A button's label is its link (or its paragraph without one).
+    const parent = tag === 'mj-text' ? editableOf(selectedId) : elementOf(selectedId)?.querySelector('a, p');
+    return parent ? { parent, prefix: ' ' } : null;
+  }
+
+  function stepPreview() {
+    if (!preview) return;
+    const current = preview;
+    const { shown, target } = current;
+    // Wipe back to what both share, then type the rest.
+    const next = !target.startsWith(shown)
+      ? shown.slice(0, -1)
+      : shown.length < target.length
+        ? target.slice(0, shown.length + 1)
+        : null;
+    if (next === null) {
+      current.timer = 0;
+      current.el.removeAttribute('data-typing');
+      if (!target) dropPreview();
+      return;
+    }
+    current.shown = next;
+    current.el.textContent = next;
+    current.el.setAttribute('data-typing', '');
+    current.timer = win.setTimeout(stepPreview, next.length < shown.length ? 12 : 22);
+    scheduleOverlays();
+  }
+
+  function animatePreview() {
+    if (!preview || preview.timer) return;
+    if (win.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      preview.shown = preview.target;
+      preview.el.textContent = preview.target;
+      if (!preview.target) dropPreview();
+      scheduleOverlays();
+      return;
+    }
+    stepPreview();
+  }
+
+  /** @param {string} text @returns {boolean} false when nothing would take it */
+  function previewText(text) {
+    if (!text) {
+      hidePreview();
+      return false;
+    }
+    if (preview && !preview.el.isConnected) dropPreview();
+    if (!preview) {
+      const spot = previewSpot();
+      if (!spot) return false;
+      const el = doc.createElement('span');
+      el.className = PREVIEW_CLASS;
+      el.setAttribute('contenteditable', 'false');
+      el.setAttribute('data-testid', 'eb-canvas-preview');
+      if (spot.range) spot.range.insertNode(el);
+      else spot.parent?.appendChild(el);
+      preview = { el, prefix: spot.prefix, shown: '', target: '', timer: 0 };
+    }
+    preview.target = preview.prefix + text;
+    animatePreview();
+    return true;
+  }
+
+  /** Wipes the preview out. */
+  function hidePreview() {
+    if (!preview) return;
+    preview.target = '';
+    animatePreview();
+  }
+
+  /** Removes the preview at once. */
+  function dropPreview() {
+    if (!preview) return;
+    win.clearTimeout(preview.timer);
+    preview.el.remove();
+    preview = null;
+    scheduleOverlays();
+  }
+
+  /**
+   * The preview becomes what was inserted: it stays, whole, until the render
+   * that draws the real text replaces it (no blink in between).
+   */
+  function settlePreview() {
+    if (!preview) return;
+    win.clearTimeout(preview.timer);
+    preview.el.textContent = preview.target;
+    preview.el.removeAttribute('data-typing');
+    preview = null;
   }
 
   /* Text toolbar: built once. */
@@ -837,6 +962,7 @@ export function createCanvasView(options) {
     /** @param {string|null} id */
     setSelection(id) {
       if (editingId && editingId !== id) finishEditing();
+      if (id !== selectedId) dropPreview();
       selectedId = id;
       refreshOverlays();
       if (id) {
@@ -870,6 +996,7 @@ export function createCanvasView(options) {
     editingId: () => editingId,
     /** @param {string} text */
     insertText(text) {
+      dropPreview();
       if (!restoreCaret()) return false;
       doc.execCommand('insertText', false, text);
       options.onEditInput(/** @type {string} */ (editingId), contentOfEditing());
@@ -877,13 +1004,18 @@ export function createCanvasView(options) {
     },
     /** @param {string} html */
     insertHtml(html) {
+      dropPreview();
       if (!restoreCaret()) return false;
       doc.execCommand('insertHTML', false, html);
       options.onEditInput(/** @type {string} */ (editingId), contentOfEditing());
       return true;
     },
+    previewText,
+    hidePreview,
+    settlePreview,
     destroy() {
       destroyed = true;
+      dropPreview();
       cancelDrag();
       resizeObserver.disconnect();
       if (overlayFrame) win.cancelAnimationFrame(overlayFrame);

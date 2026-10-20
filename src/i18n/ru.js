@@ -382,6 +382,7 @@ export const ru = {
   "Saving…": "Сохранение…",
   "script not allowed": "скрипты запрещены",
   "Search variables…": "Поиск переменных…",
+  "Personalization fields": "Поля персонализации",
   "Section": "Секция",
   "Select a text or a button first.": "Сначала выберите текст или кнопку.",
   "Send": "Отправить",

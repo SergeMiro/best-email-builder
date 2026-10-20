@@ -382,6 +382,7 @@ export const pt = {
   "Saving…": "Salvando…",
   "script not allowed": "script não permitido",
   "Search variables…": "Pesquisar variáveis…",
+  "Personalization fields": "Campos de personalização",
   "Section": "Seção",
   "Select a text or a button first.": "Selecione primeiro um texto ou um botão.",
   "Send": "Enviar",

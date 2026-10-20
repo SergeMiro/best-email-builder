@@ -382,6 +382,7 @@ export const zh = {
   "Saving…": "正在保存……",
   "script not allowed": "不允许使用脚本",
   "Search variables…": "搜索变量……",
+  "Personalization fields": "个性化字段",
   "Section": "版块",
   "Select a text or a button first.": "请先选择文本或按钮。",
   "Send": "发送",

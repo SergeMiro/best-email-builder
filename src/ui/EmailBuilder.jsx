@@ -482,9 +482,10 @@ function Builder({
     setBrand,
     ai,
   };
-  const toolbarFeatures = emailBuilderFeatures.list(
-    (f) => f.enabled !== false && Boolean(f.toolbar) && (f.isAvailable ? f.isAvailable(featureContext) : true)
-  );
+  const featuresWith = (slot) =>
+    emailBuilderFeatures.list((f) => f.enabled !== false && Boolean(f[slot]) && (f.isAvailable ? f.isAvailable(featureContext) : true));
+  const toolbarFeatures = featuresWith('toolbar');
+  const canvasBars = featuresWith('canvasBar');
 
   const properties = (
     <PropertiesPanel
@@ -547,7 +548,7 @@ function Builder({
         )}
       >
         {!blocksInDrawer && <BlockSidebar editor={editor} disabled={!ready} onAdded={compact ? () => setDrawer('properties') : undefined} />}
-        <div className="eb:relative eb:min-w-0 eb:bg-surface-75" aria-busy={!ready}>
+        <div className="eb:relative eb:flex eb:min-w-0 eb:flex-col eb:bg-surface-75" aria-busy={!ready}>
           {boot.status === 'error' || engineError ? (
             <div role="alert" className="eb:flex eb:h-full eb:flex-col eb:items-center eb:justify-center eb:gap-2 eb:p-6 eb:text-center">
               <AlertTriangle className="eb:size-6 eb:text-destructive" aria-hidden="true" />
@@ -570,15 +571,21 @@ function Builder({
             </div>
           ) : (
             <>
-              {boot.status === 'ready' && (
-                <EmailCanvas
-                  key={attempt}
-                  editor={editor}
-                  document={boot.document}
-                  onReady={onReady}
-                  onError={(error) => setEngineError(error.message)}
-                />
-              )}
+              {canvasBars.map((feature) => {
+                const Bar = feature.canvasBar;
+                return <Bar key={feature.id} context={featureContext} />;
+              })}
+              <div className="eb:relative eb:min-h-0 eb:flex-1">
+                {boot.status === 'ready' && (
+                  <EmailCanvas
+                    key={attempt}
+                    editor={editor}
+                    document={boot.document}
+                    onReady={onReady}
+                    onError={(error) => setEngineError(error.message)}
+                  />
+                )}
+              </div>
               {!ready && (
                 <div className="eb:absolute eb:inset-0 eb:flex eb:items-center eb:justify-center eb:bg-surface-75" role="status" aria-live="polite">
                   <Loader2 className="eb:size-6 eb:animate-spin eb:text-foreground-muted" aria-hidden="true" />

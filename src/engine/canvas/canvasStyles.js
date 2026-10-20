@@ -1,7 +1,8 @@
 // @ts-check
 /**
  * Styles of the canvas's own layer, inside the frame: selection and hover
- * boxes, labels, toolbars, the drop line, placeholders. Never in the email.
+ * boxes, labels, toolbars, the drop line, placeholders, the caret of a text
+ * being previewed. Never in the email.
  */
 
 import { FRAME_SCROLLBAR_CSS } from '../../core/scrollbars.js';
@@ -15,6 +16,9 @@ body { margin: 0; }
 .eb-node a { cursor: pointer; }
 [contenteditable="true"] { outline: none; cursor: text; caret-color: ${PRIMARY}; }
 td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
+.eb-preview-text[data-typing]::after { content: ''; display: inline-block; width: 1.5px; height: 1em; margin-left: 1px;
+  vertical-align: -0.12em; background: currentColor; animation: eb-preview-caret 0.7s steps(1) infinite; }
+@keyframes eb-preview-caret { 50% { opacity: 0; } }
 .eb-placeholder { user-select: none; }
 
 #eb-ui { position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2147483000;
