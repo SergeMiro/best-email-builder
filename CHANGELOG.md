@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.13.1] — 2026-10-20
+
 ### Fixed
 - Deleting a template in the library selects the next one of the list (the
   one before it when it was the last). Deleting the first template showed
