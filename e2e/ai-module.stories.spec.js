@@ -31,7 +31,7 @@ async function selectHeadline(page) {
 test.describe('The AI module', () => {
   test('without it (?ai=off): no Proofread, no Write or Rewrite with AI, no Suggest subjects — the rest is all there', async ({ page }) => {
     await openBuilder(page, '&ai=off');
-    await expect(page.getByRole('button', { name: 'Variables' })).toBeVisible();
+    await expect(page.getByTestId('eb-variables-bar')).toBeVisible();
     await expect(proofreadButton(page)).toHaveCount(0);
     await expect(panel(page).getByRole('textbox', { name: 'Subject' })).toBeVisible();
     await expect(page.getByTestId('eb-subject-ideas')).toHaveCount(0);
@@ -76,10 +76,9 @@ test.describe('Ctrl K', () => {
   /** Whether the whole text of the focused field is selected. */
   const allSelected = (field) => field.evaluate((input) => input.selectionStart === 0 && input.selectionEnd === input.value.length);
 
-  test('in the variables menu: the hint, and the shortcut back to the search', async ({ page }) => {
+  test('in the variables of the subject: the hint, and the shortcut back to the search', async ({ page }) => {
     await openBuilder(page);
-    await selectHeadline(page);
-    await page.getByRole('button', { name: 'Variables' }).click();
+    await panel(page).getByRole('button', { name: 'Insert a variable in the subject' }).click();
     const picker = page.getByTestId('variable-picker');
     const search = picker.getByRole('textbox', { name: 'Search variables…' });
     await expect(picker.getByTestId('eb-search-keys')).toHaveText('Ctrl K');
@@ -94,8 +93,7 @@ test.describe('Ctrl K', () => {
 
   test('the hint is the same in French', async ({ page }) => {
     await openBuilder(page, '&lang=fr');
-    await canvas(page).getByText('Titre du message', { exact: true }).click();
-    await page.getByRole('button', { name: 'Variables' }).click();
+    await panel(page).getByRole('button', { name: 'Insérer une variable dans l’objet' }).click();
     await expect(page.getByTestId('variable-picker').getByTestId('eb-search-keys')).toHaveText('Ctrl K');
   });
 });

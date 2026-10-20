@@ -461,83 +461,84 @@ const PNG = Buffer.from(
   'base64'
 );
 
-async function openVariables(page) {
-  await page.getByRole('button', { name: 'Variables' }).click();
-  const picker = page.getByTestId('variable-picker');
-  await expect(picker).toBeVisible();
-  return picker;
+/** The variables bar, opened (its badges show under the pointer). */
+async function openBar(page) {
+  const bar = page.getByTestId('eb-variables-bar');
+  await bar.hover();
+  const badges = bar.getByRole('group', { name: 'Email provider variables' });
+  await expect(badges).toBeVisible();
+  return badges;
 }
 
 test.describe('Variables', () => {
-  test('inserted at the caret of a text being edited', async ({ page }) => {
+  test('one place to insert them: the bar above the canvas, no Variables menu in the toolbar', async ({ page }) => {
     await openBuilder(page);
-    await canvas(page).getByText('Your headline').dblclick();
-    // Caret at the START of the text: an insertion "at the end" would show.
-    await page.keyboard.press('Home');
-    const picker = await openVariables(page);
-    await picker.getByRole('option', { name: /First name/ }).click();
-    await expect.poll(() => mjml(page)).toMatch(/>\{\{contact\.firstname\}\}\s*Your headline<\/mj-text>/);
-  });
-
-  test('search and keyboard: type, arrows, Enter', async ({ page }) => {
-    await openBuilder(page);
-    await canvas(page).getByText('Your headline').dblclick();
-    await page.keyboard.press('Home');
-    const picker = await openVariables(page);
-    await picker.getByRole('textbox').fill('comp');
-    await expect(picker.getByRole('option')).toHaveCount(1);
-    await page.keyboard.press('Enter');
-    await expect.poll(() => mjml(page)).toMatch(/>\{\{company\.name\}\}\s*Your headline<\/mj-text>/);
+    await expect(page.getByRole('button', { name: 'Variables', exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: /^Email provider variables/ })).toBeVisible();
   });
 
   test('unsubscribe on a selected button becomes its URL', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Learn more').click();
     await expect(panel(page).getByRole('heading', { name: 'Button' })).toBeVisible();
-    const picker = await openVariables(page);
-    await picker.getByRole('option', { name: /Unsubscribe link/ }).click();
+    const badges = await openBar(page);
+    const unsubscribe = badges.getByRole('button', { name: 'Unsubscribe link' });
+    // A link: no typed preview, its tag in the tooltip.
+    await unsubscribe.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('{{ unsubscribe }}');
+    await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveCount(0);
+    await unsubscribe.click();
     await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*href="\{\{ unsubscribe \}\}"/);
   });
 
-  test('nothing selected: nothing inserted, a hint is shown', async ({ page }) => {
+  test('unsubscribe in a text being edited: a link at the caret', async ({ page }) => {
     await openBuilder(page);
-    const before = await mjml(page);
-    const picker = await openVariables(page);
-    await picker.getByRole('option', { name: /Company/ }).click();
-    await expect(notice(page, 'Select a text or a button first.')).toBeVisible();
-    expect(await mjml(page)).toBe(before);
+    await canvas(page).getByText('Your headline').dblclick();
+    await page.keyboard.press('End');
+    const badges = await openBar(page);
+    await badges.getByRole('button', { name: 'Unsubscribe link' }).click();
+    await expect.poll(() => mjml(page)).toMatch(/Your headline\s*<a href="\{\{ unsubscribe \}\}">Unsubscribe<\/a>/);
   });
 
-  test('personalization bar: a badge under the pointer types its tag into the selected button, wipes it out when it leaves; a click inserts it', async ({ page }) => {
+  test('variables bar: a badge under the pointer types its tag into the selected button, wipes it out when it leaves; a click inserts it', async ({ page }) => {
     await openBuilder(page);
     const before = await mjml(page);
     const bar = page.getByTestId('eb-variables-bar');
-    const title = bar.getByRole('button', { name: /^Personalization fields/ });
-    const fields = bar.getByRole('group', { name: 'Personalization fields' });
+    const title = bar.getByRole('button', { name: /^Email provider variables/ });
+    const badges = bar.getByRole('group', { name: 'Email provider variables' });
     const preview = canvas(page).getByTestId('eb-canvas-preview');
     const button = canvas(page).locator('.eb-tag-mj-button');
-    // A thin bar: its fields show under the pointer. Links stay in the Variables menu.
+    // A thin bar: its badges show under the pointer.
     await expect(title).toHaveAttribute('aria-expanded', 'false');
-    await expect(fields).toBeHidden();
+    await expect(badges).toBeHidden();
     await bar.hover();
     await expect(title).toHaveAttribute('aria-expanded', 'true');
-    await expect(fields.getByRole('button')).toHaveText(['First name', 'Last name', 'Email address', 'Company', 'Campaign name']);
+    await expect(badges.locator('[data-variable]')).toHaveText([
+      'First name',
+      'Last name',
+      'Email address',
+      'Company',
+      'Campaign name',
+      'Unsubscribe link',
+    ]);
+    await expect(badges.getByRole('button', { name: 'New variable' })).toBeVisible();
 
     // Nothing selected: the tooltip names the tag, nothing is typed; a click says what to do.
-    await fields.getByRole('button', { name: 'Company' }).hover();
+    await badges.getByRole('button', { name: 'Company' }).hover();
     await expect(page.getByRole('tooltip')).toHaveText('{{company.name}}');
     await expect(preview).toHaveCount(0);
-    await fields.getByRole('button', { name: 'Company' }).click();
+    await badges.getByRole('button', { name: 'Company' }).click();
     await expect(notice(page, 'Select a text or a button first.')).toBeVisible();
+    expect(await mjml(page)).toBe(before);
 
     await canvas(page).getByText('Learn more').click();
     await bar.hover();
-    const lastName = fields.getByRole('button', { name: 'Last name' });
+    const lastName = badges.getByRole('button', { name: 'Last name' });
     await lastName.hover();
     await expect(page.getByRole('tooltip')).toHaveText('{{contact.lastname}}');
     await expect(button).toContainText('Learn more {{contact.lastname}}');
     // Another badge: only the end changes.
-    await fields.getByRole('button', { name: 'First name' }).hover();
+    await badges.getByRole('button', { name: 'First name' }).hover();
     await expect(button).toContainText('Learn more {{contact.firstname}}');
     expect(await mjml(page)).toBe(before);
     await page.mouse.move(700, 700, { steps: 8 });
@@ -556,14 +557,13 @@ test.describe('Variables', () => {
     await expect(button).toContainText('Learn more {{contact.lastname}}');
   });
 
-  test('personalization bar on a text being edited: the tag shows at the caret, a click inserts it there', async ({ page }) => {
+  test('variables bar on a text being edited: the tag shows at the caret, a click inserts it there', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Your headline').dblclick();
     await page.keyboard.press('Home');
     const before = await mjml(page);
-    const bar = page.getByTestId('eb-variables-bar');
-    await bar.hover();
-    const firstName = bar.getByRole('button', { name: 'First name' });
+    const badges = await openBar(page);
+    const firstName = badges.getByRole('button', { name: 'First name' });
     await firstName.hover();
     await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveText('{{contact.firstname}}');
     expect(await mjml(page)).toBe(before);
@@ -576,8 +576,8 @@ test.describe('Variables', () => {
     await openBuilder(page);
     await canvas(page).getByText('Your headline').dblclick();
     await page.keyboard.press('Home');
-    const picker = await openVariables(page);
-    await picker.getByRole('button', { name: 'New variable' }).click();
+    const badges = await openBar(page);
+    await badges.getByRole('button', { name: 'New variable' }).click();
 
     const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
     await dialog.getByLabel('Name').fill('Order number');
@@ -593,16 +593,17 @@ test.describe('Variables', () => {
       expect.objectContaining({ key: 'order_number', label: 'Order number', group: 'Custom', sample: 'CMD-1042', fallback: 'your order' }),
     ]);
 
-    // It is offered in the menu, in its group.
-    const again = await openVariables(page);
-    await expect(again.getByRole('group', { name: 'Custom' }).getByRole('option', { name: /Order number/ })).toBeVisible();
+    // It is offered in the bar, with its tag.
+    await openBar(page);
+    await badges.getByRole('button', { name: 'Order number', exact: true }).hover();
+    await expect(page.getByRole('tooltip')).toHaveText('{{order_number}}');
   });
 
   test('a custom variable is validated, edited, then deleted; system variables are read-only', async ({ page }) => {
     await openBuilder(page);
-    let picker = await openVariables(page);
-    await expect(picker.getByRole('button', { name: /^Edit/ })).toHaveCount(0);
-    await picker.getByRole('button', { name: 'New variable' }).click();
+    let badges = await openBar(page);
+    await expect(badges.getByRole('button', { name: /^Edit/ })).toHaveCount(0);
+    await badges.getByRole('button', { name: 'New variable' }).click();
     const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
     await dialog.getByLabel('Name').fill('Email');
     await dialog.getByLabel('Tag').fill('contact.email');
@@ -616,34 +617,36 @@ test.describe('Variables', () => {
     await dialog.getByRole('button', { name: 'Create' }).click();
     await expect(notice(page, 'Variable “Loyalty points” created.')).toBeVisible();
 
-    picker = await openVariables(page);
-    await picker.getByRole('option', { name: /Loyalty points/ }).hover();
-    await picker.getByRole('button', { name: 'Edit “Loyalty points”' }).click();
+    badges = await openBar(page);
+    await badges.getByRole('button', { name: 'Edit “Loyalty points”' }).click();
     const edit = page.getByRole('dialog').filter({ hasText: 'Edit variable' });
     await expect(edit.getByLabel('Tag')).toBeDisabled();
     await edit.getByLabel('Group').fill('Loyalty');
     await edit.getByRole('button', { name: 'Save' }).click();
     await expect(notice(page, 'Variable “Loyalty points” saved.')).toBeVisible();
-    picker = await openVariables(page);
-    await expect(picker.getByRole('group', { name: 'Loyalty' })).toBeVisible();
+    expect((await stored(page)).variables).toEqual([expect.objectContaining({ key: 'loyalty.points', group: 'Loyalty' })]);
 
-    await picker.getByRole('option', { name: /Loyalty points/ }).hover();
-    await picker.getByRole('button', { name: 'Edit “Loyalty points”' }).click();
+    badges = await openBar(page);
+    await badges.getByRole('button', { name: 'Edit “Loyalty points”' }).click();
     await page.getByRole('dialog').filter({ hasText: 'Edit variable' }).getByRole('button', { name: 'Delete' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
     await expect(notice(page, 'Variable deleted.')).toBeVisible();
     expect((await stored(page)).variables).toEqual([]);
+    await expect(badges.getByRole('button', { name: 'Loyalty points', exact: true })).toHaveCount(0);
   });
 
-  test('search with no result offers to create the variable under that name', async ({ page }) => {
+  test('{ } button of the subject: search and keyboard — type, arrows, Enter', async ({ page }) => {
     await openBuilder(page);
-    const picker = await openVariables(page);
-    await picker.getByRole('textbox').fill('Delivery date');
-    await expect(picker.getByText('No variable found.')).toBeVisible();
-    await picker.getByRole('button', { name: 'Create “Delivery date”' }).click();
-    const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
-    await expect(dialog.getByLabel('Name')).toHaveValue('Delivery date');
-    await expect(dialog.getByLabel('Tag')).toHaveValue('delivery_date');
+    const subject = panel(page).getByLabel('Subject', { exact: true });
+    await subject.fill('Your order is ready');
+    await subject.press('Home');
+    await panel(page).getByRole('button', { name: 'Insert a variable in the subject' }).click();
+    const picker = page.getByTestId('variable-picker');
+    await picker.getByRole('textbox').fill('name');
+    await expect(picker.getByRole('option')).toHaveText([/First name/, /Last name/, /Company/, /Campaign name/]);
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(subject).toHaveValue('{{contact.lastname}}Your order is ready');
   });
 
   test('{ } button inserts a variable in the subject line, at the caret', async ({ page }) => {

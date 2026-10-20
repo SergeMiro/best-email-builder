@@ -10,7 +10,7 @@ export const SEARCH_KEYS = 'Control+K Meta+K';
 /**
  * Ctrl+K (⌘K) puts the cursor in this search field, its words selected, for
  * as long as the field is on screen — the library's search, the one of the
- * variables menu.
+ * variables next to the subject.
  * @param {{current: HTMLInputElement|null}} inputRef
  */
 export function useSearchShortcut(inputRef) {

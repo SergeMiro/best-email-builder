@@ -21,7 +21,8 @@ same list to both sides: `<EmailBuilder variables>` and
 
 ## Custom variables
 
-Users create custom variables from the *Variables* menu, with *New variable*.
+Users create custom variables from the variables bar above the canvas, with
+*New variable*, and edit or delete them with the pencil of their badge.
 A custom variable has:
 
 - a **name**, for example "Order number";
@@ -37,16 +38,15 @@ reference).
 
 ## Inserting a variable
 
-- The menu has a search field (Ctrl K). ↑, ↓ and Enter work in it. A search
-  with no result offers to create a variable with that name.
-- A click inserts the tag at the caret of the text being edited. The
-  unsubscribe link becomes the URL of a selected button.
-- The *Personalization fields* bar above the canvas lists the variables as
-  small badges, without the unsubscribe link. It grows under the pointer, or
-  on a click. A badge's tooltip shows its tag. With a text or a button
-  selected, a badge under the pointer types its tag where it would go, and
-  wipes it out when the pointer leaves. Nothing is saved until you click the
-  badge, which inserts the tag like the menu does.
+- The *Email provider variables* bar above the canvas is the one place to
+  insert a variable. It grows under the pointer, or on a click, and lists the
+  variables as small badges. A badge's tooltip shows its tag.
+- With a text or a button selected, a badge under the pointer types its tag
+  where it would go, and wipes it out when the pointer leaves. Nothing is
+  saved until you click the badge.
+- A click inserts the tag at the caret of the text being edited, otherwise at
+  the end of the selected text or button. The unsubscribe link is inserted as
+  a link, or becomes the URL of a selected button.
 - The `{ }` buttons next to *Subject* and *Preview text* insert a tag there.
 - `{{contact.firstname|there}}` sets a fallback for that one place.
 - The preview flags unknown tags, such as `{{contact.fistname}}`, before they

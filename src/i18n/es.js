@@ -382,7 +382,7 @@ export const es = {
   "Saving…": "Guardando…",
   "script not allowed": "script no permitido",
   "Search variables…": "Buscar variables…",
-  "Personalization fields": "Campos de personalización",
+  "Email provider variables": "Variables del proveedor de correo",
   "Section": "Sección",
   "Select a text or a button first.": "Selecciona primero un texto o un botón.",
   "Send": "Enviar",

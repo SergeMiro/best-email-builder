@@ -24,8 +24,9 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await page.locator('[data-block-id="divider"]').click();
 
   // Custom variable, kept by the demo storage.
-  await page.getByRole('button', { name: 'Variables' }).click();
-  await page.getByTestId('variable-picker').getByRole('button', { name: 'New variable' }).click();
+  const bar = page.getByTestId('eb-variables-bar');
+  await bar.hover();
+  await bar.getByRole('button', { name: 'New variable' }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
   await dialog.getByLabel('Name').fill('Coupon code');
   await dialog.getByLabel('Sample value').fill('WELCOME10');
@@ -51,8 +52,8 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await page.getByTestId('eb-library-details').getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   await expect(page.frameLocator('.eb-canvas-frame').locator('.eb-tag-mj-divider')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Variables' }).click();
-  await expect(page.getByTestId('variable-picker').getByRole('option', { name: /Coupon code/ })).toBeVisible();
+  await page.getByTestId('eb-variables-bar').hover();
+  await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: 'Coupon code', exact: true })).toBeVisible();
 });
 
 test('French switch', async ({ page }) => {

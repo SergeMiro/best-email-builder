@@ -6,6 +6,13 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- The *Email provider variables* bar above the canvas (formerly
+  *Personalization fields*) is the one place to insert a variable: the
+  toolbar's *Variables* menu is gone. The bar now also offers the unsubscribe
+  link, *New variable*, and a pencil to edit or delete a custom variable.
+  The `{ }` buttons next to *Subject* and *Preview text* keep their search.
+
 ## [0.13.1] — 2026-10-20
 
 ### Fixed

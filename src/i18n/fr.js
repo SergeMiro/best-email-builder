@@ -382,7 +382,7 @@ export const fr = {
   "Saving…": "Enregistrement…",
   "script not allowed": "script interdit",
   "Search variables…": "Rechercher une variable…",
-  "Personalization fields": "Champs de personnalisation",
+  "Email provider variables": "Variables du fournisseur d’e-mail",
   "Section": "Section",
   "Select a text or a button first.": "Sélectionnez d’abord un texte ou un bouton.",
   "Send": "Envoyer",

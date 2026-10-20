@@ -152,7 +152,7 @@ all.
 | `locale` | `'en'` | `'en'`, `'fr'`, `'de'`, `'es'`, `'pt'`, `'ru'`, `'zh'`, or any BCP 47 tag used with `messages`. |
 | `messages` | — | Extra or overriding translations (`{ 'Save': 'Speichern', … }`). |
 | `onNotify` | built-in notices | `(level, message) => void` to use your own toaster. |
-| `variables` | `DEFAULT_VARIABLES` | The merge tags offered in the *Variables* menu. Pass the same list to the server. |
+| `variables` | `DEFAULT_VARIABLES` | The merge tags offered in the variables bar above the canvas. Pass the same list to the server. |
 | `sender` | — | `{ name, address, logoUrl, logoWidth }`, used in the starter template's footer. |
 | `starterMjml` | — | Replaces the starter template entirely. |
 | `templates` | `TEMPLATE_GALLERY` | The ready-made emails behind the *Templates* button (blank, simple, newsletter, welcome, promotion, event invitation). Pass your own `{ id, name, description, tags?, create({ sender, t }), meta?(t) }` entries, or `[]` to hide the gallery. The dialog has a search and the entries' `tags` as filters. |

@@ -6,8 +6,8 @@ import { SEARCH_KEYS, SearchKeyHint, useSearchShortcut } from '../../ui/primitiv
 import { tokenOf } from './catalog.js';
 
 /**
- * List of variables with a search field — shared by the toolbar menu and the
- * buttons next to the subject and preview text fields.
+ * List of variables with a search field — opened by the buttons next to the
+ * subject and preview text fields.
  *
  * Keyboard: type to filter, ↑/↓ to move, Enter to insert, Ctrl+K (⌘K) back
  * to the search. A search with no result offers to create the variable under
