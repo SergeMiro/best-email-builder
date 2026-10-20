@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] — 2026-10-20
+
 ### Added
 - A *Personalization fields* bar above the canvas. It is thin until the
   pointer comes over it (or a click opens it), then lists the variables as
