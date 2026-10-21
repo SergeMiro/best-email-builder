@@ -29,6 +29,7 @@
 import { canvasMjml, markedAncestor } from '../canvasMjml.js';
 import { dropTargetFor } from '../placement.js';
 import { cleanRichText } from '../richText.js';
+import { findTags, removalSpan, textMap } from '../mergeTags.js';
 import { morphChildren, syncAttributes } from './morph.js';
 import { CANVAS_CSS, GHOST_STYLE } from './canvasStyles.js';
 import { ICONS } from './icons.js';
@@ -40,6 +41,9 @@ import { ICONS } from './icons.js';
 /** Elements edited as rich text in the canvas. */
 export const EDITABLE_TAGS = new Set(['mj-text']);
 
+/** Elements whose words may hold merge tags that the × on a tag takes out. */
+const TAGGED_TAGS = new Set(['mj-text', 'mj-button', 'mj-navbar-link']);
+
 const MOBILE_WIDTH = 375;
 const EDGE = 56;
 
@@ -49,9 +53,10 @@ const EDGE = 56;
  *   compile: (mjml: string) => Promise<{html: string, errors: any[]}>,
  *   getRoot: () => EmailNode,
  *   t: (key: string, values?: Record<string, any>) => string,
- *   info: (id: string) => {label: string, tag: string, canRemove: boolean, canDuplicate: boolean, canMove: boolean, hasParent: boolean, parentLabel: string}|null,
+ *   info: (id: string) => {label: string, tag: string, canRemove: boolean, canDuplicate: boolean, canMove: boolean, canStep: boolean, canStepBack: boolean, canStepForward: boolean, vertical: boolean, hasParent: boolean, parentLabel: string}|null,
  *   onSelect: (id: string|null) => void,
- *   onAction: (action: 'parent'|'duplicate'|'remove', id: string) => void,
+ *   onAction: (action: 'parent'|'duplicate'|'remove'|'back'|'forward', id: string) => void,
+ *   onRemoveTag: (id: string, index: number) => void,
  *   onDrop: (payload: DragPayload, target: DropTarget) => void,
  *   onEditStart: (id: string) => void,
  *   onEditInput: (id: string, html: string) => void,
@@ -109,12 +114,24 @@ export function createCanvasView(options) {
   const textTools = make('eb-ui-text');
   textTools.setAttribute('role', 'toolbar');
   textTools.setAttribute('aria-label', t('Text formatting'));
+  // A merge tag under the pointer: drawn in inverted colours, with a × that
+  // takes it out (rather than erasing it letter by letter).
+  const tagBox = make('eb-ui-tag');
+  tagBox.setAttribute('data-testid', 'eb-canvas-tag');
+  const tagClear = doc.createElement('button');
+  tagClear.type = 'button';
+  tagClear.className = 'eb-ui-tag-clear';
+  tagClear.hidden = true;
+  tagClear.innerHTML = ICONS.x;
+  ui.appendChild(tagClear);
 
   /** @type {string|null} */ let selectedId = null;
   /** Ctrl+A: the sections drawn as selected, and their boxes. */
   /** @type {string[]} */ let multiIds = [];
   /** @type {HTMLElement[]} */ const multiBoxes = [];
   /** @type {string|null} */ let hoverId = null;
+  /** The merge tag under the pointer: its element, and which of its tags. */
+  /** @type {{id: string, index: number}|null} */ let tagHover = null;
   /** @type {string|null} */ let editingId = null;
   /** @type {HTMLElement|null} */ let editingEl = null;
   /** @type {Range|null} */ let savedRange = null;
@@ -184,10 +201,14 @@ export function createCanvasView(options) {
     if (editingId) selectChip.hidden = true;
     // Toolbar: top-right, above the element when there is room. The first
     // button climbs to the parent and says which one ("⤴ Column"): an arrow
-    // alone read as "move up".
+    // alone read as "move up". What cannot leave its parent (a column, a
+    // social icon, a menu link) gets two arrows instead of the drag handle.
+    const [backLabel, forwardLabel] = details.vertical ? [t('Move up'), t('Move down')] : [t('Move left'), t('Move right')];
     const buttons = [
       details.hasParent && ['parent', `${t('Select the parent')}: ${details.parentLabel}`],
       details.canMove && ['move', t('Drag to move')],
+      details.canStep && ['back', backLabel, details.vertical ? 'arrowUp' : 'arrowLeft'],
+      details.canStep && ['forward', forwardLabel, details.vertical ? 'arrowDown' : 'arrowRight'],
       details.canDuplicate && ['duplicate', t('Duplicate')],
       details.canRemove && ['remove', t('Delete')],
     ].filter(Boolean);
@@ -196,13 +217,13 @@ export function createCanvasView(options) {
       tools.textContent = '';
       for (const button of buttons) {
         if (!button) continue;
-        const [action, label] = button;
+        const [action, label, icon = action] = button;
         const el = doc.createElement('button');
         el.type = 'button';
         el.dataset.action = action;
         el.title = label;
         el.setAttribute('aria-label', label);
-        el.innerHTML = ICONS[action];
+        el.innerHTML = ICONS[icon];
         if (action === 'parent') {
           el.classList.add('eb-ui-parent');
           const name = doc.createElement('span');
@@ -213,6 +234,10 @@ export function createCanvasView(options) {
       }
       tools.dataset.signature = signature;
       tools.dataset.lang = t('Delete');
+    }
+    for (const button of tools.querySelectorAll('button[data-action="back"], button[data-action="forward"]')) {
+      /** @type {HTMLButtonElement} */ (button).disabled =
+        button.getAttribute('data-action') === 'back' ? !details.canStepBack : !details.canStepForward;
     }
     tools.hidden = editingId !== null || buttons.length === 0;
     const toolsWidth = tools.offsetWidth || buttons.length * 27 + 4;
@@ -257,6 +282,7 @@ export function createCanvasView(options) {
     drawSelection();
     drawHover();
     drawTextTools();
+    drawTag();
   }
 
   function scheduleOverlays() {
@@ -320,16 +346,24 @@ export function createCanvasView(options) {
   };
 
   doc.addEventListener('mousemove', (event) => {
-    if (drag) return;
+    // On the ×: the tag stays as it is.
+    if (drag || tagClear.contains(/** @type {Node} */ (event.target))) return;
     const id = nodeIdAt(event.target);
     if (id !== hoverId) {
       hoverId = id;
       drawHover();
     }
+    const tag = tagAt(id, event.clientX, event.clientY);
+    if (tag?.id !== tagHover?.id || tag?.index !== tagHover?.index) {
+      tagHover = tag;
+      drawTag();
+    }
   });
   doc.addEventListener('mouseleave', () => {
     hoverId = null;
+    tagHover = null;
     drawHover();
+    drawTag();
   });
 
   doc.addEventListener('click', (event) => {
@@ -384,6 +418,123 @@ export function createCanvasView(options) {
     return search(getRoot());
   }
 
+  /* ── Merge tags ────────────────────────────────────────────────────────── */
+
+  /** Where an element's words are: a text's content, a button's or a link's label. @param {string} id */
+  const wordsOf = (id) => (findTag(id) === 'mj-text' ? editableOf(id) : elementOf(id));
+  /** The preview of an AI answer is not part of the text. @param {Element} el */
+  const isPreview = (el) => el.classList.contains(PREVIEW_CLASS);
+
+  /** The tags of an element's words, each with its range in the frame. @param {string} id */
+  function tagsOf(id) {
+    const words = wordsOf(id);
+    if (!words) return null;
+    const map = textMap(words, isPreview);
+    const tags = findTags(map.text).map((tag) => {
+      const start = map.pointOf(tag.start);
+      const end = map.pointOf(tag.end, true);
+      const range = doc.createRange();
+      if (start && end) {
+        range.setStart(start.node, start.offset);
+        range.setEnd(end.node, end.offset);
+      }
+      return { ...tag, range };
+    });
+    return { map, tags };
+  }
+
+  /**
+   * The tag under the pointer (frame viewport coordinates) in the element
+   * `id`. The one already shown keeps a margin around it, so that the pointer
+   * reaches its × without losing it.
+   * @param {string|null} id @param {number} x @param {number} y
+   */
+  function tagAt(id, x, y) {
+    if (!id || !TAGGED_TAGS.has(findTag(id) || '')) return null;
+    const found = tagsOf(id);
+    if (!found) return null;
+    const index = found.tags.findIndex((tag, i) => {
+      const margin = tagHover && tagHover.id === id && tagHover.index === i ? 12 : 0;
+      return [...tag.range.getClientRects()].some(
+        (r) => x >= r.left - margin && x <= r.right + margin && y >= r.top - margin && y <= r.bottom + margin
+      );
+    });
+    return index === -1 ? null : { id, index };
+  }
+
+  /** The first colour painted behind an element (white when none is). @param {Element|null} el */
+  function backgroundOf(el) {
+    for (let node = el; node; node = node.parentElement) {
+      const color = win.getComputedStyle(node).backgroundColor;
+      if (color && color !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(color)) return color;
+    }
+    return '#ffffff';
+  }
+
+  function drawTag() {
+    const tag = tagHover && !drag ? tagsOf(tagHover.id)?.tags[tagHover.index] : null;
+    const rects = tag ? [...tag.range.getClientRects()].filter((r) => r.width && r.height) : [];
+    tagBox.hidden = tagClear.hidden = !tag || !rects.length;
+    if (!tag || !rects.length) return;
+    const top = Math.min(...rects.map((r) => r.top));
+    const bottom = Math.max(...rects.map((r) => r.bottom));
+    const left = Math.min(...rects.map((r) => r.left));
+    const right = Math.max(...rects.map((r) => r.right));
+    place(tagBox, { top: top + win.scrollY, left: left + win.scrollX - 2, width: right - left + 4, height: bottom - top });
+    const textEl = tag.range.startContainer.parentElement;
+    const style = textEl ? win.getComputedStyle(textEl) : null;
+    // On one line: the tag again, in the colours swapped (white on dark
+    // becomes dark on white). Cut over two lines: a frame of its colour.
+    const filled = rects.length === 1 && style;
+    tagBox.classList.toggle('eb-ui-tag-frame', !filled);
+    tagBox.textContent = filled ? tag.range.toString() : '';
+    tagBox.style.background = filled ? style.color : '';
+    tagBox.style.color = filled ? backgroundOf(textEl) : '';
+    tagBox.style.borderColor = style ? style.color : '';
+    if (filled) {
+      tagBox.style.font = style.font;
+      tagBox.style.letterSpacing = style.letterSpacing;
+      tagBox.style.lineHeight = `${bottom - top}px`;
+    }
+    tagClear.style.top = `${top + win.scrollY - 9}px`;
+    tagClear.style.left = `${right + win.scrollX - 6}px`;
+    const label = t('Remove the variable');
+    if (tagClear.title !== label) {
+      tagClear.title = label;
+      tagClear.setAttribute('aria-label', label);
+    }
+  }
+
+  // The × keeps the caret and the selection where they are.
+  tagClear.addEventListener('mousedown', (event) => event.preventDefault());
+  tagClear.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const at = tagHover;
+    tagHover = null;
+    drawTag();
+    if (!at) return;
+    const found = tagsOf(at.id);
+    const tag = found?.tags[at.index];
+    if (!found || !tag) return;
+    if (editingEl && editingEl.contains(tag.range.startContainer)) {
+      // In the text being edited: deleted like a selection, and committed by
+      // the input that follows.
+      const span = removalSpan(found.map.text, tag.start, tag.end);
+      const start = found.map.pointOf(span.start);
+      const end = found.map.pointOf(span.end, true);
+      const selection = win.getSelection();
+      if (!start || !end || !selection) return;
+      const range = doc.createRange();
+      range.setStart(start.node, start.offset);
+      range.setEnd(end.node, end.offset);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      doc.execCommand('delete');
+      savedRange = selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
+    } else options.onRemoveTag(at.id, at.index);
+  });
+
   /* ── Element toolbar ───────────────────────────────────────────────────── */
 
   tools.addEventListener('click', (event) => {
@@ -392,7 +543,9 @@ export function createCanvasView(options) {
     event.preventDefault();
     event.stopPropagation();
     const action = button.getAttribute('data-action');
-    if (action === 'parent' || action === 'duplicate' || action === 'remove') options.onAction(action, selectedId);
+    if (action === 'parent' || action === 'duplicate' || action === 'remove' || action === 'back' || action === 'forward') {
+      options.onAction(action, selectedId);
+    }
   });
   tools.addEventListener('pointerdown', (event) => {
     const button = /** @type {Element} */ (event.target).closest('button[data-action="move"]');
@@ -944,6 +1097,7 @@ export function createCanvasView(options) {
     doc.addEventListener('keydown', onKey, true);
     drag = { payload, target: null, cancel: end };
     hoverId = null;
+    tagHover = null;
     refreshOverlays();
     update();
   }

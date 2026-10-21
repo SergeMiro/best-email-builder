@@ -16,7 +16,10 @@ three use the same stylesheet, `best-email-builder/styles.css`.
 Both blocks fill their parent, so give the parent a height. They also follow
 the parent's width:
 
-- the editor has three columns, then a properties drawer, then the canvas alone;
+- the editor has three columns, then a properties drawer, then the canvas
+  alone. The side columns are resized by dragging their border, and fold to a
+  narrow rail with the round button on it; the editor remembers both in the
+  browser;
 - the library has three columns, then two, then the list and the details on two screens.
 
 <p align="center">

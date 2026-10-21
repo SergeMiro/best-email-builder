@@ -37,6 +37,7 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
   color: #fff; border-radius: 4px; cursor: pointer; }
 .eb-ui-tools button:hover, .eb-ui-tools button:focus-visible { background: rgba(255, 255, 255, 0.2); }
 .eb-ui-tools button[data-action="move"] { cursor: grab; touch-action: none; }
+.eb-ui-tools button:disabled { opacity: 0.4; cursor: default; background: none; }
 .eb-ui-tools button.eb-ui-parent { width: auto; gap: 4px; padding: 0 7px 0 5px; display: inline-flex; align-items: center;
   font-weight: 600; white-space: nowrap; }
 .eb-ui-tools button.eb-ui-parent + button { margin-left: 2px; box-shadow: -1px 0 0 rgba(255, 255, 255, 0.25); }
@@ -56,6 +57,13 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
 .eb-ui-text input { all: unset; box-sizing: border-box; width: 220px; height: 26px; padding: 0 8px; border-radius: 5px;
   border: 1px solid #dfe3ea; font: 400 12px/1 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #2b3038; }
 .eb-ui-text input:focus { border-color: ${PRIMARY}; }
+.eb-ui-tag { position: absolute; pointer-events: none; padding: 0 2px; border-radius: 3px; white-space: pre; overflow: visible; }
+.eb-ui-tag-frame { background: none; border: 1.5px solid; }
+.eb-ui-tag-clear { all: unset; position: absolute; box-sizing: border-box; width: 16px; height: 16px; display: grid;
+  place-items: center; border-radius: 50%; background: #1f2433; color: #fff; cursor: pointer; pointer-events: auto;
+  box-shadow: 0 0 0 1.5px #fff, 0 2px 6px rgba(16, 24, 40, 0.3); }
+.eb-ui-tag-clear:hover, .eb-ui-tag-clear:focus-visible { background: #e5484d; }
+.eb-ui-tag-clear svg { width: 10px; height: 10px; stroke-width: 3; }
 ${FRAME_SCROLLBAR_CSS}
 `;
 

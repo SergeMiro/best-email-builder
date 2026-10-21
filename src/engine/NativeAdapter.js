@@ -39,6 +39,7 @@ import {
 import { parseMjml, parseMjmlFragment, serializeMjml } from './mjml.js';
 import { placementFor, sectionOf } from './placement.js';
 import { escapeText, textOfHtml } from './richText.js';
+import { withoutTag, withoutTagInText } from './mergeTags.js';
 import { EDITABLE_TAGS, createCanvasView } from './canvas/CanvasView.js';
 import { functionExport } from './unwrapModule.js';
 
@@ -162,8 +163,13 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
       canRemove: selection.canRemove,
       canDuplicate: selection.canDuplicate,
       // Dragged: content of a column, and sections. Columns, social icons and
-      // menu links move among their siblings, from the panel.
+      // menu links stay in their parent: arrows swap them with a neighbour.
       canMove: selection.canRemove && !BOUND_TAGS.has(selection.tagName),
+      canStep: selection.canRemove && BOUND_TAGS.has(selection.tagName),
+      canStepBack: selection.canMoveUp,
+      canStepForward: selection.canMoveDown,
+      // Side by side, except the icons of a social block set vertical.
+      vertical: selection.tagName === 'mj-social-element' && parent?.attributes.mode === 'vertical',
       // A section's parent is the page: "select the parent" would only show
       // the page settings, which a click beside the email does already.
       hasParent: Boolean(parent && parent.tag !== 'mjml' && parent.tag !== 'mj-body'),
@@ -549,6 +555,16 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
             adapter.select(parent && parent.tag !== 'mjml' && parent.tag !== 'mj-body' ? parent.id : null);
           } else if (action === 'duplicate') duplicateNode(id);
           else if (action === 'remove') removeById(id);
+          else if (action === 'back' || action === 'forward') adapter.move(id, action === 'back' ? -1 : 1);
+        },
+        onRemoveTag: (id, index) => {
+          const current = requireRoot();
+          const node = findNode(current, id);
+          if (!node || node.content === null) return;
+          const content = LABEL_TAGS.has(node.tag)
+            ? escapeText(withoutTagInText(textOfHtml(node.content), index))
+            : withoutTag(node.content, index, host.ownerDocument);
+          if (content !== node.content) commit(setContent(current, id, content));
         },
         onDrop: (payload, target) => {
           if (payload.nodeId) moveTo(payload.nodeId, target);

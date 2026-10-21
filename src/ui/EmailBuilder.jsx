@@ -17,12 +17,12 @@ import { Button } from './primitives/button.jsx';
 import { cn } from './primitives/cn.js';
 import EmailCanvas from './EmailCanvas.jsx';
 import BlockSidebar from './BlockSidebar.jsx';
-import ElementActions from './ElementActions.jsx';
 import PropertiesPanel from './PropertiesPanel.jsx';
 import Toolbar from './Toolbar.jsx';
 import Drawer from './Drawer.jsx';
 import { useEmailEditorState } from './useEmailEditorState.js';
 import { useLayoutWidth } from './useLayoutWidth.js';
+import { CANVAS_MIN, SidePanel, panelTrack, useSidePanels } from './SidePanel.jsx';
 
 /**
  * THE EMAIL BUILDER — the screen.
@@ -51,6 +51,11 @@ import { useLayoutWidth } from './useLayoutWidth.js';
  * move to a drawer and the toolbar takes two rows; on a phone the blocks go to
  * a drawer too, and a bar under the canvas opens them ("Add a block", "Edit").
  * Adding a block from the sidebar opens its properties.
+ *
+ * ── SIDE PANELS (`SidePanel`) ───────────────────────────────────────────────
+ * The blocks and the properties beside the canvas: their border with it is
+ * dragged to resize them, a button folds them to a rail. Remembered in the
+ * browser.
  *
  * ── AUTOSAVE (feature `autosave`) ───────────────────────────────────────────
  * Template already saved: server save without a version. New template: local
@@ -164,6 +169,8 @@ function Builder({
   const layout = useLayoutWidth(rootRef);
   const compact = layout !== 'wide';
   const blocksInDrawer = layout === 'narrow';
+  const { panels, update: updatePanel } = useSidePanels();
+  const gridRef = useRef(null);
   /** Open drawer of the compact layouts: 'blocks', 'properties' or null. */
   const [drawer, setDrawer] = useState(null);
   const closeDrawer = useCallback(() => setDrawer(null), []);
@@ -487,6 +494,21 @@ function Builder({
   const toolbarFeatures = featuresWith('toolbar');
   const canvasBars = featuresWith('canvasBar');
 
+  const columns =
+    layout === 'wide'
+      ? `${panelTrack(panels.blocks, 'blocks')} minmax(${CANVAS_MIN.wide}px, 1fr) ${panelTrack(panels.properties, 'properties')}`
+      : layout === 'medium'
+        ? `${panelTrack(panels.blocks, 'blocks')} minmax(${CANVAS_MIN.medium}px, 1fr)`
+        : 'minmax(0, 1fr)';
+  /** The widest a panel can be: the builder, less the other panel and the canvas's minimum. @param {'blocks'|'properties'} other */
+  const roomFor = (other) => {
+    const grid = gridRef.current;
+    if (!grid) return Infinity;
+    const otherPanel = grid.querySelector(`[data-panel="${other}"]`);
+    const otherWidth = otherPanel ? otherPanel.getBoundingClientRect().width : 0;
+    return grid.getBoundingClientRect().width - otherWidth - (layout === 'wide' ? CANVAS_MIN.wide : CANVAS_MIN.medium);
+  };
+
   const properties = (
     <PropertiesPanel
       onDismiss={compact ? closeDrawer : null}
@@ -496,7 +518,6 @@ function Builder({
       onMetaChange={setMeta}
       changes={state.changes}
       showErrors={showErrors}
-      actions={<ElementActions editor={editor} selection={state.selection} />}
       services={services}
       ai={ai}
       variables={variables}
@@ -540,14 +561,22 @@ function Builder({
         }
       />
       <div
-        className={cn(
-          'eb:relative eb:grid eb:min-h-0 eb:flex-1 eb:grid-rows-1',
-          layout === 'wide' && 'eb:grid-cols-[224px_minmax(0,1fr)_296px]',
-          layout === 'medium' && 'eb:grid-cols-[200px_minmax(0,1fr)]',
-          layout === 'narrow' && 'eb:grid-cols-1'
-        )}
+        ref={gridRef}
+        className="eb:relative eb:grid eb:min-h-0 eb:flex-1 eb:grid-rows-1"
+        style={{ gridTemplateColumns: columns }}
       >
-        {!blocksInDrawer && <BlockSidebar editor={editor} disabled={!ready} onAdded={compact ? () => setDrawer('properties') : undefined} />}
+        {!blocksInDrawer && (
+          <SidePanel
+            name="blocks"
+            side="left"
+            state={panels.blocks}
+            onChange={(patch) => updatePanel('blocks', patch)}
+            room={() => roomFor('properties')}
+            labels={{ resize: t('Width of the blocks'), hide: t('Hide the blocks'), show: t('Show the blocks') }}
+          >
+            <BlockSidebar editor={editor} disabled={!ready} onAdded={compact ? () => setDrawer('properties') : undefined} />
+          </SidePanel>
+        )}
         <div className="eb:relative eb:flex eb:min-w-0 eb:flex-col eb:bg-surface-75" aria-busy={!ready}>
           {boot.status === 'error' || engineError ? (
             <div role="alert" className="eb:flex eb:h-full eb:flex-col eb:items-center eb:justify-center eb:gap-2 eb:p-6 eb:text-center">
@@ -595,7 +624,18 @@ function Builder({
             </>
           )}
         </div>
-        {!compact && properties}
+        {!compact && (
+          <SidePanel
+            name="properties"
+            side="right"
+            state={panels.properties}
+            onChange={(patch) => updatePanel('properties', patch)}
+            room={() => roomFor('blocks')}
+            labels={{ resize: t('Width of the properties'), hide: t('Hide the properties'), show: t('Show the properties') }}
+          >
+            {properties}
+          </SidePanel>
+        )}
         {blocksInDrawer && (
           <Drawer open={drawer === 'blocks'} side="left" title={t('Add a block')} onClose={closeDrawer} testId="eb-blocks-drawer">
             <BlockSidebar editor={editor} disabled={!ready} onAdded={() => setDrawer('properties')} />

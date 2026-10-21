@@ -27,8 +27,9 @@ function normalizeHex(v) {
 /**
  * Colour field: a swatch opening a full-spectrum picker (with alpha), a hex
  * input and presets. `value` is `#RRGGBB` or `#RRGGBBAA`; `onChange(hex)`.
+ * `dense`: the height of the properties panel's fields.
  */
-export function ColorPicker({ value, onChange, id, className, placeholder = '' }) {
+export function ColorPicker({ value, onChange, id, className, placeholder = '', dense = false }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const valid = isValidHex(value);
@@ -43,7 +44,10 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '' }
             type="button"
             aria-label={t('Pick a colour')}
             title={t('Pick a colour')}
-            className="eb-checker eb:relative eb:h-8 eb:w-[44px] eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:shadow-sm eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-[1.04]"
+            className={cn(
+              'eb-checker eb:relative eb:h-8 eb:w-[44px] eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:shadow-sm eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-[1.04]',
+              dense && 'eb:h-6.5 eb:w-9'
+            )}
           >
             {/* Empty: the colour MJML renders by default, faded. */}
             <span
@@ -98,7 +102,8 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '' }
         onChange={(e) => onChange(e.target.value)}
         maxLength={9}
         placeholder={placeholder || '#RRGGBB'}
-        className="eb:h-8 eb:flex-1 eb:font-mono eb:text-[13px]"
+        dense={dense}
+        className={cn('eb:flex-1 eb:font-mono', dense ? 'eb:text-[12px]' : 'eb:text-[13px]')}
       />
     </div>
   );

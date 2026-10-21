@@ -5,7 +5,7 @@ import { Label } from './primitives/fields.jsx';
 import { Textarea } from './primitives/fields.jsx';
 import { SectionLabel } from './primitives/misc.jsx';
 import { TruncatedText as FadedText } from './primitives/misc.jsx';
-import { X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import { GROUPS } from '../blocks/shared.js';
 import { PropertyField } from './fields.jsx';
 import { useT } from './context.jsx';
@@ -19,11 +19,13 @@ import VariableInsertButton from '../features/variables/VariableInsertButton.jsx
  *   nothing is selected    -> the TEMPLATE (name, subject, preview text) and
  *     the page (background, width), i.e. the email body.
  *
- * `actions`: the element action bar (move, duplicate, delete), provided by
- * the host screen. `ai` (the AI module, `createAi`): with its `rewrite`, a
- * text or a button also gets "Rewrite with AI"; with its `suggestSubjects`,
- * the subject gets "Suggest subjects". `onDismiss`: the panel is shown in a drawer — its header
- * button closes the drawer rather than deselecting.
+ * Moving, duplicating and deleting the element are on the canvas, in the
+ * toolbar of its selection frame (and Del); every block selected (Ctrl+A) has
+ * no frame of its own, so the panel keeps its Delete. `ai` (the AI module, `createAi`):
+ * with its `rewrite`, a text or a button also gets "Rewrite with AI"; with its
+ * `suggestSubjects`, the subject gets "Suggest subjects". `onDismiss`: the
+ * panel is shown in a drawer — its header button closes the drawer rather
+ * than deselecting.
  */
 
 const GROUP_ORDER = Object.values(GROUPS);
@@ -96,16 +98,17 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
   return (
     <>
       <PanelHeader title={t('Email')} onClose={onDismiss} closeLabel="Close" />
-      <div className="eb:space-y-5 eb:p-4">
+      <div className="eb:space-y-4 eb:p-4">
         <section className="eb:space-y-3">
           <SectionLabel>{t('Template')}</SectionLabel>
-          <div className="eb:space-y-1.5">
+          <div className="eb:space-y-1">
             <Label htmlFor="eb-meta-name" className="eb:text-[12px] eb:font-normal eb:text-foreground-lighter">
               {t('Name')} <span className="eb:text-destructive">*</span>
             </Label>
             <Input
               id="eb-meta-name"
               maxLength={200}
+              dense
               value={meta.name}
               onChange={field('name')}
               aria-invalid={(showErrors && !meta.name.trim()) || undefined}
@@ -114,7 +117,7 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
               <p className="eb:text-[12px] eb:text-destructive">{t('Name is required')}</p>
             )}
           </div>
-          <div className="eb:space-y-1.5">
+          <div className="eb:space-y-1">
             <div className="eb:flex eb:h-6 eb:items-center eb:justify-between">
               <Label htmlFor="eb-meta-subject" className="eb:text-[12px] eb:font-normal eb:text-foreground-lighter">
                 {t('Subject')}
@@ -129,7 +132,7 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
                 />
               )}
             </div>
-            <Input ref={subjectRef} id="eb-meta-subject" maxLength={250} value={meta.subject} onChange={field('subject')} />
+            <Input ref={subjectRef} id="eb-meta-subject" dense maxLength={250} value={meta.subject} onChange={field('subject')} />
             {ai?.suggestSubjects && (
               <ai.components.Subjects
                 editor={editor}
@@ -140,7 +143,7 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
               />
             )}
           </div>
-          <div className="eb:space-y-1.5">
+          <div className="eb:space-y-1">
             <div className="eb:flex eb:h-6 eb:items-center eb:justify-between">
               <Label htmlFor="eb-meta-preheader" className="eb:text-[12px] eb:font-normal eb:text-foreground-lighter">
                 {t('Preview text')}
@@ -159,6 +162,7 @@ function TemplateSettings({ editor, meta, onMetaChange, changes, showErrors, var
               ref={preheaderRef}
               id="eb-meta-preheader"
               rows={2}
+              dense
               maxLength={250}
               value={meta.preheader}
               onChange={field('preheader')}
@@ -178,7 +182,6 @@ export default function PropertiesPanel({
   meta,
   onMetaChange,
   changes,
-  actions = null,
   showErrors = false,
   services = null,
   ai = null,
@@ -208,15 +211,25 @@ export default function PropertiesPanel({
             onClose={onDismiss || (() => editor.select(null))}
             closeLabel={onDismiss ? 'Close' : 'Deselect'}
           />
-          {actions}
           {selection.multiple ? (
-            <p className="eb:p-4 eb:text-[13px] eb:leading-relaxed eb:text-foreground-lighter" data-testid="eb-select-all">
-              {t('{count} sections selected. Press Delete to remove them (Ctrl+Z brings them back).', {
-                count: selection.multiple,
-              })}
-            </p>
+            <div className="eb:space-y-3 eb:p-4">
+              <p className="eb:text-[13px] eb:leading-relaxed eb:text-foreground-lighter" data-testid="eb-select-all">
+                {t('{count} sections selected. Press Delete to remove them (Ctrl+Z brings them back).', {
+                  count: selection.multiple,
+                })}
+              </p>
+              <Button
+                variant="outline"
+                size="sm-compact"
+                onClick={() => editor.remove(selection.id)}
+                className="eb:hover:border-destructive/40 eb:hover:bg-destructive/10 eb:hover:text-destructive"
+              >
+                <Trash2 aria-hidden="true" />
+                {t('Delete')}
+              </Button>
+            </div>
           ) : (
-          <div className="eb:space-y-5 eb:p-4">
+          <div className="eb:space-y-4 eb:p-4">
             {selection.content !== null && selection.content !== undefined && (
               <section className="eb:space-y-3">
                 <SectionLabel>{t(GROUPS.content)}</SectionLabel>

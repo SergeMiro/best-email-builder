@@ -128,7 +128,8 @@ export default function BlockSidebar({ editor, disabled = false, onAdded }) {
         return (
           <section key={group.kind} className="eb:space-y-2">
             <SectionLabel>{t(group.title)}</SectionLabel>
-            <div className="eb:grid eb:grid-cols-2 eb:gap-2">
+            {/* As many in a row as the panel's width holds: three by default. */}
+            <div className="eb:grid eb:grid-cols-[repeat(auto-fill,minmax(80px,1fr))] eb:gap-2">
               {items.map((block) => (
                 <BlockTile
                   key={block.id}

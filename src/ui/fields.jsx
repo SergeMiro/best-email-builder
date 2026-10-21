@@ -120,17 +120,17 @@ function TextField({ id, property, value, fallback = '', onCommit, addon = null,
     'aria-invalid': invalid || undefined,
   };
   return (
-    <div ref={ref} className="eb:space-y-1.5">
+    <div ref={ref} className="eb:space-y-1">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
       {property.type === 'textarea' ? (
-        <Textarea rows={3} {...shared} />
+        <Textarea rows={3} dense {...shared} />
       ) : addon ? (
         <div className="eb:flex eb:gap-2">
-          <Input {...shared} className="eb:min-w-0 eb:flex-1" />
+          <Input {...shared} dense className="eb:min-w-0 eb:flex-1" />
           {addon}
         </div>
       ) : (
-        <Input {...shared} />
+        <Input {...shared} dense />
       )}
       <FieldError>{invalid ? (kind === 'image' ? t('An https:// address is required') : t('Address not allowed')) : error}</FieldError>
     </div>
@@ -178,7 +178,8 @@ function ImageField({ id, property, value, onCommit, services }) {
       <Button
         type="button"
         variant="outline"
-        size="sm"
+        size="xs"
+        className="eb:h-6.5"
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
@@ -216,7 +217,7 @@ function SizeField({ id, property, value, fallback = '', onCommit }) {
   };
 
   return (
-    <div ref={ref} className="eb:space-y-1.5">
+    <div ref={ref} className="eb:space-y-1">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
       <div className="eb:relative">
         <Input
@@ -233,9 +234,10 @@ function SizeField({ id, property, value, fallback = '', onCommit }) {
             if (e.key === 'Enter') commit();
             if (e.key === 'Escape') setDraft(asNumber(value));
           }}
-          className="eb:pr-9 eb:tabular-nums"
+          dense
+          className="eb:pr-8 eb:tabular-nums"
         />
-        <span className="eb:pointer-events-none eb:absolute eb:right-3 eb:top-1/2 eb:-translate-y-1/2 eb:text-[12px] eb:text-foreground-muted">
+        <span className="eb:pointer-events-none eb:absolute eb:right-2.5 eb:top-1/2 eb:-translate-y-1/2 eb:text-[12px] eb:text-foreground-muted">
           {property.unit || 'px'}
         </span>
       </div>
@@ -267,9 +269,9 @@ function ColorField({ id, property, value, fallback = '', onCommit }) {
   };
 
   return (
-    <div ref={ref} className="eb:space-y-1.5">
+    <div ref={ref} className="eb:space-y-1">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
-      <ColorPicker id={id} value={draft} placeholder={emailColor(fallback) || ''} onChange={change} />
+      <ColorPicker id={id} value={draft} placeholder={emailColor(fallback) || ''} onChange={change} dense />
     </div>
   );
 }
@@ -286,7 +288,7 @@ function SelectField({ id, property, value, fallback = '', onCommit }) {
   const fallbackOption = (property.options || []).find((o) => o.value && words(o.value) === words(fallback));
   const defaultLabel = fallbackOption ? t('Default ({value})', { value: t(fallbackOption.label) }) : t('Default');
   return (
-    <div className="eb:space-y-1.5">
+    <div className="eb:space-y-1">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
       <Select
         value={current}
@@ -295,7 +297,7 @@ function SelectField({ id, property, value, fallback = '', onCommit }) {
           if (v !== (value || '')) onCommit(v || null);
         }}
       >
-        <SelectTrigger id={id} className="eb:w-full">
+        <SelectTrigger id={id} dense className="eb:w-full">
           <SelectValue placeholder={defaultLabel} />
         </SelectTrigger>
         <SelectContent>
@@ -319,7 +321,7 @@ const ALIGN_ICONS = { left: AlignLeft, center: AlignCenter, right: AlignRight, j
 function AlignField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
   return (
-    <div className="eb:space-y-1.5">
+    <div className="eb:space-y-1">
       <FieldLabel id={id}>{t(property.label)}</FieldLabel>
       <div
         id={id}
@@ -340,7 +342,7 @@ function AlignField({ id, property, value, fallback = '', onCommit }) {
                 aria-label={t(option.label)}
                 onClick={() => option.value !== value && onCommit(option.value)}
                 className={cn(
-                  'eb:inline-flex eb:h-7 eb:w-7 eb:items-center eb:justify-center eb:rounded-lg2 eb:transition-colors',
+                  'eb:inline-flex eb:h-5 eb:w-6 eb:items-center eb:justify-center eb:rounded-md eb:transition-colors',
                   active
                     ? 'eb:bg-primary eb:text-primary-foreground'
                     : 'eb:text-foreground-lighter eb:hover:bg-surface-200 eb:hover:text-foreground'
@@ -387,8 +389,8 @@ function SpacingField({ id, property, value, fallback = '', onCommit }) {
   };
 
   return (
-    <fieldset ref={ref} className="eb:space-y-1.5">
-      <legend className="eb:mb-1.5 eb:text-[12px] eb:text-foreground-lighter">{t(property.label)}</legend>
+    <fieldset ref={ref} className="eb:space-y-1">
+      <legend className="eb:mb-1 eb:text-[12px] eb:text-foreground-lighter">{t(property.label)}</legend>
       <div className="eb:grid eb:grid-cols-4 eb:gap-1.5">
         {SIDE_LABELS.map(([side, label], i) => (
           <div key={side} className="eb:space-y-1">
@@ -406,6 +408,7 @@ function SpacingField({ id, property, value, fallback = '', onCommit }) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') commit();
               }}
+              dense
               className="eb:px-2 eb:text-center eb:tabular-nums"
             />
             <span className="eb:block eb:text-center eb:text-[10.5px] eb:text-foreground-muted">{t(label)}</span>

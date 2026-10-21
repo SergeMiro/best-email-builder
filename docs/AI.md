@@ -281,7 +281,8 @@ one line. Where a fact is missing (a date, a price, a name), the model writes a
 
 Under it, and for a button too, *Rewrite with AI* offers *Shorter*,
 *Longer*, *Fix mistakes*, *Friendlier*, *More formal*, *Translate* (13
-languages, each under its own name), and a field to say what to change.
+languages, each under its own name), and a field to say what to change. Both
+fields take several lines: Enter sends, Shift+Enter starts a new line.
 
 The answer replaces the text at once, as one step of the history. Ctrl+Z
 brings the previous text back, so there is nothing to accept or compare.

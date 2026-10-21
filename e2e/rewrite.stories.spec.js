@@ -84,11 +84,18 @@ test.describe('Rewrite with AI', () => {
     await page.evaluate(() => {
       window.__rewriteAnswers = ['Hi there, here is the news.', 'Hi {{contact.firstname}}, here is the news.'];
     });
-    await rewrite(page).getByRole('textbox', { name: 'What to change' }).fill('Say hi, one sentence');
-    await rewrite(page).getByRole('textbox', { name: 'What to change' }).press('Enter');
+    // A prompt of several lines: Shift+Enter starts a new one, Enter sends.
+    const prompt = rewrite(page).getByRole('textbox', { name: 'What to change' });
+    await expect(prompt).toHaveJSProperty('tagName', 'TEXTAREA');
+    await prompt.fill('Say hi');
+    await prompt.press('Shift+Enter');
+    await prompt.pressSequentially('one sentence');
+    await expect(prompt).toHaveValue('Say hi\none sentence');
+    expect(await asked(page)).toHaveLength(1);
+    await prompt.press('Enter');
     await expect(canvas(page).getByText(/here is the news/)).toBeVisible();
     expect(await mjml(page)).toContain('Hi {{contact.firstname}}, here is the news.');
-    expect((await asked(page))[1]).toMatchObject({ action: 'custom', instruction: 'Say hi, one sentence', format: 'html' });
+    expect((await asked(page))[1]).toMatchObject({ action: 'custom', instruction: 'Say hi\none sentence', format: 'html' });
     await expect(rewrite(page).getByRole('textbox', { name: 'What to change' })).toHaveValue('');
     // Two rewrites, one notice: the second replaces the first.
     await expect(page.getByText('Text rewritten. Ctrl+Z brings back the previous one.')).toHaveCount(1);

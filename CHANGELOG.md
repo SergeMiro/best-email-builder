@@ -6,6 +6,33 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- A variable in the email, under the pointer, swaps its colors (a frame when
+  it runs over two lines) and shows a **×** in its top-right corner. The ×
+  takes the tag out, with the space before it, in a text (being edited or
+  not) or a button's label. Ctrl+Z brings it back.
+- The side panels are resized by dragging their border towards the canvas or
+  away from it (or with the arrow keys once it is focused; a double-click
+  restores the default width), and fold to a narrow rail with the round button
+  on that border. The editor remembers both in the browser.
+
+### Changed
+- The *Email provider variables* bar no longer covers the email when it
+  opens: the email moves down to make room, and back up when the bar closes.
+  Under the pointer, it opens after a short pause, so crossing it on the way
+  to the email does not move the email.
+- Wider side panels by default: three blocks in a row on the left, and the
+  properties about 40% wider.
+- The properties panel no longer has the *Move up* / *Move down* /
+  *Duplicate* / *Delete* row: the toolbar of the selection frame on the canvas
+  does it. Columns, social icons and menu links, which are not dragged, get
+  arrows in that toolbar to move them among their siblings. With every block
+  selected (Ctrl+A), the panel keeps a *Delete* button.
+- Denser properties: fields, lists and color pickers are 26 px high (all the
+  same), the AI action chips 22 px, with less space between the fields.
+- *Write with AI* and *Rewrite with AI* take the instruction in a box of
+  several lines: Enter sends it, Shift+Enter starts a new line.
+
 ## [0.14.0] — 2026-10-20
 
 ### Changed

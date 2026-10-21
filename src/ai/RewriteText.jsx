@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Languages, Loader2, PenLine, Sparkles, TriangleAlert } from 'lucide-react';
 import { useUi } from '../ui/context.jsx';
 import { Button } from '../ui/primitives/button.jsx';
-import { Input } from '../ui/primitives/fields.jsx';
+import { Textarea } from '../ui/primitives/fields.jsx';
 import { SectionLabel } from '../ui/primitives/misc.jsx';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/primitives/overlays.jsx';
 import { cleanRichText } from '../engine/richText.js';
@@ -113,25 +113,17 @@ export default function RewriteText({ editor, selection, rewrite }) {
             <PenLine className="eb:size-3" aria-hidden="true" />
             {t('Write with AI')}
           </SectionLabel>
-          <form
-            className="eb:flex eb:gap-1.5"
-            onSubmit={(event) => {
-              event.preventDefault();
-              write();
-            }}
+          <PromptForm
+            value={topic}
+            onChange={setTopic}
+            onSubmit={write}
+            placeholder={t('What should it say? e.g. the sale ends Sunday')}
+            label={t('What the text is about')}
+            busy={busy}
+            submitLabel={t('Write')}
           >
-            <Input
-              value={topic}
-              onChange={(event) => setTopic(event.target.value)}
-              maxLength={MAX_REWRITE_INSTRUCTION}
-              placeholder={t('What should it say? e.g. the sale ends Sunday')}
-              aria-label={t('What the text is about')}
-              disabled={busy}
-            />
-            <Button type="submit" variant="outline" size="icon-sm" aria-label={t('Write')} disabled={busy || !topic.trim()}>
-              {running === 'write' ? <Loader2 className="eb:animate-spin" /> : <PenLine />}
-            </Button>
-          </form>
+            {running === 'write' ? <Loader2 className="eb:animate-spin" /> : <PenLine />}
+          </PromptForm>
         </section>
       )}
       <section className="eb:space-y-2.5" aria-label={t('Rewrite with AI')} data-testid="eb-rewrite">
@@ -163,25 +155,17 @@ export default function RewriteText({ editor, selection, rewrite }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <form
-          className="eb:flex eb:gap-1.5"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (instruction.trim()) run('custom', { instruction: instruction.trim() });
-          }}
+        <PromptForm
+          value={instruction}
+          onChange={setInstruction}
+          onSubmit={() => run('custom', { instruction: instruction.trim() })}
+          placeholder={t('Or say what to change…')}
+          label={t('What to change')}
+          busy={busy}
+          submitLabel={t('Rewrite')}
         >
-          <Input
-            value={instruction}
-            onChange={(event) => setInstruction(event.target.value)}
-            maxLength={MAX_REWRITE_INSTRUCTION}
-            placeholder={t('Or say what to change…')}
-            aria-label={t('What to change')}
-            disabled={busy}
-          />
-          <Button type="submit" variant="outline" size="icon-sm" aria-label={t('Rewrite')} disabled={busy || !instruction.trim()}>
-            {running === 'custom' ? <Loader2 className="eb:animate-spin" /> : <Sparkles />}
-          </Button>
-        </form>
+          {running === 'custom' ? <Loader2 className="eb:animate-spin" /> : <Sparkles />}
+        </PromptForm>
         {running && (
           <p className="eb:flex eb:items-center eb:gap-2 eb:text-[12px] eb:text-foreground-muted" role="status" aria-live="polite">
             {running === 'write' ? t('Writing…') : t('Rewriting…')}
@@ -198,5 +182,43 @@ export default function RewriteText({ editor, selection, rewrite }) {
         )}
       </section>
     </>
+  );
+}
+
+/**
+ * What the AI is asked, on a few lines so that the whole request stays in
+ * view. Enter sends it, Shift+Enter starts a new line; an empty one is not
+ * sent. `children`: the send button's icon.
+ */
+function PromptForm({ value, onChange, onSubmit, placeholder, label, busy, submitLabel, children }) {
+  const ready = !busy && Boolean(value.trim());
+  return (
+    <form
+      className="eb:flex eb:items-end eb:gap-1.5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (ready) onSubmit();
+      }}
+    >
+      <Textarea
+        dense
+        rows={3}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return;
+          event.preventDefault();
+          if (ready) onSubmit();
+        }}
+        maxLength={MAX_REWRITE_INSTRUCTION}
+        placeholder={placeholder}
+        aria-label={label}
+        disabled={busy}
+        className="eb:min-h-16 eb:max-h-40 eb:resize-none"
+      />
+      <Button type="submit" variant="outline" size="icon-dense" aria-label={submitLabel} disabled={!ready}>
+        {children}
+      </Button>
+    </form>
   );
 }

@@ -1,10 +1,14 @@
-import { Fragment, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useRef, useState } from 'react';
 import { Braces, ChevronDown, Link2, Pencil, Plus } from 'lucide-react';
 import { useUi } from '../../ui/context.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { TooltipWrap } from '../../ui/primitives/misc.jsx';
 import { tokenOf } from './catalog.js';
 import VariableDialog from './VariableDialog.jsx';
+
+// Hover intent: the pointer crossing the thin bar on its way to the email
+// does not open it, since an open bar moves the email down.
+const OPEN_DELAY = 150;
 
 const BADGE =
   'eb:inline-flex eb:h-5.5 eb:items-center eb:gap-1 eb:rounded-full eb:border eb:border-border eb:bg-surface-75 eb:px-2 eb:text-[11px] eb:font-medium eb:text-foreground eb:transition-colors eb:outline-none eb:hover:border-primary/50 eb:hover:bg-primary/5 eb:hover:text-primary eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:opacity-50';
@@ -13,9 +17,9 @@ const BADGE =
  * EMAIL PROVIDER VARIABLES — thin bar above the canvas, the one place to
  * insert a variable.
  *
- * Shows its title only. Under the pointer (or opened by a click: touch,
- * keyboard) it grows over the canvas and lists the variables as badges; a
- * badge's tooltip names its tag. A badge under the pointer types its tag into
+ * Shows its title only. Kept under the pointer (or opened by a click: touch,
+ * keyboard) it grows and lists the variables as badges, moving the email
+ * down rather than covering it; a badge's tooltip names its tag. A badge under the pointer types its tag into
  * the selected text or button, as it will look, and wipes it out when the
  * pointer leaves; a click inserts it for good: at the caret of the text being
  * edited, otherwise at the end of the selected text or button. The editor
@@ -34,6 +38,8 @@ export default function VariablesBar({ context }) {
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState(null); // { variable } | {}
   const listId = useId();
+  const hoverTimer = useRef(0);
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
   if (!variables.length && !canManageVariables) return null;
   const expanded = hovered || open;
   const fields = variables.filter((v) => v.kind !== 'link');
@@ -90,15 +96,19 @@ export default function VariablesBar({ context }) {
   };
 
   return (
-    <div className="eb:relative eb:z-10 eb:h-6 eb:shrink-0" data-testid="eb-variables-bar">
+    <div className="eb:relative eb:shrink-0" data-testid="eb-variables-bar">
       <div
-        className={cn(
-          'eb:absolute eb:inset-x-0 eb:top-0 eb:border-b eb:border-border eb:bg-background eb:transition-shadow',
-          expanded && 'eb:shadow-md'
-        )}
+        className="eb:border-b eb:border-border eb:bg-background"
         data-expanded={expanded}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={(e) => {
+          clearTimeout(hoverTimer.current);
+          // Not while dragging: the email would move under the drop.
+          if (!e.buttons) hoverTimer.current = setTimeout(() => setHovered(true), OPEN_DELAY);
+        }}
+        onMouseLeave={() => {
+          clearTimeout(hoverTimer.current);
+          setHovered(false);
+        }}
         onKeyDown={(e) => e.key === 'Escape' && open && setOpen(false)}
         // No mousedown: the text being edited keeps its caret.
         onMouseDown={(e) => e.preventDefault()}

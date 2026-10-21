@@ -19,7 +19,7 @@ component knows the model or the canvas: everything goes through the
 | Folder | Role |
 |---|---|
 | `core/` | `EmailEditor` contract, versioned document envelope (`document.js`), registries, events |
-| `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
+| `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), merge tags in the words (`mergeTags.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
 | `features/` | one folder per feature + the `emailBuilderFeatures` registry (brand, variables, autosave, versions, preview, test send), the starter template and the gallery of bases, and the library's tags (`tags/`) |
 | `ai/` | the AI module, an entry of its own (`best-email-builder/ai`, `/ai/server`): proofreading, writing and rewriting, subject ideas, the providers, their buttons and texts — see *AI* |
@@ -97,7 +97,10 @@ the HTML **compiled by the server**.
   block goes into a column (between two elements, by their middle); over a
   section's top or bottom padding, or outside the sections, it gets a section
   of its own. A layout goes between sections. Social icons, menu links and
-  columns only move among their siblings.
+  columns are not dragged: the arrows of their toolbar move them among their
+  siblings.
+- **Merge tags** (`engine/mergeTags.js`): a tag under the pointer swaps its
+  colors and gets a ×, which takes it out with the space before it.
 
 ## Saving
 

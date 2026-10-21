@@ -188,6 +188,86 @@ async function dragBlock(page, blockId, textIndex) {
   await drag(page, tile, { x: target.x + target.width / 2, y: target.y + target.height - 3 });
 }
 
+test.describe('Side panels', () => {
+  const sidePanel = (page, name) => page.locator(`[data-panel="${name}"]`);
+  const widthOf = async (locator) => Math.round((await locator.boundingBox()).width);
+
+  test('wide by default: three blocks in a row, a roomier properties panel', async ({ page }) => {
+    await openBuilder(page);
+    expect(await widthOf(sidePanel(page, 'blocks'))).toBe(328);
+    expect(await widthOf(sidePanel(page, 'properties'))).toBe(416);
+    const tops = await page.locator('[data-block-id]').evaluateAll((tiles) => tiles.slice(0, 4).map((tile) => Math.round(tile.getBoundingClientRect().top)));
+    expect(tops.slice(0, 3)).toEqual([tops[0], tops[0], tops[0]]);
+    expect(tops[3]).toBeGreaterThan(tops[0]);
+  });
+
+  test('a border dragged resizes its panel; the arrow keys too; remembered after a reload', async ({ page }) => {
+    await openBuilder(page);
+    const blocks = sidePanel(page, 'blocks');
+    const properties = sidePanel(page, 'properties');
+    // The properties narrower (towards the right), then the blocks wider.
+    for (const [panel, dx] of [
+      [properties, 60],
+      [blocks, 80],
+    ]) {
+      const border = await panel.getByRole('separator').boundingBox();
+      await page.mouse.move(border.x + border.width / 2, border.y + 300);
+      await page.mouse.down();
+      await page.mouse.move(border.x + border.width / 2 + dx, border.y + 300, { steps: 6 });
+      await page.mouse.up();
+    }
+    expect(await widthOf(properties)).toBe(356);
+    expect(await widthOf(blocks)).toBe(408);
+    // The canvas keeps its room: dragging further stops at it.
+    const border = await blocks.getByRole('separator').boundingBox();
+    await page.mouse.move(border.x + border.width / 2, border.y + 300);
+    await page.mouse.down();
+    await page.mouse.move(border.x + 600, border.y + 300, { steps: 6 });
+    await page.mouse.up();
+    expect((await page.locator('.eb-canvas-frame').boundingBox()).width).toBeGreaterThanOrEqual(639);
+
+    await properties.getByRole('separator').focus();
+    await page.keyboard.press('ArrowRight');
+    expect(await widthOf(properties)).toBe(340);
+
+    await page.reload();
+    await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready');
+    expect(await widthOf(properties)).toBe(340);
+    // A double-click puts the default width back (above the fold button, in the middle).
+    await properties.getByRole('separator').dblclick({ position: { x: 4, y: 40 } });
+    expect(await widthOf(properties)).toBe(416);
+  });
+
+  test('folded to a rail and unfolded; the canvas takes the room', async ({ page }) => {
+    await openBuilder(page);
+    const frame = page.locator('.eb-canvas-frame');
+    const before = (await frame.boundingBox()).width;
+    await page.getByRole('button', { name: 'Hide the blocks' }).click();
+    await page.getByRole('button', { name: 'Hide the properties' }).click();
+    expect(await widthOf(sidePanel(page, 'blocks'))).toBe(40);
+    expect(await widthOf(sidePanel(page, 'properties'))).toBe(40);
+    expect((await frame.boundingBox()).width).toBeGreaterThan(before + 600);
+    await expect(page.locator('[data-block-id]')).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready');
+    await page.getByRole('button', { name: 'Show the blocks' }).click();
+    await page.getByRole('button', { name: 'Show the properties' }).click();
+    expect(await widthOf(sidePanel(page, 'blocks'))).toBe(328);
+    await expect(panel(page).getByRole('heading', { name: 'Email' })).toBeVisible();
+  });
+
+  test('the properties are compact: a field and a select of the same height', async ({ page }) => {
+    await openBuilder(page);
+    await canvas(page).getByText('Your headline').click();
+    const props = panel(page);
+    const field = await props.locator('[data-slot=input]').first().boundingBox();
+    const select = await props.locator('[data-slot=select-trigger]').first().boundingBox();
+    expect(Math.round(field.height)).toBe(26);
+    expect(Math.round(select.height)).toBe(26);
+  });
+});
+
 test.describe('Element actions', () => {
   test('drag a block from the sidebar into the canvas', async ({ page }) => {
     await openBuilder(page);
@@ -212,41 +292,40 @@ test.describe('Element actions', () => {
     await expect.poll(async () => (await texts(page)).indexOf('Your headline')).toBe(2);
   });
 
-  test('duplicate, move, delete from the panel', async ({ page }) => {
+  test('the panel has no action row: duplicate and delete are on the selection frame', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Your headline').click();
-    const props = panel(page);
-    await expect(props.getByRole('button', { name: 'Move up' })).toBeDisabled();
+    await expect(panel(page).getByRole('heading', { name: 'Text' })).toBeVisible();
+    await expect(panel(page).getByRole('toolbar', { name: 'Element actions' })).toHaveCount(0);
 
-    await props.getByRole('button', { name: 'Duplicate' }).click();
+    await canvas(page).getByRole('button', { name: 'Duplicate' }).click();
     await expect.poll(async () => (await texts(page)).slice(1, 4)).toEqual([
       'Your headline',
       'Your headline',
       'Hello,Your text.',
     ]);
-    // The copy is selected (second headline): move it down, then up.
-    await props.getByRole('button', { name: 'Move down' }).click();
-    await expect.poll(async () => (await texts(page))[3]).toBe('Your headline');
-    await props.getByRole('button', { name: 'Move up' }).click();
-    await expect.poll(async () => (await texts(page))[2]).toBe('Your headline');
-
-    await props.getByRole('button', { name: 'Delete' }).click();
+    await canvas(page).getByRole('button', { name: 'Delete' }).click();
     await expect.poll(async () => (await texts(page)).filter((t) => t === 'Your headline').length).toBe(1);
-    await expect(props.getByRole('heading', { name: 'Email' })).toBeVisible();
+    await expect(panel(page).getByRole('heading', { name: 'Email' })).toBeVisible();
   });
 
-  test('columns: sideways move', async ({ page }) => {
+  test('columns: arrows on the selection frame move them sideways', async ({ page }) => {
     await openBuilder(page);
     await page.locator('[data-block-id="columns-2"]').click();
     const before = await idsOf(page, 'mj-column');
     // An empty column says "Drop a block here"; clicking it selects the column.
     await canvas(page).getByText('Drop a block here').first().click();
-    const props = panel(page);
-    await expect(props.getByRole('heading', { name: 'Column' })).toBeVisible();
-    await expect(props.getByRole('button', { name: 'Move left' })).toBeDisabled();
-    await props.getByRole('button', { name: 'Move right' }).click();
+    await expect(panel(page).getByRole('heading', { name: 'Column' })).toBeVisible();
+    // A column cannot leave its section: arrows instead of the drag handle.
+    await expect(canvas(page).locator('button[data-action="move"]')).toHaveCount(0);
+    await expect(canvas(page).getByRole('button', { name: 'Move left' })).toBeDisabled();
+    await canvas(page).getByRole('button', { name: 'Move right' }).click();
     const [first, second] = before.slice(-2);
     await expect.poll(async () => (await idsOf(page, 'mj-column')).slice(-2)).toEqual([second, first]);
+    // Still selected, now the last one: left again, right no more.
+    await expect(canvas(page).getByRole('button', { name: 'Move right' })).toBeDisabled();
+    await canvas(page).getByRole('button', { name: 'Move left' }).click();
+    await expect.poll(async () => (await idsOf(page, 'mj-column')).slice(-2)).toEqual([first, second]);
   });
 
   test('keyboard: Delete, Ctrl+Z, Ctrl+Y', async ({ page }) => {
@@ -537,8 +616,18 @@ test.describe('Variables', () => {
     // A thin bar: its badges show under the pointer.
     await expect(title).toHaveAttribute('aria-expanded', 'false');
     await expect(badges).toBeHidden();
+    const frame = page.locator('.eb-canvas-frame');
+    const closedTop = (await frame.boundingBox()).y;
     await bar.hover();
     await expect(title).toHaveAttribute('aria-expanded', 'true');
+    // Open, it moves the email down instead of covering it.
+    await expect.poll(async () => (await frame.boundingBox()).y).toBeGreaterThan(closedTop + 20);
+    await expect
+      .poll(async () => {
+        const list = await badges.boundingBox();
+        return (await frame.boundingBox()).y - (list.y + list.height);
+      })
+      .toBeGreaterThanOrEqual(0);
     await expect(badges.locator('[data-variable]')).toHaveText([
       'First name',
       'Last name',
@@ -685,6 +774,78 @@ test.describe('Variables', () => {
     await expect(picker.getByRole('option', { name: /Unsubscribe link/ })).toHaveCount(0);
     await picker.getByRole('option', { name: /First name/ }).click();
     await expect(subject).toHaveValue('{{contact.firstname}}Your order is ready');
+  });
+
+  /** Puts the pointer on the first tag of the canvas text holding `near`; its box shows. */
+  async function hoverTag(page, near) {
+    const frame = page.locator('.eb-canvas-frame');
+    await expect(async () => {
+      const at = await frame.boundingBox();
+      const box = await canvas(page).locator('body').evaluate((body, near) => {
+        const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const start = node.data.indexOf('{{');
+          if (start === -1 || !node.parentElement?.textContent.includes(near)) continue;
+          const range = document.createRange();
+          range.setStart(node, start);
+          range.setEnd(node, node.data.indexOf('}}', start) + 2);
+          const { x, y, width, height } = range.getBoundingClientRect();
+          return { x, y, width, height };
+        }
+        return null;
+      }, near);
+      await page.mouse.move(at.x + box.x + box.width / 2, at.y + box.y + box.height / 2, { steps: 4 });
+      await expect(canvas(page).getByTestId('eb-canvas-tag')).toBeVisible({ timeout: 500 });
+    }).toPass();
+  }
+
+  async function insertFirstName(page, near) {
+    await canvas(page).getByText(near).click();
+    const badges = await openBar(page);
+    await badges.getByRole('button', { name: 'First name', exact: true }).click();
+    await page.mouse.move(10, 10);
+    await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: /^Email provider variables/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
+  }
+
+  test('a tag in the email: under the pointer its colours swap, its × takes it out with its space', async ({ page }) => {
+    await openBuilder(page);
+    await insertFirstName(page, /Your text\./);
+    await expect.poll(() => mjml(page)).toMatch(/Your text\. \{\{contact\.firstname\}\}</);
+    const tag = canvas(page).getByTestId('eb-canvas-tag');
+    await expect(tag).toBeHidden();
+
+    await hoverTag(page, 'Your text.');
+    const ink = await canvas(page).getByText(/Your text\./).evaluate((el) => getComputedStyle(el).color);
+    await expect(tag).toHaveCSS('background-color', ink);
+    await expect(tag).toHaveCSS('color', 'rgb(255, 255, 255)');
+    const clear = canvas(page).getByRole('button', { name: 'Remove the variable' });
+    await clear.click();
+    await expect.poll(() => mjml(page)).toMatch(/Your text\.</);
+    expect(await mjml(page)).not.toContain('{{contact.firstname}}');
+    await expect(tag).toBeHidden();
+    await expect(clear).toBeHidden();
+    await page.keyboard.press('Control+z');
+    await expect.poll(() => mjml(page)).toMatch(/Your text\. \{\{contact\.firstname\}\}</);
+
+    // While the text is being edited: taken out where the caret can go on typing.
+    await canvas(page).getByText(/Your text\./).dblclick();
+    await hoverTag(page, 'Your text.');
+    await clear.click();
+    await page.keyboard.type(' again');
+    await page.keyboard.press('Escape');
+    await expect.poll(() => mjml(page)).toMatch(/Your text\. again</);
+  });
+
+  test("a tag in a button's label: its × takes it out of the label", async ({ page }) => {
+    await openBuilder(page);
+    await insertFirstName(page, 'Learn more');
+    await expect.poll(() => mjml(page)).toMatch(/>Learn more \{\{contact\.firstname\}\}<\/mj-button>/);
+    await hoverTag(page, 'Learn more');
+    await canvas(page).getByRole('button', { name: 'Remove the variable' }).click();
+    await expect.poll(() => mjml(page)).toMatch(/>Learn more<\/mj-button>/);
   });
 });
 

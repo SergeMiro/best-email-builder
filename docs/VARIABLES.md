@@ -59,7 +59,8 @@ configured* when a user creates one.
 
 - The *Email provider variables* bar above the canvas is the one place to
   insert a variable. It grows under the pointer, or on a click, and lists the
-  variables as small badges. A badge's tooltip shows its tag.
+  variables as small badges, moving the email down rather than covering it.
+  A badge's tooltip shows its tag.
 - With a text or a button selected, a badge under the pointer types its tag
   where it would go, and wipes it out when the pointer leaves. Nothing is
   saved until you click the badge.
@@ -70,6 +71,13 @@ configured* when a user creates one.
 - `{{contact.firstname|there}}` sets a fallback for that one place.
 - The preview flags unknown tags, such as `{{contact.fistname}}`, before they
   reach anyone.
+
+## Removing a variable
+
+In the email, a tag under the pointer swaps its colors (a frame when it runs
+over two lines) and shows a **×** in its top-right corner. The × takes the
+tag out of the text or the button's label, with the space before it, so no
+double space or space before a comma is left. Ctrl+Z brings it back.
 
 ## Sending a campaign
 
