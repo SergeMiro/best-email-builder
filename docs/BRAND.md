@@ -8,7 +8,8 @@ font, and can repaint the email being edited.
 The first field is the company's website. *Get my brand* reads the site's
 logo, main color, headings color, font and name, and fills in the fields
 below. You can then change everything by hand (upload a logo, pick a color).
-A small preview follows every change.
+*Font size* sets the size of paragraphs, from 13 to 18 px (15 px until one
+is picked). A small preview follows every change.
 
 *Save* keeps the brand for the whole workspace:
 
@@ -28,6 +29,9 @@ email: a gallery template, an old one, or one built by hand.
 - Filled buttons and colored banners take the main color. Their text switches
   to white or dark, whichever is easier to read.
 - Bold headings take the headings color.
+- With a font size, paragraphs take it: body text of 13 to 18 px, neither bold
+  nor gray, with its line height scaled to match. Headings, buttons and
+  footers keep their sizes.
 - Colored links take the main color. If the main color is too light to read
   on white, they take the headings color instead.
 - Gray footers and body text keep their colors.

@@ -174,11 +174,11 @@ between the two with a sun / moon control.
 ## Brand
 
 `features/brand/` keeps a company's look (name, logo, main color, headings
-color, font) and applies it:
+color, font, text size) and applies it:
 
 | File | Role |
 |---|---|
-| `brand.js` | colors (parse, contrast, what reads on what), `cleanBrand`, and `applyBrand`: repaints an email by role — filled buttons and colored banners, bold headings, colored links, fonts — and optionally puts the logo or the name in the header and the name in the footer |
+| `brand.js` | colors (parse, contrast, what reads on what), `cleanBrand`, and `applyBrand`: repaints an email by role — filled buttons and colored banners, bold headings, colored links, fonts, paragraph sizes — and optionally puts the logo or the name in the header and the name in the footer |
 | `extract.js` | what a home page says: `readPage` (name, logo candidates, stylesheets, inline styles, theme color) and `brandFromCss` (custom properties, weights by selector, noise filtered, near colors clustered); `imageSize`, `logoWidthFor` |
 | `messages.js` | why a website could not be read, and the notes about what it did not give |
 | `useBrand.js` | the brand of a storage, read once and shared by the screens using it |

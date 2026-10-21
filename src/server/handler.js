@@ -21,10 +21,11 @@
  *                                                         the AI module: best-email-builder/ai/server)
  *   POST   {base}/proofread                       write   the mistakes of an email's texts (needs `generator`)
  *   POST   {base}/subjects                        write   three other subject lines (needs `generator`)
- *   GET    {base}/variables                       read    custom variables
+ *   GET    {base}/variables                       read    custom variables, and edits of system ones
  *   POST   {base}/variables                       write   create a custom variable
- *   PUT    {base}/variables/:key                  write   edit (label, group, sample, fallback)
- *   DELETE {base}/variables/:key                  write   delete
+ *   PUT    {base}/variables/:key                  write   edit (label, group, sample, fallback), a system
+ *                                                         variable's too (its tag stays yours)
+ *   DELETE {base}/variables/:key                  write   delete; a system variable's edit: back to yours
  *   GET    {base}/tags                            read    the workspace's tags
  *   POST   {base}/tags                            write   create a tag (needs `tagStore`)
  *   PUT    {base}/tags/:id                        write   rename it, change its color

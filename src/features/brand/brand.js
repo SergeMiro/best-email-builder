@@ -1,7 +1,7 @@
 // @ts-check
 /**
  * BRAND — the look of a company's emails: its name, its logo, a main color,
- * a color for headings and a font. Set once (by hand, or read from the
+ * a color for headings, a font and a text size. Set once (by hand, or read from the
  * company's website), it is used by every new email, template and block,
  * and can be applied to the email being edited.
  *
@@ -17,6 +17,9 @@
  *   colored links       take the main color, or the headings color when the
  *                       main one is too light to read on white;
  *   fonts               every text, button and menu link;
+ *   text size           paragraphs (not bold, 13 to 18 px, not gray): their
+ *                       line height follows; headings, labels and footers
+ *                       keep theirs;
  *   header              (optional) the logo — or the name — at the top, and
  *                       the name in the footer.
  *
@@ -35,10 +38,12 @@ import { parseMjml, parseMjmlFragment, serializeMjml } from '../../engine/mjml.j
  *   primary?: string,
  *   heading?: string,
  *   font?: string,
+ *   fontSize?: number,
  *   website?: string,
  * }} Brand
  *   `primary`: buttons, banners, links; `heading`: headings; colors as
  *   `#rrggbb`. `font`: one of the builder's web-safe stacks (FONT_OPTIONS).
+ *   `fontSize`: the paragraphs' size in px (BRAND_FONT_SIZES).
  *   `website`: where it was read from, to read it again.
  *
  * @typedef {import('../../engine/model.js').EmailNode} EmailNode
@@ -47,6 +52,8 @@ import { parseMjml, parseMjmlFragment, serializeMjml } from '../../engine/mjml.j
 const HEX = /^#[0-9a-f]{6}$/;
 const FONTS = new Set(FONT_OPTIONS.map((option) => option.value));
 export const MAX_LOGO_WIDTH = 240;
+/** The paragraphs' sizes a brand offers, in px; the builder's own is 15. */
+export const BRAND_FONT_SIZES = [13, 14, 15, 16, 17, 18];
 
 /* ── Colors ─────────────────────────────────────────────────────────────── */
 
@@ -202,6 +209,8 @@ export function cleanBrand(input) {
   const heading = cleanColor(source.heading);
   if (heading && HEX.test(heading)) brand.heading = heading;
   if (typeof source.font === 'string' && FONTS.has(source.font)) brand.font = source.font;
+  const fontSize = Number(source.fontSize);
+  if (BRAND_FONT_SIZES.includes(fontSize)) brand.fontSize = fontSize;
   const website = typeof source.website === 'string' ? source.website.trim() : '';
   if (/^https?:\/\/[^\s"'<>]+$/i.test(website) && website.length <= 500) brand.website = website;
   return brand;
@@ -240,6 +249,7 @@ function paletteOf(brand) {
     // A link must read on white: a too-light main color gives way.
     link: primary ? (contrastRatio(primary, PALETTE.white) >= 3 ? primary : brand.heading || PALETTE.ink) : null,
     font: brand.font || null,
+    fontSize: brand.fontSize || null,
   };
 }
 
@@ -256,6 +266,18 @@ const px = (size) => {
 
 /** @param {string|undefined} weight */
 const isBold = (weight) => /^(bold|bolder|[6-9]00)$/.test(String(weight ?? '').trim());
+
+/**
+ * A paragraph's attributes in a new size, its line height in proportion (a
+ * text without a size has MJML's 13 px).
+ * @param {Record<string, string>} attributes @param {number} size
+ */
+function resize(attributes, size) {
+  const from = px(attributes['font-size']) || 13;
+  const lineHeight = String(attributes['line-height'] ?? '').trim();
+  attributes['font-size'] = `${size}px`;
+  if (/^\d+(\.\d+)?px$/.test(lineHeight)) attributes['line-height'] = `${Math.round((px(lineHeight) * size) / from)}px`;
+}
 
 /**
  * The links of a text in a new color, when theirs is a color (a gray or a
@@ -300,6 +322,10 @@ function paint(node, palette, onColor) {
   if (FONT_TAGS.has(node.tag) && palette.font) set('font-family', palette.font);
 
   if (node.tag === 'mj-text' && content !== null) {
+    const size = px(attributes['font-size']) || 13;
+    if (palette.fontSize && !isBold(attributes['font-weight']) && size >= 13 && size <= 18 && !isMuted(attributes.color)) {
+      resize(attributes, palette.fontSize);
+    }
     if (onColor) {
       set('color', palette.onPrimary);
     } else {

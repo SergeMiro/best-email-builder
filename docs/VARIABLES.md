@@ -5,8 +5,10 @@ filled in on the server when you send. A raw tag never reaches a recipient.
 
 ## System variables
 
-System variables come from your application. Users can insert them but
-cannot change them.
+System variables come from your application. Users insert them, and may
+edit their name, group, sample value and value if empty with the pencil of
+their badge, but never their tag (see [Editing a system
+variable](#editing-a-system-variable)).
 
 There are none by default, apart from the unsubscribe link
 `{{ unsubscribe }}` (`DEFAULT_VARIABLES`), which the sending pipeline fills
@@ -55,6 +57,18 @@ Custom variables are shared by every template. The server keeps them in the
 reference). Without it, the server answers 501 *Custom variables are not
 configured* when a user creates one.
 
+## Editing a system variable
+
+The pencil of a system variable's badge opens the same dialog as for a
+custom one, with its tag frozen. What the user changes (name, group, sample
+value, value if empty) is stored like a custom variable, under the system
+variable's key: `PUT {base}/variables/:key` on the server, `saveVariable` in
+the storage. `mergeVariables` lays it over your variable and marks it
+`edited`; its tag, kind and token stay yours, and the unsubscribe link is
+never edited. Once edited, the dialog offers *Restore the default*: it
+deletes the edit (`DELETE {base}/variables/:key`) and your values are back.
+This needs the `variableStore` repository, as custom variables do.
+
 ## Inserting a variable
 
 - The *Email provider variables* bar above the canvas is the one place to
@@ -74,8 +88,9 @@ configured* when a user creates one.
 
 ## Removing a variable
 
-In the email, a tag under the pointer swaps its colors (a frame when it runs
-over two lines) and shows a **×** in its top-right corner. The × takes the
+In the email, a tag under the pointer swaps its colors, line by line when it
+runs over two (the words beside it keep theirs), and shows a **×** in its
+top-right corner. The × takes the
 tag out of the text or the button's label, with the space before it, so no
 double space or space before a comma is left. Ctrl+Z brings it back.
 

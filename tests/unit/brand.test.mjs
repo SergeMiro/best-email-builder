@@ -1,5 +1,5 @@
 /**
- * BRAND — a company's look (name, logo, main color, headings color, font),
+ * BRAND — a company's look (name, logo, main color, headings color, font, text size),
  * set by hand or read from its website, and applied to every email.
  *
  * What is locked here:
@@ -118,6 +118,9 @@ test('cleanBrand: colors as #rrggbb, known fonts, https or site-relative logos, 
     assert.equal(cleanBrand({ logoUrl }).logoUrl, undefined, logoUrl);
   }
   assert.deepEqual(cleanBrand({ font: 'Comic Sans MS', primary: 'red-ish', website: 'javascript:x', logoWidth: 100 }), {});
+  // The paragraphs' size: one of the sizes offered.
+  assert.deepEqual(cleanBrand({ fontSize: '17' }), { fontSize: 17 });
+  for (const fontSize of [12, 15.5, 40, 'big']) assert.deepEqual(cleanBrand({ fontSize }), {}, String(fontSize));
   assert.deepEqual(cleanBrand(null), {});
   assert.deepEqual(cleanBrand('acme'), {});
   assert.equal(hasBrand({}), false);
@@ -158,6 +161,18 @@ test('applyBrand on the starter: button, heading and font by role; footer gray k
   }
   assert.ok(validateMjml(branded).ok);
   assert.equal(applyBrand(branded, BRAND), branded, 'idempotent');
+
+  // The paragraphs' size, their line height in proportion; headings, the button and the gray footer keep theirs.
+  const large = nodesOf(applyBrand(starter, { fontSize: 18 }));
+  const paragraph = large.find((n) => n.tag === 'mj-text' && n.content.includes('Your text'));
+  assert.equal(paragraph.attributes['font-size'], '18px');
+  assert.equal(paragraph.attributes['line-height'], '29px');
+  assert.equal(large.find((n) => n.tag === 'mj-text' && n.content.includes('Your headline')).attributes['font-size'], '24px');
+  assert.equal(large.find((n) => n.tag === 'mj-button').attributes['font-size'], '15px');
+  assert.equal(large.find((n) => n.tag === 'mj-text' && n.content.includes('unsubscribe')).attributes['font-size'], '12px');
+  // A size chosen again replaces the first one.
+  const smaller = nodesOf(applyBrand(applyBrand(starter, { fontSize: 18 }), { fontSize: 14 }));
+  assert.equal(smaller.find((n) => n.tag === 'mj-text' && n.content.includes('Your text')).attributes['font-size'], '14px');
 
   // A light main color: the button text turns dark, links fall back to the headings color.
   const yellow = applyBrand(starter, { primary: '#ffe01b', heading: '#1a1a2e' });

@@ -17,7 +17,10 @@
  *   sendTest(input)             → { sent, failed, invalid, results } (optional: test send)
  *   listVariables()             → custom variables            (optional: user-defined
  *   saveVariable(variable)      → saved variable               variables, shared by
- *   deleteVariable(key)         → void                         every template)
+ *   deleteVariable(key)         → void                         every template, and
+ *                                                              users' edits of the
+ *                                                              system ones, under
+ *                                                              their key)
  *   listTags()                  → the workspace's tags        (optional: tags on
  *   saveTag(tag)                → saved tag                    templates, at most
  *   deleteTag(id)               → void                         three each; `list()`
@@ -38,7 +41,7 @@
 import { readDocument } from '../core/document.js';
 import { DEFAULT_ASSETS_PATH } from '../renderer/links.js';
 import { IMAGE_TYPES, imageUploadError } from '../validation/images.js';
-import { DEFAULT_VARIABLES, validateCustomVariable } from '../features/variables/catalog.js';
+import { DEFAULT_VARIABLES, isEditable, mergeVariables, validateCustomVariable, validateVariableEdit } from '../features/variables/catalog.js';
 import { cleanBrand } from '../features/brand/brand.js';
 import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/tags/tags.js';
 
@@ -276,7 +279,8 @@ export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = 
  *   brand?: Brand|null,
  *   assetsPath?: string,
  *   systemVariables?: EmailVariable[],
- * }} [options]  `systemVariables`: keys a custom variable may not take
+ * }} [options]  `systemVariables`: keys a custom variable may not take, and
+ *   whose names, samples… users may edit
  * @returns {TemplateStorage & {dump: () => object}}
  */
 export function createMemoryStorage({
@@ -455,6 +459,14 @@ export function createMemoryStorage({
       return [...customVariables.values()].map((v) => ({ ...v }));
     },
     async saveVariable(input, { create = false } = {}) {
+      // A system variable's edit: kept under its key, laid over it by `mergeVariables`.
+      const system = !create && systemVariables.find((v) => v.key === String(input?.key) && isEditable(v));
+      if (system) {
+        const { variable, errors } = validateVariableEdit(system, { ...customVariables.get(system.key), ...input });
+        if (errors) throw new StorageError(Object.values(errors)[0], 400, 'INVALID_VARIABLE');
+        customVariables.set(system.key, variable);
+        return mergeVariables([system], [variable])[0];
+      }
       const existing = [...systemVariables, ...customVariables.values()];
       if (!create && !customVariables.has(String(input?.key))) {
         throw new StorageError('Variable not found', 404, 'NOT_FOUND');

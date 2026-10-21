@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Braces, Loader2, Trash2 } from 'lucide-react';
+import { Braces, Loader2, RotateCcw, Trash2 } from 'lucide-react';
 import { useUi } from '../../ui/context.jsx';
 import { Button } from '../../ui/primitives/button.jsx';
 import { Input, Label } from '../../ui/primitives/fields.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
-import { CUSTOM_GROUP, VARIABLE_LIMITS, keyFromLabel, validateCustomVariable } from './catalog.js';
+import { CUSTOM_GROUP, VARIABLE_LIMITS, keyFromLabel, labelOf, tokenOf, validateCustomVariable, validateVariableEdit } from './catalog.js';
 
 /**
- * Create or edit a CUSTOM variable.
+ * Create or edit a CUSTOM variable, or edit a SYSTEM one (the application's):
+ * its tag is frozen, and the dialog restores the application's values rather
+ * than deleting it.
  *
  *   Name             what the menu shows ("Order number");
  *   Tag              proposed from the name, editable until the variable
@@ -24,12 +26,13 @@ import { CUSTOM_GROUP, VARIABLE_LIMITS, keyFromLabel, validateCustomVariable } f
  *   variables: import('./catalog.js').EmailVariable[],
  *   storage: import('../../storage/client.js').TemplateStorage,
  *   onSaved: (variable: import('./catalog.js').EmailVariable, created: boolean) => void,
- *   onDeleted?: (key: string) => void,
+ *   onDeleted?: (key: string, info?: {restored?: boolean}) => void,
  * }} props
  */
 export default function VariableDialog({ open, onOpenChange, variable = null, initialLabel = '', variables, storage, onSaved, onDeleted }) {
   const { t, notify, confirm } = useUi();
   const editing = Boolean(variable);
+  const system = editing && !variable.custom;
   const [form, setForm] = useState({ label: '', key: '', group: '', sample: '', fallback: '' });
   const [keyTouched, setKeyTouched] = useState(false);
   const [errors, setErrors] = useState({});
@@ -40,9 +43,9 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
     setForm(
       variable
         ? {
-            label: variable.label,
+            label: labelOf(variable, t),
             key: variable.key,
-            group: variable.group || '',
+            group: (system ? t(variable.group) : variable.group) || '',
             sample: variable.sample || '',
             fallback: variable.fallback || '',
           }
@@ -50,7 +53,7 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
     );
     setKeyTouched(false);
     setErrors({});
-  }, [open, variable, initialLabel]);
+  }, [open, variable, initialLabel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const groups = useMemo(
     () => [...new Set([CUSTOM_GROUP, ...variables.filter((v) => v.custom).map((v) => v.group)])].filter(Boolean),
@@ -72,7 +75,9 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
   const submit = async (e) => {
     e.preventDefault();
     const existing = variables.filter((v) => !editing || v.key !== variable.key);
-    const check = validateCustomVariable(form, { existing, editing: editing ? variable.key : null, t });
+    const check = system
+      ? validateVariableEdit(variable, form, { t })
+      : validateCustomVariable(form, { existing, editing: editing ? variable.key : null, t });
     if (check.errors) {
       setErrors(check.errors);
       return;
@@ -101,6 +106,20 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
     try {
       await storage.deleteVariable(variable.key);
       onDeleted?.(variable.key);
+      onOpenChange(false);
+    } catch (error) {
+      notify('error', error.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** A system variable: its edit is deleted, the application's values are back. */
+  const restore = async () => {
+    setBusy(true);
+    try {
+      await storage.deleteVariable(variable.key);
+      onDeleted?.(variable.key, { restored: true });
       onOpenChange(false);
     } catch (error) {
       notify('error', error.message);
@@ -154,7 +173,7 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
             'key',
             t('Tag'),
             { disabled: editing, maxLength: VARIABLE_LIMITS.key, className: 'eb:font-mono eb:text-[12px]' },
-            form.key ? `{{${form.key}}}` : null
+            variable ? tokenOf(variable) : form.key ? `{{${form.key}}}` : null
           )}
           <div className="eb:space-y-1.5">
             <Label htmlFor="eb-var-group">{t('Group')}</Label>
@@ -164,7 +183,7 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
               value={form.group}
               onChange={set('group')}
               maxLength={VARIABLE_LIMITS.group}
-              placeholder={t(CUSTOM_GROUP)}
+              placeholder={t(system ? variable.group : CUSTOM_GROUP)}
             />
             <datalist id="eb-var-groups">
               {groups.map((g) => (
@@ -177,7 +196,13 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
             {field('fallback', t('Value if empty'), { maxLength: VARIABLE_LIMITS.fallback }, t('When a recipient has none'))}
           </div>
           <div className="eb:flex eb:items-center eb:gap-2 eb:pt-1">
-            {editing && (
+            {system && variable.edited && (
+              <Button variant="ghost" onClick={restore} disabled={busy}>
+                <RotateCcw />
+                {t('Restore the default')}
+              </Button>
+            )}
+            {editing && !system && (
               <Button variant="ghost" className="eb:text-destructive eb:hover:text-destructive" onClick={remove} disabled={busy}>
                 <Trash2 />
                 {t('Delete')}

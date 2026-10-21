@@ -2,8 +2,12 @@
 /**
  * CUSTOM VARIABLES — created by users in the builder, shared by every template.
  *
- * System variables (the `variables` option of the handler) are read-only; a
- * custom variable can never take one of their keys. A key never changes after
+ * A custom variable can never take a key of the system variables (the
+ * `variables` option of the handler). Users may still edit a system
+ * variable's name, group, sample and value if empty: the edit is stored in the
+ * same repository under its key (`update` inserts it the first time), laid over
+ * the application's by `catalog()`, and removed — back to the application's —
+ * by `remove`. Its tag stays the application's. A key never changes after
  * creation: templates contain it.
  *
  * Storage is a REPOSITORY supplied by the application;
@@ -11,7 +15,7 @@
  */
 
 import { identity } from '../i18n/index.js';
-import { DEFAULT_VARIABLES, mergeVariables, validateCustomVariable } from '../features/variables/catalog.js';
+import { DEFAULT_VARIABLES, isEditable, mergeVariables, validateCustomVariable, validateVariableEdit } from '../features/variables/catalog.js';
 import { HttpError } from './errors.js';
 
 /**
@@ -27,15 +31,15 @@ import { HttpError } from './errors.js';
 
 const actorName = (user) => (user ? String(user.name ?? user.id ?? '') || null : null);
 
-/** Public shape (no audit fields). @param {any} row @returns {EmailVariable} */
-const toVariable = (row) => ({
+/** Public shape (no audit fields). @param {any} row @param {boolean} custom @returns {EmailVariable} */
+const toVariable = (row, custom) => ({
   key: row.key,
   label: row.label,
   group: row.group,
   sample: row.sample || '',
   fallback: row.fallback || '',
   description: row.description || '',
-  custom: true,
+  ...(custom ? { custom: true } : {}),
 });
 
 /**
@@ -51,10 +55,13 @@ export function createVariableService({ repository = null, system = DEFAULT_VARI
     return repository;
   };
 
+  const systemKeys = new Set(system.map((v) => v.key));
+  const editable = (/** @type {string} */ key) => system.find((v) => v.key === key && isEditable(v)) || null;
+
   const service = {
-    /** Custom variables only. */
+    /** Custom variables, and the edits of system ones (no `custom` flag). */
     async listCustom() {
-      return repository ? (await repository.list()).map(toVariable) : [];
+      return repository ? (await repository.list()).map((row) => toVariable(row, !systemKeys.has(row.key))) : [];
     },
 
     /** System + custom: the catalog used for rendering. */
@@ -75,6 +82,16 @@ export function createVariableService({ repository = null, system = DEFAULT_VARI
     /** @param {string} key @param {any} input @param {any} [user] */
     async update(key, input, user = null) {
       const store = requireRepository();
+      const target = editable(key);
+      if (target) {
+        const current = (await service.listCustom()).find((v) => v.key === key);
+        const { variable, errors } = validateVariableEdit(target, { ...current, ...input, key }, { t });
+        if (errors) throw Object.assign(new HttpError(400, Object.values(errors)[0], 'INVALID_VARIABLE'), { issues: errors });
+        if (!(await store.update(key, { ...variable, updatedBy: actorName(user) }))) {
+          await store.insert({ ...variable, createdBy: actorName(user) });
+        }
+        return mergeVariables([target], [variable])[0];
+      }
       const current = (await service.listCustom()).find((v) => v.key === key);
       if (!current) throw new HttpError(404, t('Variable not found'), 'NOT_FOUND');
       const { variable, errors } = validateCustomVariable({ ...current, ...input, key }, { editing: key, t });

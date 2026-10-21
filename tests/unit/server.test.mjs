@@ -298,6 +298,33 @@ test('custom variables: create, edit, delete, used by preview and test send', as
   assert.equal((await call('DELETE', '/api/email-builder/variables/order.number')).status, 404);
 });
 
+test('a system variable edited by a user: its sample in the preview, its tag kept; deleted, the application’s is back', async () => {
+  const { call, handler } = setup();
+  const put = (key, body) => call('PUT', `/api/email-builder/variables/${key}`, body);
+  const edited = await put('contact.firstname', { key: 'other', label: 'Given name', sample: 'Jo', token: '{{ evil }}' });
+  assert.equal(edited.status, 200);
+  const variable = (await edited.json()).data;
+  assert.equal(variable.key, 'contact.firstname');
+  assert.equal(variable.label, 'Given name');
+  assert.equal(variable.edited, true);
+  // Edited again: the first edit is updated, not inserted twice.
+  assert.equal((await put('contact.firstname', { label: 'Given name', group: '', sample: 'Joe' })).status, 200);
+  const list = (await (await call('GET', '/api/email-builder/variables')).json()).data;
+  assert.deepEqual(list.map((v) => [v.key, v.sample, v.group, v.custom]), [['contact.firstname', 'Joe', 'Recipient', undefined]]);
+  const firstname = (await handler.catalog()).find((v) => v.key === 'contact.firstname');
+  assert.equal(firstname.token, undefined);
+  assert.equal(firstname.label, 'Given name');
+
+  const preview = (await (await call('POST', '/api/email-builder/render', { mjml: MJML })).json()).data;
+  assert.ok(preview.html.includes('Hello Joe'));
+  // The unsubscribe link is not edited, and a label is still required.
+  assert.equal((await put('unsubscribe', { label: 'X' })).status, 404);
+  assert.equal((await put('contact.firstname', { label: '' })).status, 400);
+
+  assert.equal((await call('DELETE', '/api/email-builder/variables/contact.firstname')).status, 200);
+  assert.equal((await handler.catalog()).find((v) => v.key === 'contact.firstname').label, 'First name');
+});
+
 test('custom variables without a store: listing is empty, writes are 501', async () => {
   const { call } = setup({ variableStore: null });
   assert.deepEqual((await (await call('GET', '/api/email-builder/variables')).json()).data, []);

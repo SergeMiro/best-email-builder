@@ -22,7 +22,7 @@ import Toolbar from './Toolbar.jsx';
 import Drawer from './Drawer.jsx';
 import { useEmailEditorState } from './useEmailEditorState.js';
 import { useLayoutWidth } from './useLayoutWidth.js';
-import { CANVAS_MIN, SidePanel, panelTrack, useSidePanels } from './SidePanel.jsx';
+import { CANVAS_MIN, FOLD_TRANSITION, SidePanel, panelTrack, useSidePanels } from './SidePanel.jsx';
 
 /**
  * THE EMAIL BUILDER — the screen.
@@ -54,8 +54,8 @@ import { CANVAS_MIN, SidePanel, panelTrack, useSidePanels } from './SidePanel.js
  *
  * ── SIDE PANELS (`SidePanel`) ───────────────────────────────────────────────
  * The blocks and the properties beside the canvas: their border with it is
- * dragged to resize them, a button folds them to a rail. Remembered in the
- * browser.
+ * dragged to resize them, a button folds them to a rail (gliding, as the
+ * canvas to the mobile view). Remembered in the browser.
  *
  * ── AUTOSAVE (feature `autosave`) ───────────────────────────────────────────
  * Template already saved: server save without a version. New template: local
@@ -169,7 +169,7 @@ function Builder({
   const layout = useLayoutWidth(rootRef);
   const compact = layout !== 'wide';
   const blocksInDrawer = layout === 'narrow';
-  const { panels, update: updatePanel } = useSidePanels();
+  const { panels, update: updatePanel, moving: movingPanels } = useSidePanels();
   const gridRef = useRef(null);
   /** Open drawer of the compact layouts: 'blocks', 'properties' or null. */
   const [drawer, setDrawer] = useState(null);
@@ -562,7 +562,7 @@ function Builder({
       />
       <div
         ref={gridRef}
-        className="eb:relative eb:grid eb:min-h-0 eb:flex-1 eb:grid-rows-1"
+        className={cn('eb:relative eb:grid eb:min-h-0 eb:flex-1 eb:grid-rows-1', Object.keys(movingPanels).length > 0 && FOLD_TRANSITION)}
         style={{ gridTemplateColumns: columns }}
       >
         {!blocksInDrawer && (
@@ -570,6 +570,7 @@ function Builder({
             name="blocks"
             side="left"
             state={panels.blocks}
+            moving={movingPanels.blocks}
             onChange={(patch) => updatePanel('blocks', patch)}
             room={() => roomFor('properties')}
             labels={{ resize: t('Width of the blocks'), hide: t('Hide the blocks'), show: t('Show the blocks') }}
@@ -629,6 +630,7 @@ function Builder({
             name="properties"
             side="right"
             state={panels.properties}
+            moving={movingPanels.properties}
             onChange={(patch) => updatePanel('properties', patch)}
             room={() => roomFor('blocks')}
             labels={{ resize: t('Width of the properties'), hide: t('Hide the properties'), show: t('Show the properties') }}

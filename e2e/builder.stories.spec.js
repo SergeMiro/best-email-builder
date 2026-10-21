@@ -244,17 +244,58 @@ test.describe('Side panels', () => {
     const before = (await frame.boundingBox()).width;
     await page.getByRole('button', { name: 'Hide the blocks' }).click();
     await page.getByRole('button', { name: 'Hide the properties' }).click();
-    expect(await widthOf(sidePanel(page, 'blocks'))).toBe(40);
-    expect(await widthOf(sidePanel(page, 'properties'))).toBe(40);
-    expect((await frame.boundingBox()).width).toBeGreaterThan(before + 600);
+    await expect.poll(() => widthOf(sidePanel(page, 'blocks'))).toBe(40);
+    await expect.poll(() => widthOf(sidePanel(page, 'properties'))).toBe(40);
+    await expect.poll(async () => (await frame.boundingBox()).width).toBeGreaterThan(before + 600);
     await expect(page.locator('[data-block-id]')).toHaveCount(0);
 
     await page.reload();
     await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready');
     await page.getByRole('button', { name: 'Show the blocks' }).click();
     await page.getByRole('button', { name: 'Show the properties' }).click();
-    expect(await widthOf(sidePanel(page, 'blocks'))).toBe(328);
+    await expect.poll(() => widthOf(sidePanel(page, 'blocks'))).toBe(328);
     await expect(panel(page).getByRole('heading', { name: 'Email' })).toBeVisible();
+  });
+
+  test('folding and unfolding glide like the mobile view: the content keeps its width and fades', async ({ page }) => {
+    await openBuilder(page);
+    // The panel's width and its content's, frame by frame, from the click on.
+    const glide = (label) =>
+      page.evaluate(async (label) => {
+        const properties = document.querySelector('[data-panel="properties"]');
+        /** @type {HTMLElement} */ (document.querySelector(`button[aria-label="${label}"]`)).click();
+        const frames = [];
+        const start = performance.now();
+        while (performance.now() - start < 700) {
+          await new Promise(requestAnimationFrame);
+          const content = properties.querySelector('[data-testid="eb-properties"]');
+          frames.push({
+            width: Math.round(properties.getBoundingClientRect().width),
+            content: content ? Math.round(content.getBoundingClientRect().width) : 0,
+            opacity: content ? Number(getComputedStyle(content.parentElement).opacity) : 0,
+          });
+        }
+        return frames;
+      }, label);
+    const between = (frames) => frames.filter(({ width }) => width > 40 && width < 416);
+    const fading = (frames) => frames.filter(({ opacity }) => opacity > 0.1 && opacity < 0.9);
+
+    const folding = await glide('Hide the properties');
+    expect(between(folding).length).toBeGreaterThan(5);
+    expect(fading(folding).length).toBeGreaterThan(3);
+    // Never squeezed: it keeps the panel's width (less the border) until it is gone.
+    expect(new Set(folding.map(({ content }) => content).filter(Boolean))).toEqual(new Set([415]));
+    expect(folding.at(-1)).toEqual({ width: 40, content: 0, opacity: 0 });
+
+    const unfolding = await glide('Show the properties');
+    expect(between(unfolding).length).toBeGreaterThan(5);
+    expect(fading(unfolding).length).toBeGreaterThan(3);
+    expect(new Set(unfolding.map(({ content }) => content))).toEqual(new Set([415]));
+    expect(unfolding.at(-1)).toEqual({ width: 416, content: 415, opacity: 1 });
+
+    // With reduced motion, at once.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    expect((await glide('Hide the properties'))[0]).toEqual({ width: 40, content: 0, opacity: 0 });
   });
 
   test('the properties are compact: a field and a select of the same height', async ({ page }) => {
@@ -265,6 +306,20 @@ test.describe('Side panels', () => {
     const select = await props.locator('[data-slot=select-trigger]').first().boundingBox();
     expect(Math.round(field.height)).toBe(26);
     expect(Math.round(select.height)).toBe(26);
+  });
+
+  test('a text box is resized in height only: its width stays the panel’s', async ({ page }) => {
+    await openBuilder(page);
+    const box = panel(page).getByRole('textbox', { name: 'Preview text', exact: true });
+    const before = await box.boundingBox();
+    // The resize handle, bottom right: dragged left and down.
+    await page.mouse.move(before.x + before.width - 3, before.y + before.height - 3);
+    await page.mouse.down();
+    await page.mouse.move(before.x + before.width - 120, before.y + before.height + 60, { steps: 8 });
+    await page.mouse.up();
+    const after = await box.boundingBox();
+    expect(after.width).toBe(before.width);
+    expect(after.height).toBeGreaterThan(before.height + 40);
   });
 });
 
@@ -639,21 +694,21 @@ test.describe('Variables', () => {
     await expect(badges.getByRole('button', { name: 'New variable' })).toBeVisible();
 
     // Nothing selected: the tooltip names the tag, nothing is typed; a click says what to do.
-    await badges.getByRole('button', { name: 'Company' }).hover();
+    await badges.getByRole('button', { name: 'Company', exact: true }).hover();
     await expect(page.getByRole('tooltip')).toHaveText('{{company.name}}');
     await expect(preview).toHaveCount(0);
-    await badges.getByRole('button', { name: 'Company' }).click();
+    await badges.getByRole('button', { name: 'Company', exact: true }).click();
     await expect(notice(page, 'Select a text or a button first.')).toBeVisible();
     expect(await mjml(page)).toBe(before);
 
     await canvas(page).getByText('Learn more').click();
     await bar.hover();
-    const lastName = badges.getByRole('button', { name: 'Last name' });
+    const lastName = badges.getByRole('button', { name: 'Last name', exact: true });
     await lastName.hover();
     await expect(page.getByRole('tooltip')).toHaveText('{{contact.lastname}}');
     await expect(button).toContainText('Learn more {{contact.lastname}}');
     // Another badge: only the end changes.
-    await badges.getByRole('button', { name: 'First name' }).hover();
+    await badges.getByRole('button', { name: 'First name', exact: true }).hover();
     await expect(button).toContainText('Learn more {{contact.firstname}}');
     expect(await mjml(page)).toBe(before);
     await page.mouse.move(700, 700, { steps: 8 });
@@ -678,7 +733,7 @@ test.describe('Variables', () => {
     await page.keyboard.press('Home');
     const before = await mjml(page);
     const badges = await openBar(page);
-    const firstName = badges.getByRole('button', { name: 'First name' });
+    const firstName = badges.getByRole('button', { name: 'First name', exact: true });
     await firstName.hover();
     await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveText('{{contact.firstname}}');
     expect(await mjml(page)).toBe(before);
@@ -714,10 +769,9 @@ test.describe('Variables', () => {
     await expect(page.getByRole('tooltip')).toHaveText('{{order_number}}');
   });
 
-  test('a custom variable is validated, edited, then deleted; system variables are read-only', async ({ page }) => {
+  test('a custom variable is validated, edited, then deleted', async ({ page }) => {
     await openBuilder(page);
     let badges = await openBar(page);
-    await expect(badges.getByRole('button', { name: /^Edit/ })).toHaveCount(0);
     await badges.getByRole('button', { name: 'New variable' }).click();
     const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
     await dialog.getByLabel('Name').fill('Email');
@@ -748,6 +802,40 @@ test.describe('Variables', () => {
     await expect(notice(page, 'Variable deleted.')).toBeVisible();
     expect((await stored(page)).variables).toEqual([]);
     await expect(badges.getByRole('button', { name: 'Loyalty points', exact: true })).toHaveCount(0);
+  });
+
+  test('the application’s variables are edited too: name and sample change, the tag stays; restored', async ({ page }) => {
+    await openBuilder(page);
+    let badges = await openBar(page);
+    await expect(badges.getByRole('button', { name: /^Edit “/ })).toHaveCount(5);
+    // The unsubscribe link is the sending pipeline's: no pencil.
+    await expect(badges.getByRole('button', { name: 'Edit “Unsubscribe link”' })).toHaveCount(0);
+
+    await badges.getByRole('button', { name: 'Edit “First name”' }).click();
+    const edit = page.getByRole('dialog').filter({ hasText: 'Edit variable' });
+    await expect(edit.getByLabel('Tag')).toBeDisabled();
+    await expect(edit.getByText('{{contact.firstname}}')).toBeVisible();
+    // Not deleted: it is the application's.
+    await expect(edit.getByRole('button', { name: 'Delete' })).toHaveCount(0);
+    await expect(edit.getByRole('button', { name: 'Restore the default' })).toHaveCount(0);
+    await edit.getByLabel('Name').fill('Given name');
+    await edit.getByLabel('Sample value').fill('Jo');
+    await edit.getByRole('button', { name: 'Save' }).click();
+    await expect(notice(page, 'Variable “Given name” saved.')).toBeVisible();
+    expect((await stored(page)).variables).toEqual([expect.objectContaining({ key: 'contact.firstname', label: 'Given name', sample: 'Jo' })]);
+
+    await canvas(page).getByText(/Your text\./).click();
+    badges = await openBar(page);
+    await expect(badges.locator('[data-variable="contact.firstname"]')).toHaveText('Given name');
+    await badges.getByRole('button', { name: 'Given name', exact: true }).click();
+    await expect.poll(() => mjml(page)).toMatch(/Your text\. \{\{contact\.firstname\}\}</);
+
+    await badges.getByRole('button', { name: 'Edit “Given name”' }).click();
+    await edit.getByRole('button', { name: 'Restore the default' }).click();
+    await expect(notice(page, 'Variable restored to its default.')).toBeVisible();
+    expect((await stored(page)).variables).toEqual([]);
+    badges = await openBar(page);
+    await expect(badges.locator('[data-variable="contact.firstname"]')).toHaveText('First name');
   });
 
   test('{ } button of the subject: search and keyboard — type, arrows, Enter', async ({ page }) => {
@@ -846,6 +934,48 @@ test.describe('Variables', () => {
     await hoverTag(page, 'Learn more');
     await canvas(page).getByRole('button', { name: 'Remove the variable' }).click();
     await expect.poll(() => mjml(page)).toMatch(/>Learn more<\/mj-button>/);
+  });
+
+  test('a tag cut over two lines: each line of it swaps its colours, never the words beside it', async ({ page }) => {
+    await openBuilder(page);
+    await canvas(page).getByText(/Your text\./).dblclick();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.type(' {{ contact.firstname }}');
+    await page.keyboard.press('Escape');
+    await expect.poll(() => mjml(page)).toMatch(/Your text\. \{\{ contact\.firstname \}\}</);
+    // The text narrowed until the tag breaks after its "{{" (the rest fits on the next line); the pointer on its last line.
+    const end = await canvas(page)
+      .locator('body')
+      .evaluate((body) => {
+        const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const start = node.data.indexOf('{{ contact');
+          if (start === -1) continue;
+          const range = document.createRange();
+          const widthOf = (from, to) => {
+            range.setStart(node, from);
+            range.setEnd(node, to);
+            return range.getBoundingClientRect().width;
+          };
+          const width = Math.max(widthOf(0, start + 2), widthOf(start + 3, node.data.indexOf('}}', start) + 2));
+          node.parentElement.style.width = `${Math.ceil(width) + 4}px`;
+          range.setStart(node, start);
+          range.setEnd(node, node.data.indexOf('}}', start) + 2);
+          const last = [...range.getClientRects()].filter((r) => r.width).at(-1);
+          return { x: last.x + last.width / 2, y: last.y + last.height / 2 };
+        }
+        return null;
+      });
+    const at = await page.locator('.eb-canvas-frame').boundingBox();
+    await page.mouse.move(at.x + end.x, at.y + end.y, { steps: 4 });
+
+    const pieces = canvas(page).getByTestId('eb-canvas-tag');
+    await expect(pieces.first()).toBeVisible();
+    await expect(pieces).toHaveCount(2);
+    expect((await pieces.first().boundingBox()).width).toBeLessThan(40);
+    await expect(pieces).toHaveText(['{{', 'contact.firstname }}']);
+    await canvas(page).getByRole('button', { name: 'Remove the variable' }).click();
+    await expect.poll(() => mjml(page)).toMatch(/Your text\.</);
   });
 });
 

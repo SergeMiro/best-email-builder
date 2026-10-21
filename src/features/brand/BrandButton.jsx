@@ -21,7 +21,7 @@ import { FONT_OPTIONS, FONT_STACK, PALETTE } from '../../blocks/shared.js';
 import { imageUploadError } from '../../validation/images.js';
 import { isSafeUrl } from '../../validation/urls.js';
 import { logoWidthFor } from './extract.js';
-import { applyBrand, cleanBrand, contrastRatio, hasBrand, readableOn } from './brand.js';
+import { BRAND_FONT_SIZES, applyBrand, cleanBrand, contrastRatio, hasBrand, readableOn } from './brand.js';
 import { BRAND_NOTES } from './messages.js';
 
 /**
@@ -47,8 +47,12 @@ const toForm = (/** @type {Brand} */ brand) => ({
   primary: brand.primary || '',
   heading: brand.heading || '',
   font: brand.font || '',
+  fontSize: brand.fontSize || 0,
   website: brand.website || '',
 });
+
+/** The builder's own paragraph size: what the size list shows until one is picked. */
+const TEXT_SIZE = 15;
 
 /** A logo address the builder accepts: uploaded (relative) or https. @param {string} url */
 const isLogoUrl = (url) => !url || url.startsWith('/') || (/^https:\/\//i.test(url) && isSafeUrl(url, 'image'));
@@ -345,20 +349,40 @@ export default function BrandButton({ context }) {
                   </div>
                 </div>
 
-                <div className="eb:flex eb:flex-col eb:gap-1.5">
-                  <Label htmlFor="eb-brand-font">{t('Font')}</Label>
-                  <Select value={form.font || FONT_STACK} onValueChange={(font) => set({ font })}>
-                    <SelectTrigger id="eb-brand-font">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FONT_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <span style={{ fontFamily: option.value }}>{option.label}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="eb:grid eb:gap-4 eb:sm:grid-cols-2">
+                  <div className="eb:flex eb:flex-col eb:gap-1.5">
+                    <Label htmlFor="eb-brand-font">{t('Font')}</Label>
+                    <Select value={form.font || FONT_STACK} onValueChange={(font) => set({ font })}>
+                      <SelectTrigger id="eb-brand-font">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FONT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            <span style={{ fontFamily: option.value }}>{option.label}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="eb:flex eb:flex-col eb:gap-1.5">
+                    <Label htmlFor="eb-brand-font-size">{t('Font size')}</Label>
+                    <Select value={String(form.fontSize || TEXT_SIZE)} onValueChange={(size) => set({ fontSize: Number(size) })}>
+                      <SelectTrigger id="eb-brand-font-size" aria-describedby="eb-brand-font-size-hint">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BRAND_FONT_SIZES.map((size) => (
+                          <SelectItem key={size} value={String(size)}>
+                            {size} px
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p id="eb-brand-font-size-hint" className="eb:text-[11px] eb:text-foreground-muted">
+                      {t('Paragraphs; headings keep theirs')}
+                    </p>
+                  </div>
                 </div>
               </fieldset>
 
@@ -413,6 +437,8 @@ function BrandPreview({ brand, fallbackName }) {
   const heading = brand.heading || PALETTE.navy;
   const link = contrastRatio(primary, PALETTE.white) >= 3 ? primary : heading;
   const font = brand.font || FONT_STACK;
+  // The preview is drawn at 60%: 15 px of text, 9 px here.
+  const textSize = ((brand.fontSize || TEXT_SIZE) * 3) / 5;
   const name = brand.name || fallbackName;
   return (
     <div className="eb:flex eb:flex-col eb:gap-1.5">
@@ -441,7 +467,7 @@ function BrandPreview({ brand, fallbackName }) {
             <div className="eb:text-[11px] eb:leading-tight eb:font-bold" style={{ color: heading }}>
               {t('A headline')}
             </div>
-            <div className="eb:text-[9px] eb:leading-snug" style={{ color: PALETTE.ink }}>
+            <div className="eb:leading-snug" style={{ color: PALETTE.ink, fontSize: textSize }}>
               {t('Some text, with')}{' '}
               <span className="eb:underline" style={{ color: link }}>
                 {t('a link')}

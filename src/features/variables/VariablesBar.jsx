@@ -3,7 +3,7 @@ import { Braces, ChevronDown, Link2, Pencil, Plus } from 'lucide-react';
 import { useUi } from '../../ui/context.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { TooltipWrap } from '../../ui/primitives/misc.jsx';
-import { tokenOf } from './catalog.js';
+import { isEditable, labelOf, tokenOf } from './catalog.js';
 import VariableDialog from './VariableDialog.jsx';
 
 // Hover intent: the pointer crossing the thin bar on its way to the email
@@ -27,7 +27,9 @@ const BADGE =
  *
  * There are none by default: when the storage supports it, users create
  * their own here (the + button) and edit or delete them with the pencil of
- * their badge; they are shared by every template. The unsubscribe link is
+ * their badge; they are shared by every template. The application's get a
+ * pencil too: their name, sample… change, their tag does not, and the dialog
+ * restores the application's. The unsubscribe link is
  * inserted as a link (or becomes the URL of the selected button), so it
  * shows no typed preview.
  */
@@ -55,8 +57,8 @@ export default function VariablesBar({ context }) {
 
   const badge = (variable) => {
     const link = variable.kind === 'link';
-    const label = variable.custom ? variable.label : t(variable.label);
-    const editable = canManageVariables && variable.custom;
+    const label = labelOf(variable, t);
+    const editable = canManageVariables && isEditable(variable);
     const button = (
       <button
         type="button"
@@ -84,7 +86,7 @@ export default function VariablesBar({ context }) {
         {tip}
         <button
           type="button"
-          aria-label={t('Edit “{name}”', { name: variable.label })}
+          aria-label={t('Edit “{name}”', { name: label })}
           title={t('Edit')}
           onClick={() => setDialog({ variable })}
           className={cn(BADGE, 'eb:rounded-l-none eb:px-1.5 eb:text-foreground-muted')}
@@ -180,9 +182,9 @@ export default function VariablesBar({ context }) {
               notify('success', t('Variable “{name}” saved.', { name: variable.label }));
             }
           }}
-          onDeleted={async () => {
+          onDeleted={async (_key, { restored = false } = {}) => {
             await reloadVariables();
-            notify('success', t('Variable deleted.'));
+            notify('success', restored ? t('Variable restored to its default.') : t('Variable deleted.'));
           }}
         />
       )}

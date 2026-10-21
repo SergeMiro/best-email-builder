@@ -14,9 +14,12 @@
  * an empty string — never to the raw tag.
  *
  * Two kinds of variables:
- *   - SYSTEM variables, given by the application (`variables` prop / option),
- *     read-only in the interface. None by default (`DEFAULT_VARIABLES` holds
- *     the unsubscribe link only); `EXAMPLE_VARIABLES` is a ready-made set;
+ *   - SYSTEM variables, given by the application (`variables` prop / option).
+ *     None by default (`DEFAULT_VARIABLES` holds the unsubscribe link only);
+ *     `EXAMPLE_VARIABLES` is a ready-made set. Users may edit their name,
+ *     group, sample and value if empty, never their tag (`validateVariableEdit`):
+ *     the storage keeps the edit beside the custom variables, under the same
+ *     key, and `mergeVariables` lays it over the application's;
  *   - CUSTOM variables, created by users in the builder and kept by the
  *     storage (`listVariables` / `saveVariable` / `deleteVariable`), shared by
  *     every template.
@@ -40,6 +43,7 @@ import { identity } from '../../i18n/index.js';
  *   token?: string,
  *   kind?: 'text'|'link',
  *   custom?: boolean,
+ *   edited?: boolean,
  * }} EmailVariable
  */
 
@@ -87,6 +91,25 @@ export const VARIABLE_LIMITS = { key: 60, label: 80, group: 40, sample: 200, fal
 const KEY_SHAPE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/;
 /** An application's keys may keep the capitals of its email provider's tags: Brevo's `contact.FIRSTNAME`. */
 const SYSTEM_KEY_SHAPE = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)*$/;
+
+/** What a user may change in a system variable: its tag, kind and token stay the application's. */
+const EDITABLE_FIELDS = /** @type {const} */ (['label', 'group', 'sample', 'fallback', 'description']);
+
+/**
+ * Whether users may edit a variable: all but a link (the unsubscribe link is
+ * filled in by the sending pipeline).
+ *
+ * @param {EmailVariable} variable
+ */
+export const isEditable = (variable) => variable.kind !== 'link';
+
+/**
+ * The name shown: a system variable's is translated, unless a user wrote it.
+ *
+ * @param {EmailVariable} variable
+ * @param {import('../../i18n/index.js').Translate} [t]
+ */
+export const labelOf = (variable, t = identity) => (variable.custom || variable.edited ? variable.label : t(variable.label));
 
 /** Tag inserted by the editor. @param {EmailVariable} variable */
 export function tokenOf(variable) {
@@ -181,13 +204,39 @@ export function validateCustomVariable(input, { existing = [], editing = null, t
 }
 
 /**
- * System variables first, then custom ones (a custom variable never replaces
- * a system one).
+ * Validates a user's edit of a SYSTEM variable (`validateCustomVariable`'s
+ * rules; its key cannot change, an empty group is the application's).
+ * Returns `{ variable }`, the edit to store under its key, or `{ errors }`.
+ *
+ * @param {EmailVariable} system
+ * @param {Partial<EmailVariable>} input
+ * @param {{t?: import('../../i18n/index.js').Translate}} [options]
+ */
+export function validateVariableEdit(system, input, { t = identity } = {}) {
+  const group = clean(input?.group, VARIABLE_LIMITS.group) || system.group;
+  const { variable, errors } = validateCustomVariable({ ...system, ...input, group }, { editing: system.key, t });
+  if (errors) return { errors };
+  const { custom: _custom, ...edit } = /** @type {EmailVariable} */ (variable);
+  return { variable: edit };
+}
+
+/**
+ * System variables first, then custom ones. A stored variable under a system
+ * variable's key is a user's edit of it: it changes its name, group, sample,
+ * value if empty and description, never its tag, kind or token (nor a link at
+ * all), and marks it `edited`.
  *
  * @param {EmailVariable[]} system
  * @param {EmailVariable[]} custom
  */
 export function mergeVariables(system, custom = []) {
   const keys = new Set(system.map((v) => v.key));
-  return [...system, ...custom.filter((v) => !keys.has(v.key)).map((v) => ({ ...v, custom: true }))];
+  const edits = new Map(custom.filter((v) => keys.has(v.key)).map((v) => [v.key, v]));
+  const withEdit = (/** @type {EmailVariable} */ variable) => {
+    const edit = edits.get(variable.key);
+    if (!edit || !isEditable(variable)) return variable;
+    const fields = Object.fromEntries(EDITABLE_FIELDS.filter((field) => edit[field] !== undefined).map((field) => [field, edit[field]]));
+    return { ...variable, ...fields, edited: true };
+  };
+  return [...system.map(withEdit), ...custom.filter((v) => !keys.has(v.key)).map((v) => ({ ...v, custom: true }))];
 }

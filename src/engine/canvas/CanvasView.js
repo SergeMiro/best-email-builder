@@ -114,10 +114,11 @@ export function createCanvasView(options) {
   const textTools = make('eb-ui-text');
   textTools.setAttribute('role', 'toolbar');
   textTools.setAttribute('aria-label', t('Text formatting'));
-  // A merge tag under the pointer: drawn in inverted colours, with a × that
-  // takes it out (rather than erasing it letter by letter).
-  const tagBox = make('eb-ui-tag');
-  tagBox.setAttribute('data-testid', 'eb-canvas-tag');
+  // A merge tag under the pointer: drawn again in swapped colours, a piece
+  // per line it runs over, with a × that takes it out (rather than erasing it
+  // letter by letter).
+  const tagPieces = doc.createElement('div');
+  ui.appendChild(tagPieces);
   const tagClear = doc.createElement('button');
   tagClear.type = 'button';
   tagClear.className = 'eb-ui-tag-clear';
@@ -471,33 +472,63 @@ export function createCanvasView(options) {
     return '#ffffff';
   }
 
+  /**
+   * The pieces of a tag, one per line it runs over: each one's box (frame
+   * viewport) and its characters. Measured letter by letter, so a piece
+   * holds the tag's letters only, never the words beside them.
+   * @param {ReturnType<typeof textMap>} map @param {{start: number, end: number}} tag
+   */
+  function piecesOf(map, tag) {
+    /** @type {{top: number, bottom: number, left: number, right: number, text: string}[]} */
+    const pieces = [];
+    const range = doc.createRange();
+    for (let at = tag.start; at < tag.end; at++) {
+      const start = map.pointOf(at);
+      const end = map.pointOf(at + 1, true);
+      if (!start || !end) continue;
+      range.setStart(start.node, start.offset);
+      range.setEnd(end.node, end.offset);
+      const r = range.getBoundingClientRect();
+      const last = pieces.at(-1);
+      // A space where the line breaks has no box: it ends the piece before.
+      if (!r.width || !r.height) {
+        if (last) last.text += map.text[at];
+      } else if (last && r.top < (last.top + last.bottom) / 2) {
+        Object.assign(last, { top: Math.min(last.top, r.top), bottom: Math.max(last.bottom, r.bottom), right: Math.max(last.right, r.right) });
+        last.text += map.text[at];
+      } else pieces.push({ top: r.top, bottom: r.bottom, left: r.left, right: r.right, text: map.text[at] });
+    }
+    return pieces.map((piece) => ({ ...piece, text: piece.text.trim() }));
+  }
+
   function drawTag() {
-    const tag = tagHover && !drag ? tagsOf(tagHover.id)?.tags[tagHover.index] : null;
-    const rects = tag ? [...tag.range.getClientRects()].filter((r) => r.width && r.height) : [];
-    tagBox.hidden = tagClear.hidden = !tag || !rects.length;
-    if (!tag || !rects.length) return;
-    const top = Math.min(...rects.map((r) => r.top));
-    const bottom = Math.max(...rects.map((r) => r.bottom));
-    const left = Math.min(...rects.map((r) => r.left));
-    const right = Math.max(...rects.map((r) => r.right));
-    place(tagBox, { top: top + win.scrollY, left: left + win.scrollX - 2, width: right - left + 4, height: bottom - top });
+    const found = tagHover && !drag ? tagsOf(tagHover.id) : null;
+    const tag = found && tagHover ? found.tags[tagHover.index] : null;
+    const pieces = found && tag ? piecesOf(found.map, tag) : [];
+    tagPieces.replaceChildren();
+    tagClear.hidden = !tag || !pieces.length;
+    if (!tag || !pieces.length) return;
     const textEl = tag.range.startContainer.parentElement;
     const style = textEl ? win.getComputedStyle(textEl) : null;
-    // On one line: the tag again, in the colours swapped (white on dark
-    // becomes dark on white). Cut over two lines: a frame of its colour.
-    const filled = rects.length === 1 && style;
-    tagBox.classList.toggle('eb-ui-tag-frame', !filled);
-    tagBox.textContent = filled ? tag.range.toString() : '';
-    tagBox.style.background = filled ? style.color : '';
-    tagBox.style.color = filled ? backgroundOf(textEl) : '';
-    tagBox.style.borderColor = style ? style.color : '';
-    if (filled) {
-      tagBox.style.font = style.font;
-      tagBox.style.letterSpacing = style.letterSpacing;
-      tagBox.style.lineHeight = `${bottom - top}px`;
+    // The tag again, in the colours swapped (white on dark becomes dark on white).
+    for (const piece of pieces) {
+      const box = doc.createElement('div');
+      box.className = 'eb-ui-tag';
+      box.setAttribute('data-testid', 'eb-canvas-tag');
+      place(box, { top: piece.top + win.scrollY, left: piece.left + win.scrollX - 2, width: piece.right - piece.left + 4, height: piece.bottom - piece.top });
+      box.textContent = piece.text;
+      if (style) {
+        box.style.background = style.color;
+        box.style.color = backgroundOf(textEl);
+        box.style.font = style.font;
+        box.style.letterSpacing = style.letterSpacing;
+      }
+      box.style.lineHeight = `${piece.bottom - piece.top}px`;
+      tagPieces.appendChild(box);
     }
-    tagClear.style.top = `${top + win.scrollY - 9}px`;
-    tagClear.style.left = `${right + win.scrollX - 6}px`;
+    // At the tag's top right: the end of its first line.
+    tagClear.style.top = `${pieces[0].top + win.scrollY - 9}px`;
+    tagClear.style.left = `${pieces[0].right + win.scrollX - 6}px`;
     const label = t('Remove the variable');
     if (tagClear.title !== label) {
       tagClear.title = label;

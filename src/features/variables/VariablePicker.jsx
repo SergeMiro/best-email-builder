@@ -3,7 +3,7 @@ import { Pencil, Plus, Search } from 'lucide-react';
 import { useT } from '../../ui/context.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { SEARCH_KEYS, SearchKeyHint, useSearchShortcut } from '../../ui/primitives/searchShortcut.jsx';
-import { tokenOf } from './catalog.js';
+import { isEditable, labelOf, tokenOf } from './catalog.js';
 
 /**
  * List of variables with a search field — opened by the buttons next to the
@@ -36,7 +36,7 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
       .filter(
         (v) =>
           !q ||
-          t(v.label).toLowerCase().includes(q) ||
+          labelOf(v, t).toLowerCase().includes(q) ||
           v.key.toLowerCase().includes(q) ||
           t(v.group).toLowerCase().includes(q)
       );
@@ -123,13 +123,13 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
                       className="eb:flex eb:min-w-0 eb:flex-1 eb:items-center eb:gap-2 eb:px-2 eb:py-1.5 eb:text-left eb:text-[13px]"
                       title={variable.description || undefined}
                     >
-                      <span className="eb:min-w-0 eb:flex-1 eb:truncate">{variable.custom ? variable.label : t(variable.label)}</span>
+                      <span className="eb:min-w-0 eb:flex-1 eb:truncate">{labelOf(variable, t)}</span>
                       <code className="eb:shrink-0 eb:font-mono eb:text-[10.5px] eb:text-foreground-muted">{tokenOf(variable)}</code>
                     </button>
-                    {onEdit && variable.custom && (
+                    {onEdit && isEditable(variable) && (
                       <button
                         type="button"
-                        aria-label={t('Edit “{name}”', { name: variable.label })}
+                        aria-label={t('Edit “{name}”', { name: labelOf(variable, t) })}
                         title={t('Edit')}
                         onClick={() => onEdit(variable)}
                         className="eb:mr-1 eb:flex eb:size-6 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-md eb:text-foreground-muted eb:opacity-0 eb:group-hover/var:opacity-100 eb:hover:bg-background eb:hover:text-foreground eb:focus-visible:opacity-100"

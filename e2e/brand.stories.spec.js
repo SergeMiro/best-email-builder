@@ -46,7 +46,7 @@ test.describe('Brand', () => {
     expect(await page.evaluate(() => window.__brandImports)).toEqual(['acme.example']);
     await expect(box.getByLabel('Main color')).toHaveValue(PINK);
     await expect(box.getByLabel('Headings color')).toHaveValue('#1a1a2e');
-    await expect(box.getByLabel('Font')).toHaveText('Georgia');
+    await expect(box.getByLabel('Font', { exact: true })).toHaveText('Georgia');
     await expect(box.getByLabel('Your website')).toHaveValue('https://acme.example/');
     await expect(box.getByTestId('eb-brand-notes')).toHaveText('No logo was found on the website. Upload it below.');
     // The preview follows at once.
@@ -84,9 +84,14 @@ test.describe('Brand', () => {
     await box.getByLabel('Company name').fill('Globex');
     await box.getByLabel('Main color').fill('#0060df');
     await box.getByLabel('Headings color').fill('#14213d');
-    await box.getByLabel('Font').click();
+    await box.getByLabel('Font', { exact: true }).click();
     await page.getByRole('option', { name: 'Verdana', exact: true }).click();
     await expect(box.getByTestId('eb-brand-preview').getByText('Learn more')).toHaveCSS('background-color', 'rgb(0, 96, 223)');
+    // The paragraphs' size: the builder's 15 px until one is picked; the preview, drawn at 60%, follows.
+    await expect(box.getByLabel('Font size')).toHaveText('15 px');
+    await box.getByLabel('Font size').click();
+    await page.getByRole('option', { name: '17 px', exact: true }).click();
+    await expect(box.getByTestId('eb-brand-preview').getByText(/^Some text, with/)).toHaveCSS('font-size', '10.2px');
 
     // A logo address must be https.
     await box.getByLabel('Logo', { exact: true }).fill('http://globex.example/logo.png');
@@ -104,6 +109,7 @@ test.describe('Brand', () => {
       primary: '#0060df',
       heading: '#14213d',
       font: 'Verdana, Geneva, sans-serif',
+      fontSize: 17,
     });
 
     // A new email: the starter in the brand, named after it.
@@ -114,6 +120,7 @@ test.describe('Brand', () => {
     expect(fresh).toContain('font-family="Verdana, Geneva, sans-serif"');
     expect(fresh).toContain('color="#14213d"');
     expect(fresh).toContain('Globex · 1 Main Street, Springfield');
+    expect(fresh).toMatch(/<mj-text[^>]*font-size="17px" line-height="27px"[^>]*>\s*Hello,/);
 
     // Opened again, the dialog shows the saved brand.
     await page.getByTestId('eb-brand-button').click();

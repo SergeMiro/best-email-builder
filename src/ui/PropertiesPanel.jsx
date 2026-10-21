@@ -192,7 +192,7 @@ export default function PropertiesPanel({
   const block = selection?.blockId ? editor.getBlock(selection.blockId) : null;
 
   return (
-    <aside aria-label={t('Properties')} className="eb:min-h-0 eb:overflow-y-auto eb:border-l eb:border-border" data-testid="eb-properties">
+    <aside aria-label={t('Properties')} className="eb:min-h-0 eb:overflow-y-auto" data-testid="eb-properties">
       {!selection ? (
         <TemplateSettings
           editor={editor}

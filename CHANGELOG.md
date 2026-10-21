@@ -7,15 +7,24 @@ All notable changes are documented here. The format follows
 ## [Unreleased]
 
 ### Added
-- A variable in the email, under the pointer, swaps its colors (a frame when
-  it runs over two lines) and shows a **×** in its top-right corner. The ×
-  takes the tag out, with the space before it, in a text (being edited or
-  not) or a button's label. Ctrl+Z brings it back.
+- A variable in the email, under the pointer, swaps its colors (line by line
+  when it runs over two, never the words beside it) and shows a **×** in its
+  top-right corner. The × takes the tag out, with the space before it, in a
+  text (being edited or not) or a button's label. Ctrl+Z brings it back.
 - The side panels are resized by dragging their border towards the canvas or
   away from it (or with the arrow keys once it is focused; a double-click
   restores the default width), and fold to a narrow rail with the round button
   on that border; the same button, on the rail's border, unfolds them. The
   editor remembers both in the browser.
+- Every variable of the bar can be edited, not only the user's own: the
+  pencil of an application's variable changes its name, group, sample value
+  and value if empty — never its tag. The storage keeps the edit under the
+  variable's key (`PUT /variables/:key`, `saveVariable`) and *Restore the
+  default* deletes it. The unsubscribe link stays as it is.
+- *Font size* in the *Brand* dialog, next to the font: paragraphs take it
+  (13 to 18 px, line height scaled to match), while headings, buttons and
+  footers keep their sizes. `cleanBrand` keeps `fontSize`, `applyBrand` applies
+  it.
 - System variables' keys may keep the capitals of an email provider's tags,
   as Brevo's `contact.FIRSTNAME` (custom variables keep lowercase keys).
 - The live demo offers Brevo's contact attributes (first name, last name,
@@ -24,6 +33,11 @@ All notable changes are documented here. The format follows
   preview.
 
 ### Changed
+- The side panels fold and unfold smoothly, in the time the canvas takes to
+  switch to the mobile view (350 ms): their content keeps its width and slides
+  out under the border, fading, instead of disappearing at once. With reduced
+  motion, they still fold at once. The panel keeps the border with the canvas
+  in both states, so no line doubles while it moves.
 - The *Email provider variables* bar no longer covers the email when it
   opens: the email moves down to make room, and back up when the bar closes.
   Under the pointer, it opens after a short pause, so crossing it on the way
@@ -40,6 +54,8 @@ All notable changes are documented here. The format follows
   same), the AI action chips 22 px, with less space between the fields.
 - *Write with AI* and *Rewrite with AI* take the instruction in a box of
   several lines: Enter sends it, Shift+Enter starts a new line.
+- A text box (the preview text, a variable's description…) is resized in
+  height only: its width stays the panel's, like the other fields.
 
 ## [0.14.0] — 2026-10-20
 

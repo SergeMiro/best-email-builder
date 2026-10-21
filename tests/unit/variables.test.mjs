@@ -7,9 +7,11 @@ import {
   EXAMPLE_VARIABLES,
   defineVariables,
   keyFromLabel,
+  labelOf,
   mergeVariables,
   tokenOf,
   validateCustomVariable,
+  validateVariableEdit,
 } from '../../src/features/variables/catalog.js';
 import {
   applyVariables,
@@ -55,9 +57,33 @@ test('custom variables are validated', () => {
   assert.ok(validateCustomVariable({ label: 'X', key: 'contact.email' }, { existing: SYSTEM }).errors.key);
   // Editing keeps the key, whatever is sent.
   assert.equal(validateCustomVariable({ label: 'Y', key: 'hack' }, { editing: 'order.number' }).variable.key, 'order.number');
-  // A custom variable never replaces a system one.
-  const merged = mergeVariables(SYSTEM, [{ ...CUSTOM, key: 'contact.firstname', label: 'Fake' }]);
-  assert.equal(merged.find((v) => v.key === 'contact.firstname').label, 'First name');
+});
+
+test('a system variable edited by a user: its name, group, sample, value if empty — never its tag', () => {
+  const brevo = { key: 'contact.FIRSTNAME', label: 'First name', group: 'Brevo', sample: 'Jane', token: '{{ contact.FIRSTNAME }}' };
+  const { variable: edit } = validateVariableEdit(brevo, { key: 'other', label: ' Given  name ', group: '', sample: 'Jo', token: '{{x}}' });
+  assert.deepEqual(edit, { key: 'contact.FIRSTNAME', label: 'Given name', group: 'Brevo', sample: 'Jo', fallback: '', description: '' });
+  assert.ok(validateVariableEdit(brevo, { label: '' }).errors.label);
+
+  const [merged] = mergeVariables([brevo], [edit]);
+  assert.deepEqual(merged, { ...brevo, label: 'Given name', sample: 'Jo', fallback: '', description: '', edited: true });
+  assert.equal(tokenOf(merged), '{{ contact.FIRSTNAME }}');
+  // Its name is the user's: not translated any more.
+  const t = (/** @type {string} */ key) => (key === 'First name' ? 'Prénom' : key);
+  assert.equal(labelOf(brevo, t), 'Prénom');
+  assert.equal(labelOf(merged, t), 'Given name');
+
+  // Whatever is stored under a system key changes no tag, no kind, and no link.
+  const forged = mergeVariables(SYSTEM, [
+    { key: 'contact.firstname', label: 'Fake', token: '{{ evil }}', kind: 'link' },
+    { key: 'unsubscribe', label: 'Fake', token: '{{ evil }}', kind: 'text' },
+  ]);
+  const firstname = forged.find((v) => v.key === 'contact.firstname');
+  assert.equal(firstname.label, 'Fake');
+  assert.equal(tokenOf(firstname), '{{contact.firstname}}');
+  assert.equal(firstname.kind, undefined);
+  assert.deepEqual(forged.find((v) => v.key === 'unsubscribe'), DEFAULT_VARIABLES[0]);
+  assert.equal(forged.length, SYSTEM.length);
 });
 
 test('replacement: escaped values, inline and defined fallbacks, never a raw tag', () => {
@@ -105,4 +131,14 @@ test('memory storage keeps custom variables', async () => {
   );
   await storage.deleteVariable('order.number');
   assert.deepEqual(await storage.listVariables(), []);
+
+  // A system variable's edit, under its key; deleting it restores the application's.
+  const saved = await storage.saveVariable({ key: 'contact.firstname', label: 'Given name', sample: 'Jo' });
+  assert.equal(saved.label, 'Given name');
+  assert.equal(saved.edited, true);
+  const catalog = mergeVariables(SYSTEM, await storage.listVariables());
+  assert.equal(catalog.find((v) => v.key === 'contact.firstname').sample, 'Jo');
+  await assert.rejects(storage.saveVariable({ key: 'unsubscribe', label: 'X' }), (e) => e.status === 404);
+  await storage.deleteVariable('contact.firstname');
+  assert.equal(mergeVariables(SYSTEM, await storage.listVariables()).find((v) => v.key === 'contact.firstname').label, 'First name');
 });

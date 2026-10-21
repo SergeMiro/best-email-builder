@@ -157,7 +157,7 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
 
   // The brand is kept too; reading it from a website needs a server, so the
   // demo has no "Get my brand" field.
-  storage = createMemoryStorage({ render, brand: read(BRAND_KEY, null) });
+  storage = createMemoryStorage({ render, brand: read(BRAND_KEY, null), systemVariables: variables });
   const index = new Map(); // memory id → saved entry
 
   /** The gallery's templates and three tags, once. */
@@ -189,8 +189,10 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
   }
 
   const ready = (async () => {
+    // A system variable's key: a visitor's edit of it, not a variable of their own.
+    const systemKeys = new Set(variables.map((variable) => variable.key));
     for (const variable of read(VARIABLES_KEY)) {
-      await storage.saveVariable(variable, { create: true }).catch(() => {});
+      await storage.saveVariable(variable, { create: !systemKeys.has(variable.key) }).catch(() => {});
     }
     // The memory storage numbers the tags again: saved id → its id now.
     const tagIds = new Map();

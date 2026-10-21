@@ -58,7 +58,6 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
   border: 1px solid #dfe3ea; font: 400 12px/1 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #2b3038; }
 .eb-ui-text input:focus { border-color: ${PRIMARY}; }
 .eb-ui-tag { position: absolute; pointer-events: none; padding: 0 2px; border-radius: 3px; white-space: pre; overflow: visible; }
-.eb-ui-tag-frame { background: none; border: 1.5px solid; }
 .eb-ui-tag-clear { all: unset; position: absolute; box-sizing: border-box; width: 16px; height: 16px; display: grid;
   place-items: center; border-radius: 50%; background: #1f2433; color: #fff; cursor: pointer; pointer-events: auto;
   box-shadow: 0 0 0 1.5px #fff, 0 2px 6px rgba(16, 24, 40, 0.3); }

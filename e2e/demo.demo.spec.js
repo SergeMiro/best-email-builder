@@ -75,6 +75,25 @@ test("Brevo's variables: the bar inserts Brevo's tags, the preview shows their s
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   const preview = page.getByRole('dialog').filter({ hasText: 'Email preview' });
   await expect(preview.frameLocator('iframe[title="Email preview"]').getByText('Your text. Jane')).toBeVisible({ timeout: 30_000 });
+  await page.keyboard.press('Escape');
+
+  // Edited like any variable: its sample changes, its tag stays Brevo's; kept after a reload.
+  await bar.hover();
+  await badges.getByRole('button', { name: 'Edit “First name”' }).click();
+  const edit = page.getByRole('dialog').filter({ hasText: 'Edit variable' });
+  await expect(edit.getByText('{{ contact.FIRSTNAME }}')).toBeVisible();
+  await edit.getByLabel('Sample value').fill('Marie');
+  await edit.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  await expect(preview.frameLocator('iframe[title="Email preview"]').getByText('Your text. Marie')).toBeVisible({ timeout: 30_000 });
+  await page.keyboard.press('Escape');
+  await page.reload();
+  // The unsaved email is offered back: not needed here.
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Start over' }).click();
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await bar.hover();
+  await badges.getByRole('button', { name: 'Edit “First name”' }).click();
+  await expect(edit.getByLabel('Sample value')).toHaveValue('Marie');
 });
 
 test('French switch', async ({ page }) => {

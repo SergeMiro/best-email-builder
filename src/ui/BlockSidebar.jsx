@@ -121,7 +121,7 @@ export default function BlockSidebar({ editor, disabled = false, onAdded }) {
   const blocks = editor.listBlocks();
 
   return (
-    <aside aria-label={t('Blocks')} className="eb:min-h-0 eb:space-y-5 eb:overflow-y-auto eb:border-r eb:border-border eb:p-3">
+    <aside aria-label={t('Blocks')} className="eb:min-h-0 eb:space-y-5 eb:overflow-y-auto eb:p-3">
       {GROUPS.map((group) => {
         const items = blocks.filter((b) => b.kind === group.kind && b.mjml);
         if (!items.length) return null;
