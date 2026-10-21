@@ -85,6 +85,8 @@ const RESERVED_KEYS = new Set(['unsubscribe', 'mirror']);
 export const VARIABLE_LIMITS = { key: 60, label: 80, group: 40, sample: 200, fallback: 200, description: 200 };
 
 const KEY_SHAPE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/;
+/** An application's keys may keep the capitals of its email provider's tags: Brevo's `contact.FIRSTNAME`. */
+const SYSTEM_KEY_SHAPE = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)*$/;
 
 /** Tag inserted by the editor. @param {EmailVariable} variable */
 export function tokenOf(variable) {
@@ -120,7 +122,7 @@ export function keyFromLabel(label) {
 
 /**
  * Checks an application-provided catalog (keys must be unique and safe to
- * embed in a tag).
+ * embed in a tag; capitals are allowed, as in Brevo's `contact.FIRSTNAME`).
  *
  * @param {EmailVariable[]} variables
  * @returns {EmailVariable[]}
@@ -128,7 +130,7 @@ export function keyFromLabel(label) {
 export function defineVariables(variables) {
   const seen = new Set();
   for (const variable of variables) {
-    if (!variable || !KEY_SHAPE.test(variable.key || '')) {
+    if (!variable || !SYSTEM_KEY_SHAPE.test(variable.key || '')) {
       throw new Error(`variables: invalid key "${variable?.key}"`);
     }
     if (seen.has(variable.key)) throw new Error(`variables: duplicate key "${variable.key}"`);

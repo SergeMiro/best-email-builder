@@ -14,7 +14,14 @@ All notable changes are documented here. The format follows
 - The side panels are resized by dragging their border towards the canvas or
   away from it (or with the arrow keys once it is focused; a double-click
   restores the default width), and fold to a narrow rail with the round button
-  on that border. The editor remembers both in the browser.
+  on that border; the same button, on the rail's border, unfolds them. The
+  editor remembers both in the browser.
+- System variables' keys may keep the capitals of an email provider's tags,
+  as Brevo's `contact.FIRSTNAME` (custom variables keep lowercase keys).
+- The live demo offers Brevo's contact attributes (first name, last name,
+  email address, mobile number) in the variables bar, inserted as Brevo's own
+  tags (`{{ contact.FIRSTNAME }}`) and shown with their samples in the
+  preview.
 
 ### Changed
 - The *Email provider variables* bar no longer covers the email when it
@@ -27,7 +34,8 @@ All notable changes are documented here. The format follows
   *Duplicate* / *Delete* row: the toolbar of the selection frame on the canvas
   does it. Columns, social icons and menu links, which are not dragged, get
   arrows in that toolbar to move them among their siblings. With every block
-  selected (Ctrl+A), the panel keeps a *Delete* button.
+  selected (Ctrl+A), the panel keeps a *Delete* button. Its title no longer
+  has a line under it.
 - Denser properties: fields, lists and color pickers are 26 px high (all the
   same), the AI action chips 22 px, with less space between the fields.
 - *Write with AI* and *Rewrite with AI* take the instruction in a box of

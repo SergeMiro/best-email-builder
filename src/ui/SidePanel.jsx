@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, PanelLeftOpen, PanelRightOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from './primitives/cn.js';
 import { TooltipWrap } from './primitives/misc.jsx';
 
@@ -12,8 +12,8 @@ import { TooltipWrap } from './primitives/misc.jsx';
  * The border between a panel and the canvas is dragged to resize the panel
  * (or moved with the arrow keys once focused; a double-click puts the default
  * width back). The round button on that border folds the panel to a narrow
- * rail, and the rail unfolds it. Widths and folds are remembered in this
- * browser, for this viewer only.
+ * rail; the same button, on the rail's border, unfolds it. Widths and folds
+ * are remembered in this browser, for this viewer only.
  *
  * The widths are wishes: the canvas keeps `CANVAS_MIN`, the panels give way
  * down to their `min` when the builder is narrower than all of them.
@@ -32,6 +32,8 @@ export const RAIL_WIDTH = 40;
 export const CANVAS_MIN = { wide: 640, medium: 480 };
 
 const STORAGE_KEY = 'best-email-builder:side-panels';
+/** Centred on the border between the panel and the canvas. */
+const EDGE = { left: 'eb:right-0 eb:translate-x-1/2', right: 'eb:left-0 eb:-translate-x-1/2' };
 const KEY_STEP = 16;
 
 /** @typedef {{width: number, collapsed: boolean}} PanelState */
@@ -98,34 +100,21 @@ export function SidePanel({ name, side, state, onChange, room, labels, children 
   const { min, max } = SIDE_PANELS[name];
   // Dragging towards the canvas widens the panel.
   const sign = side === 'left' ? 1 : -1;
-  const edge = side === 'left' ? 'eb:right-0 eb:translate-x-1/2' : 'eb:left-0 eb:-translate-x-1/2';
   const widest = () => clamp(room(), min, max);
   const rendered = () => Math.round(ref.current?.getBoundingClientRect().width || state.width);
 
   if (state.collapsed) {
-    const Open = side === 'left' ? PanelLeftOpen : PanelRightOpen;
     return (
-      <div className="eb:min-h-0" data-panel={name} data-collapsed="true">
-        <TooltipWrap label={labels.show} side={side === 'left' ? 'right' : 'left'}>
-          <button
-            type="button"
-            aria-label={labels.show}
-            aria-expanded="false"
-            onClick={() => onChange({ collapsed: false })}
-            className={cn(
-              'eb:flex eb:h-full eb:w-full eb:cursor-pointer eb:justify-center eb:border-border eb:bg-background eb:pt-3 eb:text-foreground-lighter eb:transition-colors eb:outline-none',
-              'eb:hover:bg-surface-100 eb:hover:text-foreground eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:focus-visible:ring-inset',
-              side === 'left' ? 'eb:border-r' : 'eb:border-l'
-            )}
-          >
-            <Open className="eb:size-4" aria-hidden="true" />
-          </button>
-        </TooltipWrap>
+      <div
+        className={cn('eb:relative eb:min-h-0 eb:border-border eb:bg-background', side === 'left' ? 'eb:border-r' : 'eb:border-l')}
+        data-panel={name}
+        data-collapsed="true"
+      >
+        <EdgeToggle side={side} collapsed label={labels.show} onClick={() => onChange({ collapsed: false })} />
       </div>
     );
   }
 
-  const Fold = side === 'left' ? ChevronLeft : ChevronRight;
   return (
     <div ref={ref} className="eb:relative eb:flex eb:min-h-0 eb:min-w-0 eb:flex-col eb:*:min-h-0 eb:*:flex-1" data-panel={name} data-collapsed="false">
       {children}
@@ -138,7 +127,7 @@ export function SidePanel({ name, side, state, onChange, room, labels, children 
         aria-valuenow={state.width}
         tabIndex={0}
         data-dragging={dragging ? 'true' : undefined}
-        className={cn('eb:group eb:absolute eb:inset-y-0 eb:z-20 eb:w-2 eb:cursor-col-resize eb:touch-none eb:outline-none', edge)}
+        className={cn('eb:group eb:absolute eb:inset-y-0 eb:z-20 eb:w-2 eb:cursor-col-resize eb:touch-none eb:outline-none', EDGE[side])}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
           event.preventDefault();
@@ -175,21 +164,33 @@ export function SidePanel({ name, side, state, onChange, room, labels, children 
           aria-hidden="true"
         />
       </div>
-      <TooltipWrap label={labels.hide} side={side === 'left' ? 'right' : 'left'}>
-        <button
-          type="button"
-          aria-label={labels.hide}
-          aria-expanded="true"
-          onClick={() => onChange({ collapsed: true })}
-          className={cn(
-            'eb:absolute eb:top-1/2 eb:z-30 eb:flex eb:size-5.5 eb:-translate-y-1/2 eb:cursor-pointer eb:items-center eb:justify-center eb:rounded-full eb:border eb:border-border eb:bg-background eb:text-foreground-lighter eb:shadow-xs eb:transition-colors eb:outline-none',
-            'eb:hover:border-primary/50 eb:hover:text-foreground eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50',
-            edge
-          )}
-        >
-          <Fold className="eb:size-3.5" aria-hidden="true" />
-        </button>
-      </TooltipWrap>
+      <EdgeToggle side={side} collapsed={false} label={labels.hide} onClick={() => onChange({ collapsed: true })} />
     </div>
+  );
+}
+
+/**
+ * The round button on a panel's border, the same folded or not: its arrow
+ * points the way the panel goes.
+ * @param {{side: 'left'|'right', collapsed: boolean, label: string, onClick: () => void}} props
+ */
+function EdgeToggle({ side, collapsed, label, onClick }) {
+  const Arrow = (side === 'left') === collapsed ? ChevronRight : ChevronLeft;
+  return (
+    <TooltipWrap label={label} side={side === 'left' ? 'right' : 'left'}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={!collapsed}
+        onClick={onClick}
+        className={cn(
+          'eb:absolute eb:top-1/2 eb:z-30 eb:flex eb:size-5.5 eb:-translate-y-1/2 eb:cursor-pointer eb:items-center eb:justify-center eb:rounded-full eb:border eb:border-border eb:bg-background eb:text-foreground-lighter eb:shadow-xs eb:transition-colors eb:outline-none',
+          'eb:hover:border-primary/50 eb:hover:text-foreground eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50',
+          EDGE[side]
+        )}
+      >
+        <Arrow className="eb:size-3.5" aria-hidden="true" />
+      </button>
+    </TooltipWrap>
   );
 }

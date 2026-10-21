@@ -34,6 +34,9 @@ test('catalog: none by default but the unsubscribe link; unique keys, tags', () 
   assert.equal(tokenOf(EXAMPLE_VARIABLES[0]), '{{contact.firstname}}');
   assert.throws(() => defineVariables([{ key: 'a' }, { key: 'a' }]), /duplicate/);
   assert.throws(() => defineVariables([{ key: 'A B' }]), /invalid key/);
+  // The capitals of an email provider's tags (Brevo), in system variables only.
+  assert.doesNotThrow(() => defineVariables([{ key: 'contact.FIRSTNAME' }]));
+  assert.ok(validateCustomVariable({ key: 'contact.FIRSTNAME', label: 'First name' }).errors.key);
 });
 
 test('keys proposed from labels', () => {

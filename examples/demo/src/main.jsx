@@ -1,7 +1,7 @@
 import { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
 // The two blocks through their own entries, as an application using them apart would.
-import { EmailBuilder } from 'best-email-builder/builder';
+import { DEFAULT_VARIABLES, EmailBuilder } from 'best-email-builder/builder';
 import { TemplateLibrary } from 'best-email-builder/library';
 import 'best-email-builder/styles.css';
 import {
@@ -28,6 +28,21 @@ import { COMPETITORS } from './competitors.js';
 import { initialLocale, rememberLocale } from './locale.js';
 
 const REPOSITORY_URL = import.meta.env.VITE_REPOSITORY_URL || 'https://github.com/SergeMiro/best-email-builder';
+
+/**
+ * The variables of an email provider, Brevo: its contact attributes, written
+ * as Brevo writes them. The bar inserts tags that Brevo fills in itself when
+ * it sends; the preview shows the samples. Labels come from `TEXT`.
+ */
+const BREVO_VARIABLES = [
+  { key: 'contact.FIRSTNAME', sample: 'Jane' },
+  { key: 'contact.LASTNAME', sample: 'Doe' },
+  { key: 'contact.EMAIL', sample: 'jane.doe@example.com' },
+  { key: 'contact.SMS', sample: '+33 6 12 34 56 78' },
+].map((variable) => ({ ...variable, label: variable.key, group: 'Brevo', token: `{{ ${variable.key} }}` }));
+
+/** @param {string[]} labels */
+const variablesIn = (labels) => [...BREVO_VARIABLES.map((variable, i) => ({ ...variable, label: labels[i] })), ...DEFAULT_VARIABLES];
 
 const INSTALL = 'npm install best-email-builder';
 const AUTHOR_URL = 'https://smiro.dev';
@@ -56,6 +71,8 @@ const TEXT = {
     expand: 'Full screen',
     shrink: 'Exit full screen',
     note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
+    // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
+    variables: ['First name', 'Last name', 'Email address', 'Mobile number'],
     aiNote: '“Proofread” finds the mistakes of the whole email, “Write with AI” writes a text on a topic, “Rewrite with AI” reworks a selected text and “Suggest subjects” offers three subject lines, with your own key: OpenAI, Claude, Mistral, Gemini, OpenRouter or any OpenAI-compatible API. Gemini and Mistral are free and answer in seconds; OpenRouter’s free models take minutes. The key stays in this browser and goes only to the provider you choose.',
     aiConnected: 'Connected to {provider} · {model}.',
     aiChange: 'Change provider or model',
@@ -68,6 +85,7 @@ const TEXT = {
     deleteOff: 'Deleting is turned off in this demo.',
     comments: {
       opened: 'opened from your own library',
+      variables: 'your email provider’s tags (here Brevo’s), offered in the bar above the email',
       optional: 'Optional: without `ai`, no AI button and no AI code.',
       keys: 'Each user picks a provider and connects their own key:',
     },
@@ -94,6 +112,8 @@ const TEXT = {
     expand: 'Plein écran',
     shrink: 'Réduire',
     note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
+    // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
+    variables: ['Prénom', 'Nom', 'Adresse e-mail', 'Numéro de mobile'],
     aiNote: '« Relire » trouve les fautes de tout l’e-mail, « Écrire avec l’IA » rédige un texte sur un sujet, « Réécrire avec l’IA » retravaille le texte sélectionné et « Suggérer des objets » propose trois objets, avec votre propre clé : OpenAI, Claude, Mistral, Gemini, OpenRouter ou toute API compatible OpenAI. Gemini et Mistral sont gratuits et répondent en quelques secondes ; les modèles gratuits d’OpenRouter prennent plusieurs minutes. La clé reste dans ce navigateur et n’est envoyée qu’au fournisseur choisi.',
     aiConnected: 'Connecté à {provider} · {model}.',
     aiChange: 'Changer de fournisseur ou de modèle',
@@ -106,6 +126,7 @@ const TEXT = {
     deleteOff: 'La suppression est désactivée dans cette démo.',
     comments: {
       opened: 'ouvert depuis votre propre bibliothèque',
+      variables: 'les variables de votre outil d’e-mailing (ici Brevo), proposées dans la barre au-dessus de l’e-mail',
       optional: 'Facultatif : sans `ai`, ni bouton IA ni code IA.',
       keys: 'Chaque utilisateur choisit un fournisseur et connecte sa propre clé :',
     },
@@ -132,6 +153,8 @@ const TEXT = {
     expand: 'Vollbild',
     shrink: 'Vollbild beenden',
     note: 'Live-Demo: Die Vorlagen bleiben in diesem Browser, die Vorschau wird im Browser kompiliert. Eine echte App kompiliert auf ihrem Server.',
+    // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
+    variables: ['Vorname', 'Nachname', 'E-Mail-Adresse', 'Handynummer'],
     aiNote: '„Korrekturlesen“ findet die Fehler der ganzen E-Mail, „Mit KI schreiben“ schreibt einen Text zu einem Thema, „Mit KI umschreiben“ überarbeitet einen markierten Text und „Betreff vorschlagen“ bietet drei Betreffzeilen an — mit Ihrem eigenen Schlüssel: OpenAI, Claude, Mistral, Gemini, OpenRouter oder jede OpenAI-kompatible API. Gemini und Mistral sind kostenlos und antworten in Sekunden; die kostenlosen Modelle von OpenRouter brauchen Minuten. Der Schlüssel bleibt in diesem Browser und geht nur an den gewählten Anbieter.',
     aiConnected: 'Verbunden mit {provider} · {model}.',
     aiChange: 'Anbieter oder Modell wechseln',
@@ -144,6 +167,7 @@ const TEXT = {
     deleteOff: 'Löschen ist in dieser Demo deaktiviert.',
     comments: {
       opened: 'aus Ihrer eigenen Bibliothek geöffnet',
+      variables: 'die Variablen Ihres E-Mail-Anbieters (hier Brevo), in der Leiste über der E-Mail',
       optional: 'Optional: ohne `ai` weder KI-Schaltfläche noch KI-Code.',
       keys: 'Jeder Nutzer wählt einen Anbieter und verbindet seinen eigenen Schlüssel:',
     },
@@ -170,6 +194,8 @@ const TEXT = {
     expand: 'Pantalla completa',
     shrink: 'Salir de pantalla completa',
     note: 'Demo en vivo: las plantillas se quedan en este navegador y la vista previa se compila en el navegador. Una aplicación real compila en su servidor.',
+    // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
+    variables: ['Nombre', 'Apellido', 'Correo electrónico', 'Número de móvil'],
     aiNote: '“Revisar” encuentra los errores de todo el correo, “Escribir con IA” redacta un texto sobre un tema, “Reescribir con IA” rehace el texto seleccionado y “Sugerir asuntos” propone tres asuntos, con tu propia clave: OpenAI, Claude, Mistral, Gemini, OpenRouter o cualquier API compatible con OpenAI. Gemini y Mistral son gratuitos y responden en segundos; los modelos gratuitos de OpenRouter tardan minutos. La clave se queda en este navegador y solo se envía al proveedor que elijas.',
     aiConnected: 'Conectado a {provider} · {model}.',
     aiChange: 'Cambiar de proveedor o de modelo',
@@ -182,6 +208,7 @@ const TEXT = {
     deleteOff: 'Eliminar está desactivado en esta demo.',
     comments: {
       opened: 'abierta desde tu propia biblioteca',
+      variables: 'las variables de tu proveedor de email (aquí, Brevo), en la barra sobre el email',
       optional: 'Opcional: sin `ai`, ni botón de IA ni código de IA.',
       keys: 'Cada usuario elige un proveedor y conecta su propia clave:',
     },
@@ -208,6 +235,8 @@ const TEXT = {
     expand: 'Tela cheia',
     shrink: 'Sair da tela cheia',
     note: 'Demo ao vivo: os modelos ficam neste navegador e a pré-visualização é compilada no navegador. Um app de verdade compila no próprio servidor.',
+    // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
+    variables: ['Nome', 'Sobrenome', 'Endereço de e-mail', 'Número de celular'],
     aiNote: '“Revisar” encontra os erros de todo o e-mail, “Escrever com IA” redige um texto sobre um tema, “Reescrever com IA” refaz o texto selecionado e “Sugerir assuntos” propõe três assuntos, com a sua própria chave: OpenAI, Claude, Mistral, Gemini, OpenRouter ou qualquer API compatível com OpenAI. Gemini e Mistral são gratuitos e respondem em segundos; os modelos gratuitos do OpenRouter levam minutos. A chave fica neste navegador e só é enviada ao provedor que você escolher.',
     aiConnected: 'Conectado a {provider} · {model}.',
     aiChange: 'Trocar de provedor ou de modelo',
@@ -220,6 +249,7 @@ const TEXT = {
     deleteOff: 'A exclusão está desativada nesta demo.',
     comments: {
       opened: 'aberto a partir da sua própria biblioteca',
+      variables: 'as variáveis do seu provedor de e-mail (aqui, Brevo), na barra acima do e-mail',
       optional: 'Opcional: sem `ai`, nem botão de IA nem código de IA.',
       keys: 'Cada usuário escolhe um provedor e conecta a própria chave:',
     },
@@ -246,6 +276,8 @@ const TEXT = {
     expand: 'Во весь экран',
     shrink: 'Выйти из полноэкранного режима',
     note: 'Живое демо: шаблоны хранятся в этом браузере, предпросмотр компилируется тоже в браузере. Настоящее приложение компилирует на своём сервере.',
+    // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
+    variables: ['Имя', 'Фамилия', 'Адрес эл. почты', 'Мобильный телефон'],
     aiNote: '«Проверить» находит ошибки во всём письме, «Написать с помощью ИИ» пишет текст на заданную тему, «Переписать с помощью ИИ» перерабатывает выделенный текст, а «Предложить темы» даёт три варианта темы — с вашим собственным ключом: OpenAI, Claude, Mistral, Gemini, OpenRouter или любой OpenAI-совместимый API. Gemini и Mistral бесплатны и отвечают за секунды; бесплатным моделям OpenRouter нужны минуты. Ключ остаётся в этом браузере и уходит только выбранному провайдеру.',
     aiConnected: 'Подключено: {provider} · {model}.',
     aiChange: 'Сменить провайдера или модель',
@@ -258,6 +290,7 @@ const TEXT = {
     deleteOff: 'В демо удаление отключено.',
     comments: {
       opened: 'открыт из вашей библиотеки',
+      variables: 'переменные вашего сервиса рассылок (здесь Brevo) — в полоске над письмом',
       optional: 'Необязательно: без `ai` нет ни кнопки ИИ, ни кода ИИ.',
       keys: 'Каждый пользователь выбирает провайдера и подключает свой ключ:',
     },
@@ -284,6 +317,8 @@ const TEXT = {
     expand: '全屏',
     shrink: '退出全屏',
     note: '在线演示：模板保存在当前浏览器中，预览也在浏览器中编译。真实应用会在自己的服务器上编译。',
+    // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
+    variables: ['名字', '姓氏', '电子邮箱', '手机号码'],
     aiNote: '“校对”找出整封邮件中的错误，“AI 撰写”按主题写出一段文字，“AI 改写”重写选中的文字，“推荐主题”给出三个邮件主题——使用您自己的密钥：OpenAI、Claude、Mistral、Gemini、OpenRouter 或任何 OpenAI 兼容 API。Gemini 和 Mistral 免费，几秒内即可回复；OpenRouter 的免费模型需要几分钟。密钥只保存在当前浏览器中，且只发送给您选择的服务商。',
     aiConnected: '已连接 {provider} · {model}。',
     aiChange: '更换服务商或模型',
@@ -296,6 +331,7 @@ const TEXT = {
     deleteOff: '此演示中已禁用删除。',
     comments: {
       opened: '从您自己的模板库中打开',
+      variables: '您的邮件服务商的变量（此处为 Brevo），显示在邮件上方的栏中',
       optional: '可选：不传 `ai`，就没有 AI 按钮，也不加载 AI 代码。',
       keys: '每位用户选择一个服务商，并连接自己的密钥：',
     },
@@ -418,11 +454,19 @@ const CODE_SAMPLES = [
   },
   {
     id: 'builder',
-    code: (comments) => `import { EmailBuilder } from 'best-email-builder/builder';
+    code: (comments) => `import { DEFAULT_VARIABLES, EmailBuilder } from 'best-email-builder/builder';
+
+// ${comments.variables}
+const variables = [
+  { key: 'contact.FIRSTNAME', label: 'First name', sample: 'Jane',
+    token: '{{ contact.FIRSTNAME }}' },
+  ...DEFAULT_VARIABLES,
+];
 
 <EmailBuilder
   storage={storage}
   templateId={id}           // ${comments.opened}
+  variables={variables}
   onSaved={refreshMyList}
   onClose={backToMyList}
 />`,
@@ -937,7 +981,8 @@ function App() {
   }, []);
   // The storage and the AI module live as long as the page.
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the first visit's templates take the language once
-  const storage = useMemo(() => createDemoStorage({ locale, sender: SENDER }), []);
+  const storage = useMemo(() => createDemoStorage({ locale, sender: SENDER, variables: variablesIn(TEXT.en.variables) }), []);
+  const variables = useMemo(() => variablesIn(text.variables), [text]);
   const ai = useMemo(() => createBrowserAi(), []);
   const aiConnected = useSyncExternalStore(ai.key.subscribe, () => ai.key.state().connected);
   // An API of one's own may need no key: then there is none to forget.
@@ -983,6 +1028,7 @@ function App() {
                 key={`${editorKey}-${locale}`}
                 storage={storage}
                 ai={ai}
+                variables={variables}
                 templateId={savedId ?? route.templateId ?? null}
                 locale={locale}
                 sender={SENDER}

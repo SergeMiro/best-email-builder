@@ -56,6 +56,27 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: 'Coupon code', exact: true })).toBeVisible();
 });
 
+test("Brevo's variables: the bar inserts Brevo's tags, the preview shows their samples", async ({ page }) => {
+  await page.goto(`${HOME}?lang=en#/editor/new`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  const canvas = page.frameLocator('.eb-canvas-frame');
+  await canvas.getByText('Your text.').click();
+  const bar = page.getByTestId('eb-variables-bar');
+  await bar.hover();
+  const badges = bar.getByRole('group', { name: 'Email provider variables' });
+  await expect(badges.locator('[data-variable]')).toHaveText(['First name', 'Last name', 'Email address', 'Mobile number', 'Unsubscribe link']);
+  const firstName = badges.getByRole('button', { name: 'First name', exact: true });
+  await firstName.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('{{ contact.FIRSTNAME }}');
+  await firstName.click();
+  await page.mouse.move(10, 10);
+  await expect(canvas.getByText('Your text. {{ contact.FIRSTNAME }}')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const preview = page.getByRole('dialog').filter({ hasText: 'Email preview' });
+  await expect(preview.frameLocator('iframe[title="Email preview"]').getByText('Your text. Jane')).toBeVisible({ timeout: 30_000 });
+});
+
 test('French switch', async ({ page }) => {
   await page.goto(`${HOME}?lang=fr`);
   await page.getByRole('link', { name: 'Ouvrir la démo' }).click();

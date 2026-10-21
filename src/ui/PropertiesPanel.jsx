@@ -71,7 +71,7 @@ const REWRITABLE_TAGS = new Set(['mj-text', 'mj-button']);
 function PanelHeader({ title, onClose, closeLabel = 'Deselect' }) {
   const t = useT();
   return (
-    <header className="eb:sticky eb:top-0 eb:z-10 eb:flex eb:h-11 eb:shrink-0 eb:items-center eb:gap-2 eb:border-b eb:border-border eb:bg-background eb:px-4">
+    <header className="eb:sticky eb:top-0 eb:z-10 eb:flex eb:h-11 eb:shrink-0 eb:items-center eb:gap-2 eb:bg-background eb:px-4">
       <h3 className="eb:min-w-0 eb:flex-1 eb:text-[13px] eb:font-medium eb:text-foreground">
         <FadedText>{title}</FadedText>
       </h3>

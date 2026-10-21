@@ -111,3 +111,18 @@ provider's syntax instead:
 ```js
 mapVariables(html, { 'contact.firstname': '{{ contact.FIRSTNAME }}' }, variables);
 ```
+
+Or have the editor insert the provider's tags from the start: a system
+variable's key may keep the provider's capitals, and its `token` is the tag
+inserted. The live demo does this with Brevo's contact attributes:
+
+```js
+const variables = defineVariables([
+  { key: 'contact.FIRSTNAME', label: 'First name', group: 'Brevo', sample: 'Jane', token: '{{ contact.FIRSTNAME }}' },
+  ...DEFAULT_VARIABLES,
+]);
+```
+
+The preview and a test send still fill these tags with their samples; for
+the real sending, the provider fills them. Custom variables, typed by users,
+keep lowercase keys.

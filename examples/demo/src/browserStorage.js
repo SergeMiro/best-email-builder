@@ -110,15 +110,16 @@ const documentOf = (mjml) => createDocument({ engine: ENGINE_NAME, engineVersion
 
 /**
  * Memory storage + localStorage persistence + in-browser preview.
- * @param {{locale?: string, sender?: object}} [options]  the first visit's templates and tags
+ * @param {{locale?: string, sender?: object, variables?: object[]}} [options]  the first visit's templates
+ *   and tags; `variables`: the editor's system variables, whose samples the preview shows
  */
-export function createDemoStorage({ locale = 'en', sender = {} } = {}) {
+export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFAULT_VARIABLES } = {}) {
   let storage;
 
   async function render({ mjml, subject, preheader }) {
     const check = validateMjml(mjml);
     if (!check.ok) throw new Error(check.issues.map((i) => i.message).join('; '));
-    const catalog = mergeVariables(DEFAULT_VARIABLES, await storage.listVariables());
+    const catalog = mergeVariables(variables, await storage.listVariables());
     const { default: mjml2html } = await import('mjml-browser');
     // MJML 5 compiles asynchronously.
     const result = await mjml2html(prepareMjml(mjml, { title: subject, preheader, emptyImages: 'keep' }), { validationLevel: 'soft' });
