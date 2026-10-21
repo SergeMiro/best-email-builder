@@ -126,9 +126,12 @@ test('tags: create, tick up to three, rename, delete — on the row at once', as
   const form = dialog.getByTestId('eb-tags-form');
   const colors = form.getByRole('radio');
   await expect(colors).toHaveCount(12);
-  const create = await form.getByRole('button', { name: 'Create' }).boundingBox();
-  const first = await colors.first().boundingBox();
-  const last = await colors.last().boundingBox();
+  // Measured in one frame: the dialog may still be zooming in.
+  const [first, last, create] = await form.evaluate((el) => {
+    const radios = [...el.querySelectorAll('[role=radio]')];
+    const button = [...el.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Create');
+    return [radios[0], radios.at(-1), button].map((box) => box.getBoundingClientRect().toJSON());
+  });
   expect(last.y).toBeCloseTo(first.y, 0);
   expect(create.x - (last.x + last.width)).toBeLessThanOrEqual(16);
   await expect(form.getByRole('button', { name: 'Create' }).locator('svg')).toHaveCount(1);

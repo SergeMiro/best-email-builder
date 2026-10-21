@@ -601,6 +601,9 @@ async function openBar(page) {
   await bar.hover();
   const badges = bar.getByRole('group', { name: 'Email provider variables' });
   await expect(badges).toBeVisible();
+  // Done growing: a badge reached while it grows (scrolled into view, on a
+  // second row) would move from under the pointer.
+  await expect.poll(() => badges.evaluate((group) => group.parentElement.clientHeight === group.offsetHeight && group.parentElement.scrollTop === 0)).toBe(true);
   return badges;
 }
 
