@@ -1023,6 +1023,12 @@ test.describe('Images, preview, test send', () => {
     await expect(dialog.getByText('Email preview').first()).toBeVisible();
     await expect(dialog.frameLocator('iframe[title="Email preview"]').getByText(/Your headline/)).toBeVisible();
     await expect(dialog.getByText('Images without alt text: 1')).toBeVisible();
+    // One scrollbar: the frame fills its box and scrolls the email, the box itself does not scroll.
+    const fit = await dialog.locator('iframe[title="Email preview"]').evaluate((frame) => {
+      const box = frame.closest('[data-device]').parentElement;
+      return { scrolls: box.scrollHeight > box.clientHeight, padding: box.clientHeight - frame.offsetHeight };
+    });
+    expect(fit).toEqual({ scrolls: false, padding: 24 });
   });
 
   test('test send: the MJML on screen goes to the typed addresses', async ({ page }) => {

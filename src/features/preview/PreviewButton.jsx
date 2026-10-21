@@ -114,7 +114,8 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
         )}
       </div>
 
-      <div className="eb:min-h-0 eb:flex-1 eb:overflow-auto eb:rounded-lg2 eb:border eb:border-border eb:bg-surface-75 eb:p-3">
+      {/* The frame fills the box and scrolls the email itself: one scrollbar, not two. */}
+      <div className="eb:flex eb:min-h-0 eb:flex-1 eb:flex-col eb:overflow-hidden eb:rounded-lg2 eb:border eb:border-border eb:bg-surface-75 eb:p-3">
         {error ? (
           <div className="eb:flex eb:h-full eb:items-center eb:justify-center eb:p-6 eb:text-center eb:text-[13px] eb:text-destructive">{error}</div>
         ) : !srcDoc ? (
@@ -125,7 +126,7 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
           // Narrows and widens like the editor's canvas (width .35s ease).
           <div
             className={cn(
-              'eb:mx-auto eb:max-w-full eb:transition-[width,box-shadow] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none',
+              'eb:mx-auto eb:flex eb:min-h-0 eb:max-w-full eb:flex-1 eb:transition-[width,box-shadow] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none',
               isMobile && 'eb:shadow-sm'
             )}
             style={{ width: isMobile ? EMAIL_MOBILE_WIDTH : '100%', background: dark ? DARK_PAGE : '#ffffff' }}
@@ -136,8 +137,8 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
               sandbox=""
               srcDoc={srcDoc}
               title={t('Email preview')}
-              className="eb:block eb:w-full eb:border-0 eb:transition-[height] eb:duration-[350ms] eb:ease-in-out eb:motion-reduce:transition-none"
-              style={{ height: isMobile ? 760 : 900, background: dark ? DARK_PAGE : '#ffffff' }}
+              className="eb:block eb:min-h-0 eb:w-full eb:flex-1 eb:border-0"
+              style={{ background: dark ? DARK_PAGE : '#ffffff' }}
             />
           </div>
         )}
@@ -211,7 +212,8 @@ export default function PreviewButton({ context }) {
               </div>
             </div>
           </DialogHeader>
-          <div className="eb:grid eb:min-h-0 eb:flex-1 eb:grid-cols-1 eb:gap-4 eb:md:grid-cols-[minmax(0,1fr)_260px]">
+          {/* Narrow: the email takes the height left by the points to check. */}
+          <div className="eb:grid eb:min-h-0 eb:flex-1 eb:grid-cols-1 eb:grid-rows-[minmax(0,1fr)_auto] eb:gap-4 eb:md:grid-cols-[minmax(0,1fr)_260px] eb:md:grid-rows-1">
             <EmailPreview
               html={state.html}
               loading={state.loading}
@@ -222,7 +224,7 @@ export default function PreviewButton({ context }) {
               // The reminder points to "Send test": only when it exists.
               hint={typeof storage.sendTest === 'function'}
             />
-            <aside className="eb:min-h-0 eb:space-y-5 eb:overflow-y-auto" aria-busy={state.loading}>
+            <aside className="eb:max-h-48 eb:min-h-0 eb:space-y-5 eb:overflow-y-auto eb:md:max-h-none" aria-busy={state.loading}>
               <section className="eb:space-y-2">
                 <SectionLabel>{t('Inbox')}</SectionLabel>
                 <div className="eb:rounded-lg2 eb:border eb:border-border eb:bg-surface-75 eb:px-3 eb:py-2.5">

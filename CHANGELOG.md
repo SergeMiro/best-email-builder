@@ -57,6 +57,12 @@ All notable changes are documented here. The format follows
 - A text box (the preview text, a variable's description…) is resized in
   height only: its width stays the panel's, like the other fields.
 
+### Fixed
+- The email preview (the *Preview* dialog and the template library) had two
+  scrollbars, the frame's and its box's. The frame now fills the box, so only
+  the email scrolls. On a narrow screen, it takes the height the points to
+  check leave.
+
 ## [0.14.0] — 2026-10-20
 
 ### Changed
