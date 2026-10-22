@@ -325,6 +325,28 @@ test('after a first save, switching the language reopens the saved template (no 
   await expect(page.getByTestId('eb-library-templates')).toContainText('Modèles (6)');
 });
 
+test('the preview’s points to check are in the page’s language, after a switch too', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en#/editor/new`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByRole('button', { name: 'Templates', exact: true }).click();
+  await page.getByTestId('eb-template-gallery').locator('[data-template-id="newsletter"]').click();
+  // Saved, so the switch reopens it.
+  await page.getByTestId('eb-properties').getByLabel(/^Name/).fill('Monthly news');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText(/^Saved at/)).toBeVisible();
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const checks = page.getByRole('list', { name: 'Points to check' });
+  await expect(checks).toContainText('Image without file (2)', { timeout: 30_000 });
+  await page.keyboard.press('Escape');
+
+  await pickLanguage(page, 'Français');
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByRole('button', { name: 'Aperçu', exact: true }).click();
+  const points = page.getByRole('list', { name: 'Points à vérifier' });
+  await expect(points).toContainText('Image sans fichier (2)', { timeout: 30_000 });
+  await expect(points).toContainText('Texte alternatif manquant (2 image(s))');
+});
+
 test('brand: set by hand in the demo, kept after a reload, new emails start in it', async ({ page }) => {
   await page.goto(`${HOME}?lang=en#/editor/new`);
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });

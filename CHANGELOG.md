@@ -62,6 +62,8 @@ All notable changes are documented here. The format follows
   scrollbars, the frame's and its box's. The frame now fills the box, so only
   the email scrolls. On a narrow screen, it takes the height the points to
   check leave.
+- The live demo's preview listed its points to check in English whatever the
+  page's language; they now follow it, after a switch too.
 
 ## [0.14.0] — 2026-10-20
 

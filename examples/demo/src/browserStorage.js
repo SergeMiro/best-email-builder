@@ -111,10 +111,13 @@ const documentOf = (mjml) => createDocument({ engine: ENGINE_NAME, engineVersion
 /**
  * Memory storage + localStorage persistence + in-browser preview.
  * @param {{locale?: string, sender?: object, variables?: object[]}} [options]  the first visit's templates
- *   and tags; `variables`: the editor's system variables, whose samples the preview shows
+ *   and tags, and the preview's points to check (`setLocale` when the page switches language);
+ *   `variables`: the editor's system variables, whose samples the preview shows
  */
 export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFAULT_VARIABLES } = {}) {
   let storage;
+  /** The page's language: a server translates the points to check with its own. */
+  let t = translatorFor(locale);
 
   async function render({ mjml, subject, preheader }) {
     const check = validateMjml(mjml);
@@ -125,13 +128,14 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
     const result = await mjml2html(prepareMjml(mjml, { title: subject, preheader, emptyImages: 'keep' }), { validationLevel: 'soft' });
     const values = sampleValues(catalog);
     const html = applyServiceLinks(applyVariables(result.html, values, catalog), { unsubscribeUrl: '#' });
-    const quality = qualityReport({ mjml, html: result.html, subject });
+    const quality = qualityReport({ mjml, html: result.html, subject }, { t });
     const unknown = unknownVariables([mjml, subject || '', preheader || ''].join('\n'), catalog);
     if (unknown.length) {
       quality.push({
         code: 'UNKNOWN_VARIABLE',
         level: 'warning',
-        message: `Unknown variables (rendered empty): ${unknown.map((k) => `{{${k}}}`).join(', ')}`,
+        count: unknown.length,
+        message: t('Unknown variables (rendered empty): {tags}', { tags: unknown.map((k) => `{{${k}}}`).join(', ') }),
       });
     }
     return {
@@ -249,6 +253,9 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
   return {
     ...storage,
     ready,
+    setLocale(code) {
+      t = translatorFor(code);
+    },
     async listVariables() {
       await ready;
       return storage.listVariables();

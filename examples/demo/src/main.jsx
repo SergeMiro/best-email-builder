@@ -1001,7 +1001,8 @@ function App() {
 
   useEffect(() => {
     document.documentElement.lang = locale;
-  }, [locale]);
+    storage.setLocale(locale);
+  }, [locale, storage]);
   useEffect(() => {
     window.scrollTo(0, 0);
     if (route.page === 'home') setExpanded(false);
