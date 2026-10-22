@@ -16,6 +16,10 @@ All notable changes are documented here. The format follows
   `/email-assets/`. It now keeps uploads in the browser (Cache Storage, so
   they outlive a reload) and shows them in the canvas and the preview.
 
+### Changed
+- The **×** of a variable cut over two lines sits at the variable's end, top
+  right of its last line, rather than after its first piece.
+
 ## [0.15.0] — 2026-10-22
 
 ### Added

@@ -977,6 +977,11 @@ test.describe('Variables', () => {
     await expect(pieces).toHaveCount(2);
     expect((await pieces.first().boundingBox()).width).toBeLessThan(40);
     await expect(pieces).toHaveText(['{{', 'contact.firstname }}']);
+    // The × at the end of the tag: the top right of its last line.
+    const last = await pieces.last().boundingBox();
+    const clear = await canvas(page).getByRole('button', { name: 'Remove the variable' }).boundingBox();
+    expect(Math.abs(clear.x + clear.width / 2 - (last.x + last.width))).toBeLessThan(12);
+    expect(Math.abs(clear.y + clear.height / 2 - last.y)).toBeLessThan(12);
     await canvas(page).getByRole('button', { name: 'Remove the variable' }).click();
     await expect.poll(() => mjml(page)).toMatch(/Your text\.</);
   });

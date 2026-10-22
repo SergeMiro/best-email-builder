@@ -89,8 +89,8 @@ This needs the `variableStore` repository, as custom variables do.
 ## Removing a variable
 
 In the email, a tag under the pointer swaps its colors, line by line when it
-runs over two (the words beside it keep theirs), and shows a **×** in its
-top-right corner. The × takes the
+runs over two (the words beside it keep theirs), and shows a **×** at its
+end, top right (on its last line). The × takes the
 tag out of the text or the button's label, with the space before it, so no
 double space or space before a comma is left. Ctrl+Z brings it back.
 

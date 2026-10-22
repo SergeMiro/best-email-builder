@@ -527,9 +527,10 @@ export function createCanvasView(options) {
       box.style.lineHeight = `${piece.bottom - piece.top}px`;
       tagPieces.appendChild(box);
     }
-    // At the tag's top right: the end of its first line.
-    tagClear.style.top = `${pieces[0].top + win.scrollY - 9}px`;
-    tagClear.style.left = `${pieces[0].right + win.scrollX - 6}px`;
+    // At the end of the tag, top right: on its last line when it runs over two.
+    const end = pieces[pieces.length - 1];
+    tagClear.style.top = `${end.top + win.scrollY - 9}px`;
+    tagClear.style.left = `${end.right + win.scrollX - 6}px`;
     const label = t('Remove the variable');
     if (tagClear.title !== label) {
       tagClear.title = label;
