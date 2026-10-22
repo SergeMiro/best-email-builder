@@ -14,7 +14,8 @@ import { EMOJI_GROUPS, loadEmojis, nameOf, searchEmojis } from './emojis.js';
  * typed into the selected text or button, as it will look, and wiped out
  * when the pointer leaves; a click inserts it for good: at the caret of the
  * text being edited, otherwise at the end of the selected text or button.
- * The last ones used come first, remembered in the browser.
+ * The last ones used come first the next time the panel opens, remembered
+ * in the browser.
  */
 
 const RECENT_KEY = 'best-email-builder:recent-emojis';
@@ -60,7 +61,10 @@ export default function EmojiPanel({ context }) {
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [query, setQuery] = useState('');
-  const [recent, setRecent] = useState(readRecent);
+  // Shown as they were when the panel opened: a click does not move the grid
+  // under the pointer. Kept at once for the next time.
+  const [recent] = useState(readRecent);
+  const kept = useRef(recent);
   const [active, setActive] = useState('');
   const scrollRef = useRef(/** @type {HTMLDivElement|null} */ (null));
   const hovered = useRef('');
@@ -92,14 +96,14 @@ export default function EmojiPanel({ context }) {
   const labelOf = (id) => (id === 'recent' ? t('Recently used') : t(EMOJI_GROUPS[id] || id));
 
   const insert = (emoji) => {
-    hovered.current = '';
     if (!editor.insertText(emoji)) {
       notify('info', t('Select a text or a button first.'));
       return;
     }
-    const next = [emoji, ...recent.filter((item) => item !== emoji)].slice(0, RECENT_MAX);
-    setRecent(next);
-    rememberRecent(next);
+    // Still under the pointer: not typed again as a preview.
+    hovered.current = emoji;
+    kept.current = [emoji, ...kept.current.filter((item) => item !== emoji)].slice(0, RECENT_MAX);
+    rememberRecent(kept.current);
   };
 
   /** The emoji under the pointer or the focus, from the grid's events (one listener for ~1,900 buttons). */

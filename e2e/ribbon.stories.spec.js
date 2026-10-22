@@ -81,16 +81,21 @@ test.describe('Text ribbon', () => {
     await tool(page, 'italic').click();
     await expect.poll(() => textOf(page, 'Hello,')).toMatch(/<(i|em)>/);
     await expect(tool(page, 'italic')).toHaveAttribute('aria-pressed', 'true');
+    // Still only selected, not edited: no bar over it, and what comes next goes at its end.
+    await expect(canvas(page).locator('[contenteditable="true"]')).toHaveCount(0);
+    await ribbon(page).locator('[data-drawer="variables"]').click();
+    await page.getByTestId('eb-panel-variables').getByRole('button', { name: 'First name', exact: true }).click();
+    await expect.poll(() => textOf(page, 'Hello,')).toMatch(/Your text\.<\/(i|em)><\/(b|strong)> \{\{contact\.firstname\}\}<\/mj-text>$/);
+    await page.mouse.move(10, 10);
 
     // Clear formatting takes both off.
     await tool(page, 'clear').click();
     await expect.poll(() => textOf(page, 'Hello,')).not.toMatch(/<(b|strong|i|em)>/);
     await expect(tool(page, 'bold')).toHaveAttribute('aria-pressed', 'false');
 
-    // Undone like any edit (the edits of one editing go together).
-    await page.keyboard.press('Escape');
+    // Undone like any edit.
     const undo = page.getByRole('button', { name: 'Undo', exact: true });
-    for (let step = 0; step < 4 && (await undo.isEnabled()); step++) await undo.click();
+    for (let step = 0; step < 6 && (await undo.isEnabled()); step++) await undo.click();
     await expect.poll(() => textOf(page, 'Hello,')).toBe(before);
     await expect(page.getByTestId('email-builder').getByText('No changes')).toBeVisible();
   });
@@ -205,7 +210,7 @@ test.describe('Emoji panel', () => {
     await expect.poll(() => emojis(page).evaluate((aside) => aside.parentElement.offsetWidth)).toBe(256);
   }
 
-  test('beside the canvas: under the pointer an emoji shows in the text, a click inserts it, it comes first in the recent ones', async ({ page }) => {
+  test('beside the canvas: under the pointer an emoji shows in the text, a click inserts it, first in the recent ones next time', async ({ page }) => {
     await openBuilder(page);
     const before = await mjml(page);
     await openEmojis(page);
@@ -223,11 +228,16 @@ test.describe('Emoji panel', () => {
     await page.mouse.move(10, 10);
     await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveCount(0);
 
+    await grinning.hover();
+    await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveText('😀');
     await grinning.click();
-    await expect.poll(() => textOf(page, 'Hello,')).toContain('Your text. 😀');
+    await expect.poll(() => textOf(page, 'Hello,')).toMatch(/Your text\. 😀<\/mj-text>$/);
+    // Still under the pointer: not shown again (a while later either), and the grid has not moved.
+    await page.waitForTimeout(500);
+    await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveCount(0);
     const recent = emojis(page).getByRole('region', { name: 'Recently used' });
-    await expect(recent.locator('[data-emoji]').first()).toHaveAttribute('data-emoji', '😀');
-    // Kept for the next visit.
+    await expect(recent).toHaveCount(0);
+    // First among the recent ones from the next time.
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('best-email-builder:recent-emojis')))).toEqual(['😀']);
     await emojis(page).getByRole('button', { name: 'Close the panel' }).click();
     await expect(emojis(page)).toHaveCount(0);

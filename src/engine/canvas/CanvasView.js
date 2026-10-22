@@ -306,6 +306,8 @@ export function createCanvasView(options) {
     drawTextTools();
     drawTag();
     drawWorking();
+    // A text only selected: the ribbon shows the format of all its words.
+    if (!editingEl) reportFormat(selectedTextFormat());
   }
 
   function scheduleOverlays() {
@@ -761,7 +763,6 @@ export function createCanvasView(options) {
     hideLinkInput();
     textTools.hidden = true;
     options.onEditEnd(id, html);
-    reportFormat(NO_FORMAT);
     refreshOverlays();
   }
 
@@ -1082,6 +1083,39 @@ export function createCanvasView(options) {
     options.onFormat?.(format);
   }
 
+  /**
+   * The format of every word of the selected text, when it is not being
+   * edited: bold when all of it is bold, the link when all of it is one.
+   * @returns {TextFormat}
+   */
+  function selectedTextFormat() {
+    const el = selectedId && EDITABLE_TAGS.has(findTag(selectedId) || '') ? editableOf(selectedId) : null;
+    if (!el) return NO_FORMAT;
+    const all = { bold: true, italic: true, underline: true, strike: true };
+    /** @type {string|null|undefined} */
+    let href;
+    let words = 0;
+    const walker = doc.createTreeWalker(el, win.NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const parent = node.parentElement;
+      if (!node.nodeValue?.trim() || !parent || parent.closest(`.${PREVIEW_CLASS}`)) continue;
+      words += 1;
+      const style = win.getComputedStyle(parent);
+      if (!(Number(style.fontWeight) >= 600 || style.fontWeight === 'bold')) all.bold = false;
+      if (style.fontStyle === 'normal') all.italic = false;
+      // Text decorations are not inherited: they come from any element above.
+      let lines = '';
+      for (let up = /** @type {HTMLElement|null} */ (parent); up && el.contains(up); up = up.parentElement) lines += ` ${win.getComputedStyle(up).textDecorationLine}`;
+      if (!lines.includes('underline')) all.underline = false;
+      if (!lines.includes('line-through')) all.strike = false;
+      const link = parent.closest('a');
+      const at = link && el.contains(link) ? link.getAttribute('href') || '' : null;
+      href = href === undefined || href === at ? at : null;
+    }
+    if (!words) return NO_FORMAT;
+    return { ...NO_FORMAT, ...all, link: href || null };
+  }
+
   function refreshTextState() {
     if (!editingEl) return;
     /** @type {TextFormat} */
@@ -1290,24 +1324,30 @@ export function createCanvasView(options) {
      * A command of the text toolbar, from outside the frame (the builder's
      * ribbon): bold, italic, underline, strike, link (`value`: its address),
      * unlink or clear. On the selection of the text being edited; on a text
-     * only selected, on all of it.
+     * only selected, on all of it, which stays selected and not edited (what
+     * comes next goes at its end, it does not replace it).
      * @param {string} command @param {string} [value]
      */
     formatText(command, value = '') {
-      if (!editingId) {
-        if (!selectedId || !EDITABLE_TAGS.has(findTag(selectedId) || '')) return false;
-        startEditing(selectedId);
-        if (!editingEl) return false;
-        const range = doc.createRange();
-        range.selectNodeContents(editingEl);
-        const selection = win.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-        savedRange = range.cloneRange();
-      }
-      if (command !== 'link') return runTextCommand(command);
-      applyLink(value.trim());
-      return true;
+      const apply = () => {
+        if (command !== 'link') return runTextCommand(command);
+        applyLink(value.trim());
+        return true;
+      };
+      if (editingId) return apply();
+      if (!selectedId || !EDITABLE_TAGS.has(findTag(selectedId) || '')) return false;
+      startEditing(selectedId);
+      if (!editingEl) return false;
+      const range = doc.createRange();
+      range.selectNodeContents(editingEl);
+      const selection = win.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      savedRange = range.cloneRange();
+      const done = apply();
+      finishEditing();
+      win.getSelection()?.removeAllRanges();
+      return done;
     },
     /** @param {string} text */
     insertText(text) {
