@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-10-22
+
 ### Added
 - A variable in the email, under the pointer, swaps its colors (line by line
   when it runs over two, never the words beside it) and shows a **×** in its
