@@ -19,6 +19,8 @@ import EmailCanvas from './EmailCanvas.jsx';
 import BlockSidebar from './BlockSidebar.jsx';
 import PropertiesPanel from './PropertiesPanel.jsx';
 import Toolbar from './Toolbar.jsx';
+import TextRibbon from './TextRibbon.jsx';
+import CanvasPanel from './CanvasPanel.jsx';
 import Drawer from './Drawer.jsx';
 import { useEmailEditorState } from './useEmailEditorState.js';
 import { useLayoutWidth } from './useLayoutWidth.js';
@@ -182,6 +184,8 @@ function Builder({
   /** Open drawer of the compact layouts: 'blocks', 'properties' or null. */
   const [drawer, setDrawer] = useState(null);
   const closeDrawer = useCallback(() => setDrawer(null), []);
+  /** The feature panel open beside the canvas (emojis, variables): its feature's id, or null. */
+  const [canvasPanel, setCanvasPanel] = useState(null);
   useEffect(() => {
     if (!compact) setDrawer(null);
     else if (!blocksInDrawer) setDrawer((d) => (d === 'blocks' ? null : d));
@@ -501,6 +505,9 @@ function Builder({
     emailBuilderFeatures.list((f) => f.enabled !== false && Boolean(f[slot]) && (f.isAvailable ? f.isAvailable(featureContext) : true));
   const toolbarFeatures = featuresWith('toolbar');
   const canvasBars = featuresWith('canvasBar');
+  const panelFeatures = featuresWith('drawer');
+  // A feature that is no longer available takes its panel with it.
+  const openPanel = panelFeatures.find((feature) => feature.id === canvasPanel) || null;
 
   const columns =
     layout === 'wide'
@@ -609,20 +616,32 @@ function Builder({
             </div>
           ) : (
             <>
+              <TextRibbon
+                editor={editor}
+                ready={ready}
+                selection={state.selection}
+                format={state.format}
+                drawers={panelFeatures.map((feature) => ({ id: feature.id, ...feature.drawer }))}
+                openDrawer={openPanel?.id ?? null}
+                onToggleDrawer={(id) => setCanvasPanel((current) => (current === id ? null : id))}
+              />
               {canvasBars.map((feature) => {
                 const Bar = feature.canvasBar;
                 return <Bar key={feature.id} context={featureContext} />;
               })}
-              <div className="eb:relative eb:min-h-0 eb:flex-1">
-                {boot.status === 'ready' && (
-                  <EmailCanvas
-                    key={attempt}
-                    editor={editor}
-                    document={boot.document}
-                    onReady={onReady}
-                    onError={(error) => setEngineError(error.message)}
-                  />
-                )}
+              <div className="eb:relative eb:flex eb:min-h-0 eb:flex-1">
+                <div className="eb:relative eb:min-h-0 eb:min-w-0 eb:flex-1">
+                  {boot.status === 'ready' && (
+                    <EmailCanvas
+                      key={attempt}
+                      editor={editor}
+                      document={boot.document}
+                      onReady={onReady}
+                      onError={(error) => setEngineError(error.message)}
+                    />
+                  )}
+                </div>
+                <CanvasPanel feature={openPanel} context={featureContext} compact={compact} onClose={() => setCanvasPanel(null)} />
               </div>
               {!ready && (
                 <div className="eb:absolute eb:inset-0 eb:flex eb:items-center eb:justify-center eb:bg-surface-75" role="status" aria-live="polite">

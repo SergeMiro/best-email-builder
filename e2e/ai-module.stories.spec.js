@@ -31,7 +31,7 @@ async function selectHeadline(page) {
 test.describe('The AI module', () => {
   test('without it (?ai=off): no Proofread, no Write with AI, no Suggest subjects — the rest is all there', async ({ page }) => {
     await openBuilder(page, '&ai=off');
-    await expect(page.getByTestId('eb-variables-bar')).toBeVisible();
+    await expect(page.getByTestId('eb-ribbon').locator('[data-drawer="variables"]')).toBeVisible();
     await expect(proofreadButton(page)).toHaveCount(0);
     await expect(panel(page).getByRole('textbox', { name: 'Subject' })).toBeVisible();
     await expect(page.getByTestId('eb-subject-ideas')).toHaveCount(0);

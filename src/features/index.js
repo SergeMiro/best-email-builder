@@ -13,6 +13,7 @@ import { createRegistry } from '../core/registry.js';
 import { autosaveFeature } from './autosave/index.js';
 import { versionsFeature } from './versions/index.js';
 import { variablesFeature } from './variables/index.js';
+import { emojiFeature } from './emoji/index.js';
 import { previewFeature } from './preview/index.js';
 import { testEmailFeature } from './test-email/index.js';
 import { templatesFeature } from './templates/index.js';
@@ -24,6 +25,7 @@ import { brandFeature } from './brand/index.js';
 const FEATURES = [
   templatesFeature,
   brandFeature,
+  emojiFeature,
   variablesFeature,
   autosaveFeature,
   versionsFeature,

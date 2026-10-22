@@ -21,9 +21,9 @@ component knows the model or the canvas: everything goes through the
 | `core/` | `EmailEditor` contract, versioned document envelope (`document.js`), registries, events |
 | `engine/` | the builder's own engine: the email model (`model.js`), MJML ⇄ model (`mjml.js`), where blocks go (`placement.js`), merge tags in the words (`mergeTags.js`), the canvas MJML (`canvasMjml.js`), the canvas and its gestures (`canvas/`), the adapter (`NativeAdapter.js`) |
 | `blocks/` | one folder per block (heading, text, image, button, divider, spacer, social links, menu, 1–4 columns, image + text, hero banner, structure) + the `emailBlocks` registry |
-| `features/` | one folder per feature + the `emailBuilderFeatures` registry (brand, variables, autosave, versions, preview, test send), the starter template and the gallery of bases, and the library's tags (`tags/`) |
+| `features/` | one folder per feature + the `emailBuilderFeatures` registry (brand, emojis, variables, autosave, versions, preview, test send), the starter template and the gallery of bases, and the library's tags (`tags/`) |
 | `ai/` | the AI module, an entry of its own (`best-email-builder/ai`, `/ai/server`): proofreading, writing and rewriting, subject ideas, the providers, their buttons and texts — see *AI* |
-| `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, canvas, properties), the template library (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
+| `ui/` | the React interface: the editor (`EmailBuilder` — toolbar, blocks sidebar, ribbon, canvas, feature panels, properties), the template library (`library/TemplateLibrary`), the two wired together (`EmailStudio`), and the primitives |
 | `storage/` | browser storage contract — HTTP and memory implementations |
 | `renderer/` | MJML preparation, service links, uploaded image URLs (shared browser/server) |
 | `validation/` | what a template may contain (MJML, project, URLs, images, quality checks) |
@@ -101,6 +101,23 @@ the HTML **compiled by the server**.
   siblings.
 - **Merge tags** (`engine/mergeTags.js`): a tag under the pointer swaps its
   colors and gets a ×, which takes it out with the space before it.
+
+## Ribbon and panels
+
+`ui/TextRibbon.jsx` is the bar above the canvas, always open, as in a word
+processor. Its word tools (bold, italic, underline, strike, link, unlink,
+clear) go through `editor.formatText(command, value)`: on the selection of
+the text being edited, or on the whole of a selected text, which it starts
+editing. The engine reports the format at the caret with the editor's
+`format` event (`TextFormat`), so the buttons show what is pressed. Size,
+line height, weight and alignment set the selected element's properties,
+within its block's bounds; a block without one leaves its tool disabled.
+
+A feature may declare `drawer: {icon, label, title, panel}`: a button at the
+end of the ribbon opens its panel beside the canvas (`ui/CanvasPanel.jsx`),
+one at a time. Emojis and variables are two such features. The emoji names
+(`features/emoji/data/`, one file a language, loaded on first use) are built
+from emojibase-data by `scripts/build-emoji-data.mjs`.
 
 ## Saving
 

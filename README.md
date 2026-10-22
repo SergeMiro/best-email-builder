@@ -52,6 +52,10 @@ once and given away.
 - Columns from 1/4 to 3/4 of the row, background images on sections,
   full-width images on phones.
 - Drag with a drop line, type in place, a toolbar and shortcuts on every element.
+- A ribbon above the canvas, as in a word processor: bold, italic, underline,
+  strikethrough, link, size, line height, weight and alignment, each tool
+  named in a tooltip. At its end, panels beside the canvas for the emojis
+  (searchable, named in seven languages) and the variables.
 - Desktop and mobile canvas, showing the real compiled email.
 - Undo and redo, autosave, local drafts, versions, and conflict detection
   between two editors.
@@ -179,7 +183,8 @@ channel described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE). MJML and mjml-browser are MIT too.
+[MIT](LICENSE). MJML and mjml-browser are MIT too. The emoji names come from
+emojibase-data (MIT), see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Author
 

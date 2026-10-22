@@ -12,7 +12,7 @@ variable](#editing-a-system-variable)).
 
 There are none by default, apart from the unsubscribe link
 `{{ unsubscribe }}` (`DEFAULT_VARIABLES`), which the sending pipeline fills
-with `unsubscribeUrl`. Users then create their own from the variables bar
+with `unsubscribeUrl`. Users then create their own from the *Variables* panel
 (see [Custom variables](#custom-variables)).
 
 To give them a list of your own, define it with `defineVariables([...])`,
@@ -40,9 +40,9 @@ createEmailBuilderHandler({ variables, ... });        // the server
 
 ## Custom variables
 
-Users create custom variables from the variables bar above the canvas, with
-its **+** button (*New variable*), and edit or delete them with the pencil of
-their badge.
+Users create custom variables from the *Variables* panel beside the canvas,
+with its **+** button (*New variable*), and edit or delete them with the
+pencil of their badge.
 A custom variable has:
 
 - a **name**, for example "Order number";
@@ -71,10 +71,11 @@ This needs the `variableStore` repository, as custom variables do.
 
 ## Inserting a variable
 
-- The *Email provider variables* bar above the canvas is the one place to
-  insert a variable. It grows under the pointer, or on a click, and lists the
-  variables as small badges, moving the email down rather than covering it.
-  A badge's tooltip shows its tag.
+- The *Variables* panel is the one place to insert a variable. The
+  *Variables* button at the end of the ribbon above the canvas opens it
+  beside the canvas, between the email and the properties, and it stays open
+  until that button or its **×** shuts it. It lists the variables as small
+  badges; a badge's tooltip shows its tag.
 - With a text or a button selected, a badge under the pointer types its tag
   where it would go, and wipes it out when the pointer leaves. Nothing is
   saved until you click the badge.

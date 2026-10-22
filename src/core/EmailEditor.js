@@ -130,6 +130,21 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  */
 
 /**
+ * What formats the words at the caret of the text being edited: what the
+ * ribbon shows pressed. `link`: the address of the link the caret is in.
+ * @typedef {{
+ *   editing: boolean,
+ *   bold: boolean,
+ *   italic: boolean,
+ *   underline: boolean,
+ *   strike: boolean,
+ *   link: string|null,
+ * }} TextFormat
+ */
+
+/** @typedef {'bold'|'italic'|'underline'|'strike'|'link'|'unlink'|'clear'} TextCommand */
+
+/**
  * What an engine must provide. All element ids are opaque strings returned by
  * the adapter itself.
  *
@@ -140,6 +155,8 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   `selection` the selection changed — payload: EngineSelection|null
  *   `history`   undo/redo state changed — payload: {canUndo, canRedo}
  *   `device`    the displayed device changed — payload: EmailDevice
+ *   `format`    the formatting at the caret of the text being edited
+ *               changed — payload: TextFormat (optional)
  *
  * @typedef {{
  *   name: string,
@@ -169,6 +186,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   previewText?: (text: string) => boolean,
  *   clearPreview?: () => void,
  *   showWorking?: (id: string|null) => void,
+ *   formatText?: (command: TextCommand, value?: string) => boolean,
  *   undo: () => void,
  *   redo: () => void,
  *   canUndo: () => boolean,
@@ -193,9 +211,13 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  * Pluggable feature. `setup` receives the ready editor and may return a
  * teardown function, called on `destroy`. `toolbar`: React component placed in
  * the toolbar (it receives the screen context); `canvasBar`: the same, as a
- * thin bar above the canvas; `options`: its settings, read by the screen;
- * `isAvailable(context)`: hides the toolbar entry and the bar when the
- * context cannot support it (e.g. a storage that cannot render).
+ * thin bar above the canvas; `drawer`: a panel beside the canvas, opened by
+ * its button at the end of the ribbon (`label` names the button and the
+ * panel, `title` is the button's tooltip; `panel` receives the screen
+ * context); `options`: its settings,
+ * read by the screen; `isAvailable(context)`: hides the toolbar entry, the
+ * bar and the panel when the context cannot support it (e.g. a storage that
+ * cannot render).
  *
  * @typedef {{
  *   id: string,
@@ -205,6 +227,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   setup?: (editor: EmailEditor) => (void | (() => void)),
  *   toolbar?: any,
  *   canvasBar?: any,
+ *   drawer?: {icon: any, label: string, title?: string, panel: any},
  *   isAvailable?: (context: any) => boolean,
  *   options?: Record<string, any>,
  * }} EmailBuilderFeature
@@ -239,6 +262,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   previewText: (text: string) => boolean,
  *   clearPreview: () => void,
  *   showWorking: (id: string|null) => void,
+ *   formatText: (command: TextCommand, value?: string) => boolean,
  *   undo: () => void,
  *   redo: () => void,
  *   canUndo: () => boolean,
@@ -559,6 +583,17 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
      */
     showWorking(id) {
       if (status === 'ready') adapter.showWorking?.(id ?? null);
+    },
+
+    /**
+     * Formats words of a text, as its toolbar on the canvas does: bold,
+     * italic, underline, strike, link (`value`: its address), unlink, clear.
+     * On the selection of the text being edited; on a text only selected, on
+     * all of it. False when no text takes it (none selected, a button).
+     */
+    formatText(command, value) {
+      if (status !== 'ready' || !adapter.formatText) return false;
+      return adapter.formatText(command, value == null ? '' : String(value));
     },
 
     undo() {

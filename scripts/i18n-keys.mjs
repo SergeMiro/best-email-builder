@@ -8,7 +8,8 @@
  *
  * A key is the first argument of a `t('…')` call, or a user-visible field of
  * the block, variable and feature registries (label, description, group,
- * placeholder, option labels), the gallery's names, descriptions and tags, the
+ * placeholder, option labels, a feature panel's label and title), the emoji
+ * groups, the gallery's names, descriptions and tags, the
  * rewrite actions, the error messages and the brand messages.
  *
  * Two dictionaries per locale: the core's (`src/i18n/`) and the AI module's
@@ -36,6 +37,9 @@ function walk(dir, out = []) {
 const CALL = /\bt\(\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/g;
 /** Interface objects whose `label` the fields translate (`label: 'Label'`). */
 const UI_LABEL = /\blabel:\s*'([^'\\]+)'/g;
+/** A feature's `drawer: {…}`, and its `label` and `title`. */
+const DRAWER = /\bdrawer:\s*\{[^}]*\}/g;
+const DRAWER_TEXT = /\b(?:label|title):\s*'([^'\\]+)'/g;
 
 /** @returns {Promise<{core: string[], ai: string[]}>} the keys of the core, and those of the AI module */
 export async function collectKeys() {
@@ -51,6 +55,10 @@ export async function collectKeys() {
     if (file.includes(`${path.sep}ui${path.sep}`)) {
       for (const match of source.matchAll(UI_LABEL)) if (/[a-z]/i.test(match[1])) keys.add(match[1]);
     }
+    // A feature's panel beside the canvas: its button's name and tooltip.
+    for (const [drawer] of source.matchAll(DRAWER)) {
+      for (const match of drawer.matchAll(DRAWER_TEXT)) keys.add(match[1]);
+    }
   }
   // Registry data rendered through t().
   const { emailBlocks } = await import(pathToUrl('src/blocks/index.js'));
@@ -63,6 +71,8 @@ export async function collectKeys() {
   }
   const { TEMPLATE_GALLERY } = await import(pathToUrl('src/features/templates/gallery.js'));
   for (const template of TEMPLATE_GALLERY) [template.name, template.description, ...(template.tags || [])].filter(Boolean).forEach((k) => core.add(k));
+  const { EMOJI_GROUPS } = await import(pathToUrl('src/features/emoji/emojis.js'));
+  for (const name of Object.values(EMOJI_GROUPS)) core.add(name);
   const { DEFAULT_VARIABLES } = await import(pathToUrl('src/features/variables/catalog.js'));
   for (const variable of DEFAULT_VARIABLES) [variable.label, variable.group].forEach((k) => core.add(k));
   const { BRAND_IMPORT_ERRORS, BRAND_NOTES } = await import(pathToUrl('src/features/brand/messages.js'));

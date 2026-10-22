@@ -7,6 +7,21 @@ All notable changes are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- A ribbon above the canvas, always open, as in a word processor: bold,
+  italic, underline, strikethrough, link, remove the link, clear formatting,
+  font size (typed or picked), line height, weight and alignment, each tool
+  named in a tooltip. The word tools act on the selection of the text being
+  edited, or on the whole of a selected text, and show what is pressed at the
+  caret. `editor.formatText(command, value)` drives them; the editor's
+  `format` event reports the format at the caret.
+- An emoji panel, opened from the end of the ribbon: every emoji up to
+  Unicode 14 by group, searchable by name or keyword in the interface's
+  language (accents optional), the recently used first. Like a variable, an
+  emoji under the pointer shows in the text, a click inserts it. The names
+  are loaded on first use, one language at a time (emojibase-data, MIT — see
+  THIRD-PARTY-NOTICES.md).
+- A feature may declare `drawer: {icon, label, title, panel}`: its button at
+  the end of the ribbon opens its panel beside the canvas, one at a time.
 - The storage may give `imageUrl(path)`: where the canvas shows an uploaded
   image when the page cannot load its path itself (images on another origin,
   no server). The template keeps the path.
@@ -17,6 +32,9 @@ All notable changes are documented here. The format follows
   they outlive a reload) and shows them in the canvas and the preview.
 
 ### Changed
+- The *Email provider variables* bar above the canvas is now the *Variables*
+  panel beside it, opened by the *Variables* button at the end of the ribbon.
+  It stays open while you insert, rather than growing under the pointer.
 - *Write with AI* and *Rewrite with AI* are one section with ONE field: say
   what to change in the text, or give a topic to write about — the model
   tells which (`action: 'custom'` now does both; on a text with no words, the

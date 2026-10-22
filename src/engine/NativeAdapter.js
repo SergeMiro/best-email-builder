@@ -589,6 +589,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
           else void view?.render();
           history.key = null;
         },
+        onFormat: (format) => emit('format', format),
         onKeyDown: (event) => onKey(event, 'frame'),
       });
       const onHostKey = (/** @type {KeyboardEvent} */ event) => onKey(event, 'host');
@@ -720,6 +721,10 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
 
     showWorking(id) {
       view?.setWorking(id);
+    },
+
+    formatText(command, value) {
+      return view ? view.formatText(command, value) : false;
     },
 
     insertLink(href, label) {

@@ -595,23 +595,46 @@ const PNG = Buffer.from(
   'base64'
 );
 
-/** The variables bar, opened (its badges show under the pointer). */
+const variablesButton = (page) => page.getByTestId('eb-ribbon').locator('[data-drawer="variables"]');
+const variablesPanel = (page) => page.getByTestId('eb-panel-variables');
+
+/** The variables panel, opened by its button at the end of the ribbon: its badges. */
 async function openBar(page) {
-  const bar = page.getByTestId('eb-variables-bar');
-  await bar.hover();
-  const badges = bar.getByRole('group', { name: 'Email provider variables' });
+  if ((await variablesButton(page).getAttribute('aria-pressed')) !== 'true') await variablesButton(page).click();
+  const badges = variablesPanel(page).getByRole('group', { name: 'Email provider variables' });
   await expect(badges).toBeVisible();
-  // Done growing: a badge reached while it grows (scrolled into view, on a
-  // second row) would move from under the pointer.
-  await expect.poll(() => badges.evaluate((group) => group.parentElement.clientHeight === group.offsetHeight && group.parentElement.scrollTop === 0)).toBe(true);
+  // Done sliding open: a badge reached while it slides would move from under the pointer.
+  await expect.poll(() => variablesPanel(page).evaluate((aside) => aside.parentElement.offsetWidth)).toBe(256);
   return badges;
 }
 
 test.describe('Variables', () => {
-  test('one place to insert them: the bar above the canvas, no Variables menu in the toolbar', async ({ page }) => {
+  test('one place to insert them: the panel opened from the end of the ribbon, no Variables menu in the toolbar', async ({ page }) => {
     await openBuilder(page);
-    await expect(page.getByRole('button', { name: 'Variables', exact: true })).toHaveCount(0);
-    await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: /^Email provider variables/ })).toBeVisible();
+    await expect(page.getByTestId('eb-toolbar-actions').getByRole('button', { name: 'Variables', exact: true })).toHaveCount(0);
+    const button = variablesButton(page);
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await expect(variablesPanel(page)).toHaveCount(0);
+    await button.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('Email provider variables');
+
+    await openBar(page);
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(variablesPanel(page).getByRole('heading', { name: 'Variables' })).toBeVisible();
+    // Beside the canvas, between the email and the properties: it narrows the email, covers nothing.
+    const frame = await page.locator('.eb-canvas-frame').boundingBox();
+    const aside = await variablesPanel(page).boundingBox();
+    const properties = await panel(page).boundingBox();
+    expect(frame.x + frame.width).toBeLessThanOrEqual(aside.x + 1);
+    expect(aside.x + aside.width).toBeLessThanOrEqual(properties.x + 1);
+
+    // Its button again, or its ×, shuts it.
+    await button.click();
+    await expect(variablesPanel(page)).toHaveCount(0);
+    await openBar(page);
+    await variablesPanel(page).getByRole('button', { name: 'Close the panel' }).click();
+    await expect(variablesPanel(page)).toHaveCount(0);
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('none by default but the unsubscribe link: the + creates the first one', async ({ page }) => {
@@ -637,7 +660,6 @@ test.describe('Variables', () => {
     await expect(badges.locator('[data-variable]')).toHaveText(['First name', 'Unsubscribe link']);
     await expect(badges.getByText('No variables yet.')).toHaveCount(0);
     await expect(badges.getByRole('button', { name: 'Edit “First name”' })).toBeVisible();
-    await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: /^Email provider variables/ })).toContainText('1');
   });
 
   test('unsubscribe on a selected button becomes its URL', async ({ page }) => {
@@ -663,29 +685,12 @@ test.describe('Variables', () => {
     await expect.poll(() => mjml(page)).toMatch(/Your headline\s*<a href="\{\{ unsubscribe \}\}">Unsubscribe<\/a>/);
   });
 
-  test('variables bar: a badge under the pointer types its tag into the selected button, wipes it out when it leaves; a click inserts it', async ({ page }) => {
+  test('variables panel: a badge under the pointer types its tag into the selected button, wipes it out when it leaves; a click inserts it', async ({ page }) => {
     await openBuilder(page);
     const before = await mjml(page);
-    const bar = page.getByTestId('eb-variables-bar');
-    const title = bar.getByRole('button', { name: /^Email provider variables/ });
-    const badges = bar.getByRole('group', { name: 'Email provider variables' });
     const preview = canvas(page).getByTestId('eb-canvas-preview');
     const button = canvas(page).locator('.eb-tag-mj-button');
-    // A thin bar: its badges show under the pointer.
-    await expect(title).toHaveAttribute('aria-expanded', 'false');
-    await expect(badges).toBeHidden();
-    const frame = page.locator('.eb-canvas-frame');
-    const closedTop = (await frame.boundingBox()).y;
-    await bar.hover();
-    await expect(title).toHaveAttribute('aria-expanded', 'true');
-    // Open, it moves the email down instead of covering it.
-    await expect.poll(async () => (await frame.boundingBox()).y).toBeGreaterThan(closedTop + 20);
-    await expect
-      .poll(async () => {
-        const list = await badges.boundingBox();
-        return (await frame.boundingBox()).y - (list.y + list.height);
-      })
-      .toBeGreaterThanOrEqual(0);
+    const badges = await openBar(page);
     await expect(badges.locator('[data-variable]')).toHaveText([
       'First name',
       'Last name',
@@ -705,7 +710,6 @@ test.describe('Variables', () => {
     expect(await mjml(page)).toBe(before);
 
     await canvas(page).getByText('Learn more').click();
-    await bar.hover();
     const lastName = badges.getByRole('button', { name: 'Last name', exact: true });
     await lastName.hover();
     await expect(page.getByRole('tooltip')).toHaveText('{{contact.lastname}}');
@@ -717,11 +721,11 @@ test.describe('Variables', () => {
     await page.mouse.move(700, 700, { steps: 8 });
     await expect(preview).toHaveCount(0);
     await expect(button).not.toContainText('{{');
-    await expect(title).toHaveAttribute('aria-expanded', 'false');
+    // The panel stays open: it is shut by its button.
+    await expect(variablesButton(page)).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByTestId('email-builder').getByText('No changes')).toBeVisible();
     expect(await mjml(page)).toBe(before);
 
-    await bar.hover();
     await lastName.hover();
     await lastName.click();
     await expect.poll(() => mjml(page)).toMatch(/>Learn more \{\{contact\.lastname\}\}<\/mj-button>/);
@@ -730,7 +734,7 @@ test.describe('Variables', () => {
     await expect(button).toContainText('Learn more {{contact.lastname}}');
   });
 
-  test('variables bar on a text being edited: the tag shows at the caret, a click inserts it there', async ({ page }) => {
+  test('variables panel on a text being edited: the tag shows at the caret, a click inserts it there', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Your headline').dblclick();
     await page.keyboard.press('Home');
@@ -766,7 +770,7 @@ test.describe('Variables', () => {
       expect.objectContaining({ key: 'order_number', label: 'Order number', group: 'Custom', sample: 'CMD-1042', fallback: 'your order' }),
     ]);
 
-    // It is offered in the bar, with its tag.
+    // It is offered in the panel, with its tag.
     await openBar(page);
     await badges.getByRole('button', { name: 'Order number', exact: true }).hover();
     await expect(page.getByRole('tooltip')).toHaveText('{{order_number}}');
@@ -895,10 +899,7 @@ test.describe('Variables', () => {
     const badges = await openBar(page);
     await badges.getByRole('button', { name: 'First name', exact: true }).click();
     await page.mouse.move(10, 10);
-    await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: /^Email provider variables/ })).toHaveAttribute(
-      'aria-expanded',
-      'false'
-    );
+    await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveCount(0);
   }
 
   test('a tag in the email: under the pointer its colours swap, its × takes it out with its space', async ({ page }) => {

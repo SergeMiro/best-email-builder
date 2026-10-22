@@ -27,11 +27,10 @@ const rewrite = (page) => page.getByTestId('eb-rewrite');
 const canvas = (page) => page.frameLocator('.eb-canvas-frame');
 const asked = (page) => page.evaluate(() => window.__rewritten || []);
 
-/** A merge tag at the end of the selected text, added as a user does: its badge in the variables bar. */
+/** A merge tag at the end of the selected text, added as a user does: its badge in the variables panel. */
 async function addFirstName(page) {
-  const bar = page.getByTestId('eb-variables-bar');
-  await bar.hover();
-  await bar.getByRole('button', { name: 'First name', exact: true }).click();
+  await page.getByTestId('eb-ribbon').locator('[data-drawer="variables"]').click();
+  await page.getByTestId('eb-panel-variables').getByRole('button', { name: 'First name', exact: true }).click();
   await expect.poll(() => mjml(page)).toContain('Your text. {{contact.firstname}}');
   await page.mouse.move(10, 10);
 }

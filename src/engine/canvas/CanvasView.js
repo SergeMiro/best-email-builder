@@ -33,13 +33,16 @@ import { findTags, removalSpan, textMap } from '../mergeTags.js';
 import { morphChildren, syncAttributes } from './morph.js';
 import { CANVAS_CSS, GHOST_STYLE } from './canvasStyles.js';
 import { ICONS } from './icons.js';
+import { NO_FORMAT } from '../../core/textFormat.js';
 
 /** @typedef {import('../model.js').EmailNode} EmailNode */
 /** @typedef {import('../placement.js').DropTarget} DropTarget */
 /** @typedef {{kind: 'content'|'layout', nodeId?: string|null, block?: any}} DragPayload */
+/** @typedef {import('../../core/EmailEditor.js').TextFormat} TextFormat */
 
 /** Elements edited as rich text in the canvas. */
 export const EDITABLE_TAGS = new Set(['mj-text']);
+
 
 /** Elements whose words may hold merge tags that the × on a tag takes out. */
 const TAGGED_TAGS = new Set(['mj-text', 'mj-button', 'mj-navbar-link']);
@@ -62,8 +65,11 @@ const EDGE = 56;
  *   onEditStart: (id: string) => void,
  *   onEditInput: (id: string, html: string) => void,
  *   onEditEnd: (id: string, html: string) => void,
+ *   onFormat?: (format: TextFormat) => void,
  *   onKeyDown: (event: KeyboardEvent) => void,
  * }} options
+ *   `onFormat`: the formatting at the caret of the text being edited changed
+ *   (and `editing: false` when no text is edited any more).
  */
 export function createCanvasView(options) {
   const { container, compile, getRoot, t, info, imageUrl = null } = options;
@@ -755,6 +761,7 @@ export function createCanvasView(options) {
     hideLinkInput();
     textTools.hidden = true;
     options.onEditEnd(id, html);
+    reportFormat(NO_FORMAT);
     refreshOverlays();
   }
 
@@ -837,11 +844,13 @@ export function createCanvasView(options) {
     if (!preview) return;
     const current = preview;
     const { shown, target } = current;
-    // Wipe back to what both share, then type the rest.
+    // Wipe back to what both share, then type the rest: a character at a
+    // time, an emoji being one.
+    const typed = characters(shown);
     const next = !target.startsWith(shown)
-      ? shown.slice(0, -1)
+      ? typed.slice(0, -1).join('')
       : shown.length < target.length
-        ? target.slice(0, shown.length + 1)
+        ? characters(target).slice(0, typed.length + 1).join('')
         : null;
     if (next === null) {
       current.timer = 0;
@@ -980,24 +989,33 @@ export function createCanvasView(options) {
       return;
     }
     if (command === 'link-confirm') {
-      applyLink();
+      applyLink(linkInput.value.trim());
       return;
     }
-    restoreCaret();
+    runTextCommand(command);
+  });
+
+  /**
+   * Bold, italic, underline, strike, unlink or clear on the text being
+   * edited, where its caret or selection was.
+   * @param {string} command
+   */
+  function runTextCommand(command) {
     const native = /** @type {Record<string, string>} */ (NATIVE)[command];
-    if (native) {
-      if (command === 'unlink') selectLinkUnderCaret();
-      doc.execCommand(native);
-      if (command === 'clear') doc.execCommand('unlink');
-    }
+    if (!native || !editingEl) return false;
+    restoreCaret();
+    if (command === 'unlink') selectLinkUnderCaret();
+    doc.execCommand(native);
+    if (command === 'clear') doc.execCommand('unlink');
     options.onEditInput(/** @type {string} */ (editingId), contentOfEditing());
     refreshTextState();
-  });
+    return true;
+  }
 
   linkInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      applyLink();
+      applyLink(linkInput.value.trim());
     } else if (event.key === 'Escape') {
       event.preventDefault();
       hideLinkInput();
@@ -1040,8 +1058,8 @@ export function createCanvasView(options) {
     linkConfirm.hidden = true;
   }
 
-  function applyLink() {
-    const href = linkInput.value.trim();
+  /** @param {string} href */
+  function applyLink(href) {
     hideLinkInput();
     restoreCaret();
     if (!href || !editingEl) return;
@@ -1051,10 +1069,23 @@ export function createCanvasView(options) {
     else if (savedRange && !savedRange.collapsed) doc.execCommand('createLink', false, safe);
     else doc.execCommand('insertHTML', false, `<a href="${escapeAttribute(safe)}">${escapeHtml(safe)}</a>`);
     options.onEditInput(/** @type {string} */ (editingId), contentOfEditing());
+    refreshTextState();
+  }
+
+  /** @type {TextFormat} */
+  let reported = NO_FORMAT;
+
+  /** Tells the builder (its ribbon) what the caret is in, when that changed. @param {TextFormat} format */
+  function reportFormat(format) {
+    if (Object.keys(format).every((key) => format[key] === reported[key])) return;
+    reported = format;
+    options.onFormat?.(format);
   }
 
   function refreshTextState() {
     if (!editingEl) return;
+    /** @type {TextFormat} */
+    const format = { ...NO_FORMAT, editing: true, link: linkUnderCaret()?.getAttribute('href') || null };
     for (const [command, native] of Object.entries({ bold: 'bold', italic: 'italic', underline: 'underline', strike: 'strikeThrough' })) {
       const button = textTools.querySelector(`[data-command="${command}"]`);
       let on;
@@ -1064,7 +1095,9 @@ export function createCanvasView(options) {
         on = false;
       }
       button?.setAttribute('aria-pressed', on ? 'true' : 'false');
+      format[command] = on;
     }
+    reportFormat(format);
   }
 
   /* ── Drag and drop ─────────────────────────────────────────────────────── */
@@ -1253,6 +1286,29 @@ export function createCanvasView(options) {
     startEditing,
     finishEditing,
     editingId: () => editingId,
+    /**
+     * A command of the text toolbar, from outside the frame (the builder's
+     * ribbon): bold, italic, underline, strike, link (`value`: its address),
+     * unlink or clear. On the selection of the text being edited; on a text
+     * only selected, on all of it.
+     * @param {string} command @param {string} [value]
+     */
+    formatText(command, value = '') {
+      if (!editingId) {
+        if (!selectedId || !EDITABLE_TAGS.has(findTag(selectedId) || '')) return false;
+        startEditing(selectedId);
+        if (!editingEl) return false;
+        const range = doc.createRange();
+        range.selectNodeContents(editingEl);
+        const selection = win.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        savedRange = range.cloneRange();
+      }
+      if (command !== 'link') return runTextCommand(command);
+      applyLink(value.trim());
+      return true;
+    },
     /** @param {string} text */
     insertText(text) {
       dropPreview();
@@ -1291,6 +1347,13 @@ export function createCanvasView(options) {
       host.remove();
     },
   };
+}
+
+const graphemes = typeof Intl !== 'undefined' && 'Segmenter' in Intl ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+
+/** The characters a reader sees: "👍🏽" is one, not four code units. @param {string} text */
+function characters(text) {
+  return graphemes ? Array.from(graphemes.segment(text), (part) => part.segment) : Array.from(text);
 }
 
 /** @param {string} text */

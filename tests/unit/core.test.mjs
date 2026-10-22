@@ -277,3 +277,32 @@ test('previewText: shown by an engine that can, never an error before it is read
   one.destroy();
   editor.destroy();
 });
+
+test('formatText: the ribbon\'s words reach an engine that can, never an error before it is ready or when it cannot', async () => {
+  const plain = fakeAdapter();
+  const editor = createEmailEditor({ adapter: plain, blocks: createRegistry('emailBlocks', [TEXT_BLOCK]) });
+  assert.equal(editor.formatText('bold'), false);
+  await editor.initialize({ container });
+  assert.equal(editor.formatText('bold'), false);
+
+  const formatting = Object.assign(fakeAdapter(), {
+    formatText: (command, value) => (formatting.calls.push(['formatText', command, value]), true),
+  });
+  const one = createEmailEditor({ adapter: formatting, blocks: createRegistry('emailBlocks', [TEXT_BLOCK]) });
+  const formats = [];
+  one.on('format', (format) => formats.push(format));
+  await one.initialize({ container });
+  assert.equal(one.formatText('italic'), true);
+  assert.equal(one.formatText('link', 'https://example.com'), true);
+  assert.deepEqual(formatting.calls.filter(([name]) => name === 'formatText'), [
+    ['formatText', 'italic', ''],
+    ['formatText', 'link', 'https://example.com'],
+  ]);
+  // The format at the caret, as the engine reports it.
+  const format = { editing: true, bold: true, italic: false, underline: false, strike: false, link: null };
+  formatting.emit('format', format);
+  assert.deepEqual(formats, [format]);
+  one.destroy();
+  assert.equal(one.formatText('bold'), false);
+  editor.destroy();
+});

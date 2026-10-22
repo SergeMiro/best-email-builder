@@ -59,9 +59,9 @@ test('server preview: real MJML compilation, variables filled, custom variable i
   expect(created.status()).toBe(201);
 
   await openNew(page);
-  // The new variable is offered in the bar above the canvas.
-  await page.getByTestId('eb-variables-bar').hover();
-  await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: 'Order reference', exact: true })).toBeVisible();
+  // The new variable is offered in the panel opened from the ribbon.
+  await page.getByTestId('eb-ribbon').locator('[data-drawer="variables"]').click();
+  await expect(page.getByTestId('eb-panel-variables').getByRole('button', { name: 'Order reference', exact: true })).toBeVisible();
 
   await panel(page).getByLabel('Subject', { exact: true }).fill(`Order {{${key}}}`);
   await page.getByRole('button', { name: 'Preview', exact: true }).click();

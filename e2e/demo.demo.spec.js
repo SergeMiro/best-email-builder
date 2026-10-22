@@ -10,6 +10,12 @@ import { test, expect } from '@playwright/test';
 const HOME = '/best-email-builder/';
 const builder = (page) => page.getByTestId('email-builder');
 
+/** The variables panel, opened by its button at the end of the ribbon. */
+async function openVariables(page) {
+  await page.getByTestId('eb-ribbon').locator('[data-drawer="variables"]').click();
+  await expect(page.getByTestId('eb-panel-variables')).toBeVisible();
+}
+
 test('build a template, preview it, find it again after a reload', async ({ page }) => {
   await page.goto(`${HOME}?lang=en`);
   await expect(page.getByRole('heading', { name: 'Best Email Builder' })).toBeVisible();
@@ -24,9 +30,8 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await page.locator('[data-block-id="divider"]').click();
 
   // Custom variable, kept by the demo storage.
-  const bar = page.getByTestId('eb-variables-bar');
-  await bar.hover();
-  await bar.getByRole('button', { name: 'New variable' }).click();
+  await openVariables(page);
+  await page.getByTestId('eb-panel-variables').getByRole('button', { name: 'New variable' }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
   await dialog.getByLabel('Name').fill('Coupon code');
   await dialog.getByLabel('Sample value').fill('WELCOME10');
@@ -52,18 +57,17 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await page.getByTestId('eb-library-details').getByRole('button', { name: 'Edit', exact: true }).click();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   await expect(page.frameLocator('.eb-canvas-frame').locator('.eb-tag-mj-divider')).toHaveCount(1);
-  await page.getByTestId('eb-variables-bar').hover();
-  await expect(page.getByTestId('eb-variables-bar').getByRole('button', { name: 'Coupon code', exact: true })).toBeVisible();
+  await openVariables(page);
+  await expect(page.getByTestId('eb-panel-variables').getByRole('button', { name: 'Coupon code', exact: true })).toBeVisible();
 });
 
-test("Brevo's variables: the bar inserts Brevo's tags, the preview shows their samples", async ({ page }) => {
+test("Brevo's variables: the panel inserts Brevo's tags, the preview shows their samples", async ({ page }) => {
   await page.goto(`${HOME}?lang=en#/editor/new`);
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   const canvas = page.frameLocator('.eb-canvas-frame');
   await canvas.getByText('Your text.').click();
-  const bar = page.getByTestId('eb-variables-bar');
-  await bar.hover();
-  const badges = bar.getByRole('group', { name: 'Email provider variables' });
+  await openVariables(page);
+  const badges = page.getByTestId('eb-panel-variables').getByRole('group', { name: 'Email provider variables' });
   await expect(badges.locator('[data-variable]')).toHaveText(['First name', 'Last name', 'Email address', 'Mobile number', 'Unsubscribe link']);
   const firstName = badges.getByRole('button', { name: 'First name', exact: true });
   await firstName.hover();
@@ -78,7 +82,6 @@ test("Brevo's variables: the bar inserts Brevo's tags, the preview shows their s
   await page.keyboard.press('Escape');
 
   // Edited like any variable: its sample changes, its tag stays Brevo's; kept after a reload.
-  await bar.hover();
   await badges.getByRole('button', { name: 'Edit “First name”' }).click();
   const edit = page.getByRole('dialog').filter({ hasText: 'Edit variable' });
   await expect(edit.getByText('{{ contact.FIRSTNAME }}')).toBeVisible();
@@ -91,7 +94,7 @@ test("Brevo's variables: the bar inserts Brevo's tags, the preview shows their s
   // The unsaved email is offered back: not needed here.
   await page.getByRole('alertdialog').getByRole('button', { name: 'Start over' }).click();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
-  await bar.hover();
+  await openVariables(page);
   await badges.getByRole('button', { name: 'Edit “First name”' }).click();
   await expect(edit.getByLabel('Sample value')).toHaveValue('Marie');
 });

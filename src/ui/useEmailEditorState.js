@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { NO_FORMAT } from '../core/textFormat.js';
 
 /**
- * React state of an `EmailEditor`: status, selection, undo/redo, device, and
- * "modified since the last clean point".
+ * React state of an `EmailEditor`: status, selection, undo/redo, device, the
+ * formatting at the caret of the text being edited, and "modified since the
+ * last clean point".
  *
  * The UI reads the editor ONLY through this hook (and its methods): no
  * component subscribes to the engine.
@@ -34,6 +36,7 @@ export function useEmailEditorState(editor) {
     canUndo: false,
     canRedo: false,
     device: 'desktop',
+    format: NO_FORMAT,
     changes: 0,
     dirty: false,
   }));
@@ -92,8 +95,9 @@ export function useEmailEditorState(editor) {
           dirty: false,
         });
       }),
-      editor.on('destroy', () => patch({ status: 'idle', selection: null, canUndo: false, canRedo: false })),
+      editor.on('destroy', () => patch({ status: 'idle', selection: null, canUndo: false, canRedo: false, format: NO_FORMAT })),
       editor.on('selection', (selection) => patch({ selection })),
+      editor.on('format', (format) => patch({ format })),
       editor.on('history', ({ canUndo, canRedo }) => patch({ canUndo, canRedo })),
       editor.on('device', (device) => patch({ device })),
       editor.on('change', () => {
