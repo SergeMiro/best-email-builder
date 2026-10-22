@@ -34,6 +34,7 @@ export const es = {
   "As typed": "Tal como está escrito",
   "Background image": "Imagen de fondo",
   "Background image with a title and a button": "Imagen de fondo con un título y un botón",
+  "Background under the content": "Fondo bajo el contenido",
   "Background width": "Ancho del fondo",
   "Blank": "En blanco",
   "Blog": "Blog",

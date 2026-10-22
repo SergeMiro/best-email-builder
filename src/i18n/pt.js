@@ -34,6 +34,7 @@ export const pt = {
   "As typed": "Como digitado",
   "Background image": "Imagem de fundo",
   "Background image with a title and a button": "Imagem de fundo com um título e um botão",
+  "Background under the content": "Fundo sob o conteúdo",
   "Background width": "Largura do fundo",
   "Blank": "Em branco",
   "Blog": "Blog",

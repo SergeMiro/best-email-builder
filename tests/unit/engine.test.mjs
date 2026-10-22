@@ -79,6 +79,47 @@ test('reading tolerates what is not MJML: comments, a ">" in a value, self-closi
   assert.equal(findFirst(parseMjml(''), 'mj-body').children.length, 0);
 });
 
+test('the color under the content: an mj-wrapper around the sections in the MJML, an attribute of the body in the model', async () => {
+  const section = (attrs, text) => `<mj-section ${attrs}><mj-column><mj-text>${text}</mj-text></mj-column></mj-section>`;
+  const source =
+    '<mjml><mj-body background-color="#eef1f7">' +
+    section('background-color="#ffffff"', 'Top') +
+    section('background-color="#dd3333" border-radius="24px"', 'Rounded') +
+    section('background-color="#222222" full-width="full-width"', 'Band') +
+    '<mj-hero background-color="#ffffff"><mj-text>Hero</mj-text></mj-hero>' +
+    '<mj-wrapper background-color="#00aa00"><mj-section><mj-column><mj-text>Own wrapper</mj-text></mj-column></mj-section></mj-wrapper>' +
+    '</mj-body></mjml>';
+  const plain = parseMjml(source);
+  const body = findFirst(plain, 'mj-body');
+  const root = setAttributes(plain, body.id, { 'content-background-color': '#ffffff' });
+
+  const out = serializeMjml(root, { pretty: false });
+  assert.ok(!out.includes('content-background-color'), 'not an MJML attribute');
+  const layers = out.match(/<mj-wrapper css-class="eb-content-layer" background-color="#ffffff" padding="0px">/g) || [];
+  assert.equal(layers.length, 2, 'the band across the screen splits the layer in two');
+  assert.match(out, /<mj-wrapper css-class="eb-content-layer"[^>]*><mj-section[^>]*>.*Top.*Rounded.*<\/mj-section><\/mj-wrapper><mj-section[^>]*full-width/);
+  assert.match(out, /full-width.*Band.*<\/mj-section><mj-wrapper css-class="eb-content-layer"[^>]*><mj-hero[^>]*>.*Hero.*<\/mj-hero><\/mj-wrapper><mj-wrapper background-color="#00aa00">/);
+
+  // Read back: the body's attribute again, the sections where they were.
+  const back = parseMjml(out);
+  assert.equal(findFirst(back, 'mj-body').attributes['content-background-color'], '#ffffff');
+  assert.deepEqual(
+    findFirst(back, 'mj-body').children.map((c) => c.tag),
+    ['mj-section', 'mj-section', 'mj-section', 'mj-hero', 'mj-wrapper']
+  );
+  assert.equal(serializeMjml(back, { pretty: false }), out);
+  // Empty, the email is written exactly as before.
+  assert.equal(serializeMjml(setAttributes(root, body.id, { 'content-background-color': null })), serializeMjml(plain));
+
+  // Compiled: the color at the content's width under the rounded section, Outlook's table included.
+  const { html, errors } = await mjml2html(out, { validationLevel: 'strict' });
+  assert.deepEqual(errors, []);
+  assert.match(html, /<div\s+class="eb-content-layer" style="background:#ffffff;background-color:#ffffff;margin:0px auto;max-width:600px;">/);
+  assert.match(html, /class="eb-content-layer-outlook"[^>]*bgcolor="#ffffff"/);
+  const layer = html.indexOf('class="eb-content-layer"');
+  assert.ok(layer > -1 && html.indexOf('border-radius:24px', layer) > layer, 'the rounded section is inside the layer');
+});
+
 /* ── Model ─────────────────────────────────────────────────────────────── */
 
 test('operations are pure and keep ids unique', () => {

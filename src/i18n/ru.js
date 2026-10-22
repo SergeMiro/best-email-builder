@@ -34,6 +34,7 @@ export const ru = {
   "As typed": "Как введено",
   "Background image": "Фоновое изображение",
   "Background image with a title and a button": "Фоновое изображение с заголовком и кнопкой",
+  "Background under the content": "Фон под содержимым",
   "Background width": "Ширина фона",
   "Blank": "Пустое письмо",
   "Blog": "Блог",

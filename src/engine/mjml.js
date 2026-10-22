@@ -14,12 +14,36 @@
  * on write: the model holds what the attribute means, the MJML how to write
  * it.
  *
+ * One attribute of the model is not MJML: `content-background-color` on
+ * `mj-body`, the color painted under the content, at the email's width. A
+ * section with rounded corners shows it in its corners instead of the page
+ * background. MJML has no such attribute: it is written as an `mj-wrapper`
+ * around the sections (`eb-content-layer`), and read back into the body.
+ *
  * Dependency-free: runs in the browser, on the server and in unit tests.
  */
 
 import { ENDING_TAGS, createNode, findFirst } from './model.js';
 
 /** @typedef {import('./model.js').EmailNode} EmailNode */
+
+/** The color under the content, kept on `mj-body` in the model. */
+export const CONTENT_BACKGROUND = 'content-background-color';
+/** The class of the `mj-wrapper` it is written as. */
+export const CONTENT_LAYER_CLASS = 'eb-content-layer';
+
+/**
+ * Sections the layer goes under. A band across the whole screen cannot be in
+ * an `mj-wrapper` (it would shrink to the content's width), nor can another
+ * wrapper: they split the layer in two.
+ * @param {EmailNode} node
+ */
+const underLayer = (node) =>
+  (node.tag === 'mj-section' && node.attributes['full-width'] !== 'full-width') || node.tag === 'mj-hero';
+
+/** @param {EmailNode} node */
+const isContentLayer = (node) =>
+  node.tag === 'mj-wrapper' && String(node.attributes['css-class'] || '').split(/\s+/).includes(CONTENT_LAYER_CLASS);
 
 const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
@@ -183,7 +207,14 @@ export function parseMjml(source) {
       ],
     });
   }
-  if (!findFirst(root, 'mj-body')) root.children.push(createNode('mj-body'));
+  const body = findFirst(root, 'mj-body');
+  if (!body) root.children.push(createNode('mj-body'));
+  else if (body.children.some(isContentLayer)) {
+    const layer = /** @type {EmailNode} */ (body.children.find(isContentLayer));
+    const color = layer.attributes['background-color'];
+    if (color) body.attributes[CONTENT_BACKGROUND] = color;
+    body.children = body.children.flatMap((child) => (isContentLayer(child) ? child.children : [child]));
+  }
   return root;
 }
 
@@ -197,23 +228,56 @@ export function parseMjml(source) {
  */
 export function serializeMjml(node, options = {}) {
   const { pretty = true } = options;
-  /** @param {EmailNode} current @param {number} depth @returns {string} */
-  const write = (current, depth) => {
-    const indent = pretty ? '  '.repeat(depth) : '';
-    const attributes = options.attributes ? options.attributes(current) : current.attributes;
-    const attrs = Object.entries(attributes)
+  /** @param {Record<string, string>} attributes */
+  const attrsOf = (attributes) =>
+    Object.entries(attributes)
       .map(([key, value]) => ` ${key}="${encodeAttribute(value)}"`)
       .join('');
-    if (current.content !== null) {
-      return `${indent}<${current.tag}${attrs}>${current.content}</${current.tag}>`;
+  /** @param {string} tag @param {Record<string, string>} attributes @param {string[]} inner @param {number} depth */
+  const element = (tag, attributes, inner, depth) => {
+    const indent = pretty ? '  '.repeat(depth) : '';
+    const attrs = attrsOf(attributes);
+    if (!inner.length) return `${indent}<${tag}${attrs} />`;
+    return pretty ? `${indent}<${tag}${attrs}>\n${inner.join('\n')}\n${indent}</${tag}>` : `<${tag}${attrs}>${inner.join('')}</${tag}>`;
+  };
+  /** The body's children, each run of sections under the layer in its `mj-wrapper`. @param {EmailNode} body @param {number} depth */
+  const layered = (body, depth) => {
+    const layer = { 'css-class': CONTENT_LAYER_CLASS, 'background-color': body.attributes[CONTENT_BACKGROUND], padding: '0px' };
+    /** @type {string[]} */
+    const out = [];
+    /** @type {EmailNode[]} */
+    let run = [];
+    const flush = () => {
+      if (run.length) out.push(element('mj-wrapper', layer, run.map((child) => write(child, depth + 2)), depth + 1));
+      run = [];
+    };
+    for (const child of body.children) {
+      if (underLayer(child)) run.push(child);
+      else {
+        flush();
+        out.push(write(child, depth + 1));
+      }
     }
-    const inner = current.children.map((child) => write(child, depth + 1));
+    flush();
+    return out;
+  };
+  /** @param {EmailNode} current @param {number} depth @returns {string} */
+  const write = (current, depth) => {
+    let attributes = options.attributes ? options.attributes(current) : current.attributes;
+    if (current.tag === 'mj-body' && CONTENT_BACKGROUND in attributes) {
+      const { [CONTENT_BACKGROUND]: _layer, ...mjml } = attributes;
+      attributes = mjml;
+    }
+    if (current.content !== null) {
+      return `${pretty ? '  '.repeat(depth) : ''}<${current.tag}${attrsOf(attributes)}>${current.content}</${current.tag}>`;
+    }
+    const inner =
+      current.tag === 'mj-body' && current.attributes[CONTENT_BACKGROUND]
+        ? layered(current, depth)
+        : current.children.map((child) => write(child, depth + 1));
     const extra = options.extraChildren ? options.extraChildren(current) : '';
     if (extra) inner.push(pretty ? `${'  '.repeat(depth + 1)}${extra}` : extra);
-    if (!inner.length) return `${indent}<${current.tag}${attrs} />`;
-    return pretty
-      ? `${indent}<${current.tag}${attrs}>\n${inner.join('\n')}\n${indent}</${current.tag}>`
-      : `<${current.tag}${attrs}>${inner.join('')}</${current.tag}>`;
+    return element(current.tag, attributes, inner, depth);
   };
   return write(node, 0);
 }

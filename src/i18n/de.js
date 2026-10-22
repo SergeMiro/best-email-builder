@@ -34,6 +34,7 @@ export const de = {
   "As typed": "Wie eingegeben",
   "Background image": "Hintergrundbild",
   "Background image with a title and a button": "Hintergrundbild mit Titel und Schaltfläche",
+  "Background under the content": "Hintergrund unter dem Inhalt",
   "Background width": "Hintergrundbreite",
   "Blank": "Leere Vorlage",
   "Blog": "Blog",

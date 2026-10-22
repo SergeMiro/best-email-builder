@@ -34,6 +34,7 @@ export const zh = {
   "As typed": "保持原样",
   "Background image": "背景图片",
   "Background image with a title and a button": "带标题和按钮的背景图片",
+  "Background under the content": "内容下方背景",
   "Background width": "背景宽度",
   "Blank": "空白",
   "Blog": "博客",

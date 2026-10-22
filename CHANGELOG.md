@@ -35,6 +35,13 @@ All notable changes are documented here. The format follows
   `rgba()` in the email (MJML refuses `#RRGGBBAA`) and shown as `#RRGGBBAA` in
   the field. Classic Outlook, which reads no `rgba()`, gets in `bgcolor` the
   opaque color it looks like over white.
+- *Background under the content* (Email → Colors): a color painted under the
+  sections, at the email's width. The rounded corners of a section show it
+  instead of the page background. MJML has no such attribute: it is written
+  as an `mj-wrapper` (`css-class="eb-content-layer"`) around the sections and
+  read back as `content-background-color` on `mj-body`. A full-width band or
+  an `mj-wrapper` of your own interrupts it. Left empty, the MJML is exactly
+  as before.
 
 ### Fixed
 - A color dragged in the picker (the area, the hue or the transparency

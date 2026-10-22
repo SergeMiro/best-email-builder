@@ -34,6 +34,7 @@ export const fr = {
   "As typed": "Comme saisi",
   "Background image": "Image de fond",
   "Background image with a title and a button": "Image de fond avec un titre et un bouton",
+  "Background under the content": "Fond sous le modèle d'e-mail",
   "Background width": "Largeur du fond",
   "Blank": "Vierge",
   "Blog": "Blog",

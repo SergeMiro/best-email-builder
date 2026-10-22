@@ -22,6 +22,10 @@ export const bodyBlock = {
   order: 900,
   properties: [
     prop.background('background-color', 'Page background'),
+    // Under the sections, at the content's width: what the rounded corners
+    // of a section show. Empty, they show the page background. Not an MJML
+    // attribute: the engine writes it as an `mj-wrapper` (engine/mjml.js).
+    prop.background('content-background-color', 'Background under the content'),
     {
       key: 'width',
       label: 'Content width',
