@@ -42,6 +42,16 @@ All notable changes are documented here. The format follows
   read back as `content-background-color` on `mj-body`. A full-width band or
   an `mj-wrapper` of your own interrupts it. Left empty, the MJML is exactly
   as before.
+- *Proofread* without AI: `createLanguageToolProofreader({ url })` (from
+  `best-email-builder/ai` and `/ai/server`) is a `proofread` function that
+  asks a LanguageTool server. Its corrections show in the same dialog, as the
+  smallest change of their words: markup, links and merge tags stay. Style
+  suggestions, brands and acronyms, and a capital asked of a subject or a
+  button are left out; `ignoreWords` adds your own. Alone, it is the only
+  check, with no key; beside a provider, LanguageTool proofreads and the AI
+  writes. `LANGUAGETOOL_PUBLIC_API` is LanguageTool's free API, to try it
+  out (limited, and the texts go to LanguageTool). New error codes:
+  `CHECKER_UNAVAILABLE`, `CHECKER_BUSY`.
 
 ### Fixed
 - A color dragged in the picker (the area, the hue or the transparency
@@ -81,6 +91,10 @@ All notable changes are documented here. The format follows
 - `unsubscribeUrl` is optional: without it, `personalize` and `renderEmail`
   use the link's value if empty, `sendTestEmail` its sample; the handler's
   `previewUnsubscribeUrl` defaults to `null` (the sample, otherwise `#`).
+- The *Proofread* dialog no longer says the AI reads the email: "Every text
+  is checked for spelling, grammar and punctuation mistakes", whoever checks.
+- The live demo proofreads with LanguageTool's public API, without a key;
+  the visitor's key is for *Write with AI* and *Suggest subjects*.
 
 ## [0.15.0] — 2026-10-22
 

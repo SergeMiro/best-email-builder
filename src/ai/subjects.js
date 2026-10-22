@@ -101,8 +101,12 @@ const ENTITIES = {
   Uuml: 'Ü', Ntilde: 'Ñ', OElig: 'Œ', AElig: 'Æ', iexcl: '¡', iquest: '¿',
 };
 
-/** One entity, decoded once; an unknown or impossible one as written. @param {string} whole @param {string} body */
-const entity = (whole, body) => {
+/**
+ * One entity (`&eacute;`, `&#233;`), decoded once; an unknown or impossible
+ * one as written. `body`: what is between `&` and `;`.
+ * @param {string} whole @param {string} body
+ */
+export const decodeEntity = (whole, body) => {
   if (body[0] !== '#') return Object.hasOwn(ENTITIES, body) ? ENTITIES[/** @type {keyof typeof ENTITIES} */ (body)] : whole;
   const code = /^#x/i.test(body) ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
   return Number.isInteger(code) && code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : whole;
@@ -128,7 +132,7 @@ export function visibleText(markup) {
     .replace(/<\/(p|div|li|h[1-6]|mj-text|mj-button|mj-navbar-link|mj-social-element)>|<br\s*\/?>/gi, '\n')
     .replace(/<[^>]*>/g, ' ')
     // One pass: `&amp;#65;` stays `&#65;`, as the reader sees it.
-    .replace(/&(#\d{1,8}|#x[0-9a-f]{1,8}|[a-z]{2,8});/gi, entity)
+    .replace(/&(#\d{1,8}|#x[0-9a-f]{1,8}|[a-z]{2,8});/gi, decodeEntity)
     .replace(/[ \t]+/g, ' ')
     .replace(/\s*\n\s*/g, '\n')
     .trim();

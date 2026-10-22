@@ -8,10 +8,12 @@
  * A first visit finds five templates of the gallery in the library, three of
  * them tagged, so the bank does not open empty. Tags are kept like templates.
  *
- * "Proofread", "Write with AI" and "Suggest subjects" run in the
- * browser too, with the VISITOR's own key (asked once, kept in this browser's
- * localStorage, sent only to the provider they choose). An application can do the same, or call the model on its
- * server, where its own key stays (`best-email-builder/ai/server`, see the README).
+ * "Write with AI" and "Suggest subjects" run in the browser too, with the
+ * VISITOR's own key (asked once, kept in this browser's localStorage, sent only
+ * to the provider they choose). An application can do the same, or call the
+ * model on its server, where its own key stays (`best-email-builder/ai/server`,
+ * see the README). "Proofread" needs no key: LanguageTool's public API reads
+ * the texts — an application points it at its own LanguageTool server.
  */
 
 import { buildGallery, createMemoryStorage, translatorFor } from 'best-email-builder/builder';
@@ -30,7 +32,7 @@ import {
 } from '../../../src/features/variables/service.js';
 import { qualityReport } from '../../../src/validation/quality.js';
 import { validateMjml } from '../../../src/validation/mjmlValidator.js';
-import { claudeProvider, createAi } from 'best-email-builder/ai';
+import { claudeProvider, createAi, createLanguageToolProofreader, LANGUAGETOOL_PUBLIC_API } from 'best-email-builder/ai';
 
 /**
  * Uploaded images: a server would store them and serve `/email-assets/<key>`.
@@ -122,7 +124,8 @@ const claude = claudeProvider({
  * The demo's AI module: the visitor's own key, with the provider they choose
  * in the builder's Connect dialog (`askKey: true`). The key stays in this
  * browser and goes only to that provider. Gemini and Mistral have free plans
- * that answer in seconds; OpenRouter's free models take minutes.
+ * that answer in seconds; OpenRouter's free models take minutes. Proofreading
+ * goes to LanguageTool's public API, without a key (20 checks a minute).
  */
 export function createBrowserAi() {
   try {
@@ -131,7 +134,12 @@ export function createBrowserAi() {
   } catch {
     // Private window.
   }
-  return createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'], askKey: true, compile: compileWarnings });
+  return createAi({
+    provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'],
+    askKey: true,
+    proofread: createLanguageToolProofreader({ url: LANGUAGETOOL_PUBLIC_API }),
+    compile: compileWarnings,
+  });
 }
 
 const read = (key, empty = []) => {

@@ -70,7 +70,8 @@ once and given away.
 
 **AI, optional**
 - *Proofread* the whole email: spelling, grammar and punctuation in every
-  text, each correction shown word by word, applied in one step.
+  text, each correction shown word by word, applied in one step. By the AI,
+  or without AI by LanguageTool, on your own server.
 - *Write with AI*, in one field: a text on a topic, or a change in your own
   words, to fit the rest of the email; or in one click: shorter, longer,
   fixed, friendlier, more formal, translated into 13 languages. The answer

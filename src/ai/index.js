@@ -24,3 +24,5 @@ export { claudeEmailModel, claudeProvider, DEFAULT_CLAUDE_MODEL } from './claude
 export { AI_PROVIDERS, failureCode, listProviderModels, providerEmailModel, resolveProvider } from './providers.js';
 // An agent of the application's own, through a route of it: `createAi({ model: agentEmailModel({ url }) })`.
 export { agentEmailModel, AGENT_PROTOCOL, AGENT_ERROR_CODES } from './agent.js';
+// Proofread without AI: `createAi({ proofread: createLanguageToolProofreader({ url }) })`.
+export { createLanguageToolProofreader, LANGUAGETOOL_PUBLIC_API } from './languagetool.js';

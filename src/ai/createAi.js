@@ -28,7 +28,9 @@
  *   createAi({ provider, apiKey })      the same with one key for all (prototypes: the key
  *                                       is then in the page)
  *   createAi({ model })                 the generator runs in the page with this model
- *   createAi({ proofread, rewrite, … }) functions of your own: only those given are on
+ *   createAi({ proofread, rewrite, … }) functions of your own: only those given are on —
+ *                                       createLanguageToolProofreader({ url }) proofreads
+ *                                       without AI (languagetool.js)
  *
  * Each of `proofread`, `rewrite` and `suggestSubjects` can also be `false`,
  * to leave that part out — its button with it.

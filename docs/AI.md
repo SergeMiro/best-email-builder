@@ -8,7 +8,7 @@ Given to the editor, the module adds four things:
 
 | Feature | Where | What it does |
 |---|---|---|
-| **Proofread** | the toolbar | Finds the spelling, grammar and punctuation mistakes of every text in the email, and shows each correction word by word, to apply. |
+| **Proofread** | the toolbar | Finds the spelling, grammar and punctuation mistakes of every text in the email, and shows each correction word by word, to apply. The AI reads the email, or [LanguageTool](#without-ai-languagetool), without AI. |
 | **Write with AI** | the properties of a text or a button | One field: writes that text on a topic you give, or changes it as you say, to fit the rest of the email. One click makes it shorter, longer, fixed, friendlier, more formal or translated. |
 | **Suggest subjects** | under the subject | Proposes three other subject lines drawn from the email. |
 
@@ -269,6 +269,64 @@ again is left out, and the other corrections still come back.
   from `best-email-builder/ai/server`, and `diffWords` (the word-by-word
   difference the dialog shows) from both entries.
 
+### Without AI: LanguageTool
+
+[LanguageTool](https://languagetool.org) checks spelling, grammar,
+punctuation and typography by rules, in some thirty languages. No model, no
+key: give its address, and *Proofread* lists its corrections in the same
+dialog.
+
+```js
+import { createAi, createLanguageToolProofreader } from 'best-email-builder/ai';
+
+// Proofread only, without AI.
+createAi({ proofread: createLanguageToolProofreader({ url: 'https://languagetool.example.com' }) });
+
+// LanguageTool proofreads; the AI writes and suggests subjects, with each user's key.
+createAi({
+  provider: ['gemini', 'openrouter'],
+  askKey: true,
+  proofread: createLanguageToolProofreader({ url: 'https://languagetool.example.com' }),
+});
+```
+
+In production, run LanguageTool yourself (its Docker image or its Java
+server): no limit, and the texts stay with you. `LANGUAGETOOL_PUBLIC_API`
+(`https://api.languagetool.org`) is LanguageTool's free API, to try it out:
+20 requests a minute, 20 KB each, and the texts go to LanguageTool. It
+answers any origin, so the check can run in the page. On a server, pass it as
+the generator's `proofread`:
+`createEmailBuilderHandler({ generator: { ...generator, proofread } })`.
+
+The texts go as LanguageTool's annotated text: the words to check, and the
+markup read as what the reader sees (a paragraph, a line break, the
+character of an entity, a word for a merge tag). Each mistake becomes the
+smallest change of its words, so the bold, the links and the merge tags stay
+as they are. Left out:
+
+- a change that would touch the markup, or the letters of an entity or a tag;
+- a suggestion of style (LanguageTool's `style` and `register` issues);
+- an unknown word with a capital letter that its suggestion is far from (a
+  brand, a name), a word in capitals (an acronym) or with digits, and the
+  words of `ignoreWords`;
+- a capital asked at the start of a subject, a preview text, a button or a
+  menu link, which are often in lower case on purpose.
+
+| Option | Default | |
+|---|---|---|
+| `url` | (required) | The LanguageTool server, or its `/v2/check` address. |
+| `language` | `'auto'` | Detected from the whole email, the interface's language preferred when unsure; or a code such as `'fr'` or `'en-GB'`. |
+| `preferredVariants` | `en-US, de-DE, pt-PT, ca-ES` | The variant checked when the language is detected. |
+| `level` | `'default'` | `'picky'` adds LanguageTool's stricter rules. |
+| `disabledRules` | `[]` | LanguageTool rule ids to skip. |
+| `ignoreWords` | `[]` | Words never corrected: your brand, your product names. |
+| `username`, `apiKey` | — | A LanguageTool Premium account, together. |
+| `headers`, `fetch` | — | Sent with each request; your own `fetch`. |
+
+When LanguageTool cannot answer, the dialog says so: *The checker could not
+answer* (`CHECKER_UNAVAILABLE`, 502), or *The checker is busy* when it limits
+the requests (`CHECKER_BUSY`, 503).
+
 ## Write with AI
 
 The same generator writes or rewrites one text. Select a text block or a
@@ -324,10 +382,15 @@ new ones, and *Done* closes the list.
 
 ## The live demo
 
-The live demo has no server. Its AI runs in the page, with the visitor's own
-key, for the provider they choose: OpenAI, Claude, Mistral, Gemini,
-OpenRouter or an OpenAI-compatible API of their own.
+The live demo has no server. *Write with AI* and *Suggest subjects* run in
+the page, with the visitor's own key, for the provider they choose: OpenAI,
+Claude, Mistral, Gemini, OpenRouter or an OpenAI-compatible API of their own.
+*Proofread* needs no key: LanguageTool's public API reads the email.
 
 ```js
-createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'], askKey: true });
+createAi({
+  provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'],
+  askKey: true,
+  proofread: createLanguageToolProofreader({ url: LANGUAGETOOL_PUBLIC_API }),
+});
 ```

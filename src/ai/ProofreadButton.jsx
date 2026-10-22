@@ -18,8 +18,9 @@ import { visibleText } from './subjects.js';
  * are one step of the history (Ctrl+Z brings the texts back). Nothing changes
  * before the user applies it.
  *
- * A text edited while the AI reads, or before its correction is applied, is
- * left as it is: the correction was for the old one.
+ * A text edited while the email is read, or before its correction is
+ * applied, is left as it is: the correction was for the old one. Who reads it
+ * — an AI, or LanguageTool (languagetool.js) — is the `proofread` function's.
  */
 
 /** Tags whose content is a label of plain words (EmailEditor `content`). */
@@ -110,7 +111,7 @@ export default function ProofreadButton({ context, proofread }) {
           .filter((fix) => sent.has(fix.id))
           .map((fix) => {
             const text = /** @type {(typeof texts)[number]} */ (sent.get(fix.id));
-            // Edited while the AI was reading: the correction is for the old text.
+            // Edited while it was read: the correction is for the old text.
             const stale = currentText(editor, metaRef.current, fix.id) !== text.text;
             return { id: fix.id, kind: text.kind, format: text.format, before: text.text, after: fix.text, state: stale ? 'stale' : 'open' };
           })
@@ -187,7 +188,7 @@ export default function ProofreadButton({ context, proofread }) {
         <DialogContent className="eb:flex eb:max-h-[calc(100dvh-2rem)] eb:flex-col eb:gap-0 eb:p-0 eb:sm:max-w-xl" data-testid="eb-proofread">
           <DialogHeader className="eb:gap-1.5 eb:px-6 eb:pt-6 eb:pb-4">
             <DialogTitle>{t('Proofread the email')}</DialogTitle>
-            <DialogDescription>{t('AI looks for spelling, grammar and punctuation mistakes in every text. Nothing changes until you apply it.')}</DialogDescription>
+            <DialogDescription>{t('Every text is checked for spelling, grammar and punctuation mistakes. Nothing changes until you apply it.')}</DialogDescription>
           </DialogHeader>
 
           <div className="eb:min-h-0 eb:flex-1 eb:overflow-y-auto eb:border-t eb:border-border eb:px-6 eb:py-4">

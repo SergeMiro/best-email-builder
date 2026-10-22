@@ -19,6 +19,9 @@ export const GENERATION_ERRORS = {
   SUBJECTS_UNUSABLE: { status: 502, message: 'No usable subject came back. Try again.' },
   NOTHING_TO_PROOFREAD: { status: 400, message: 'The email has no text to check yet.' },
   PROOFREAD_REFUSED: { status: 422, message: 'The AI declined to check this email.' },
+  // A checker without AI (languagetool.js).
+  CHECKER_UNAVAILABLE: { status: 502, message: 'The checker could not answer. Try again.' },
+  CHECKER_BUSY: { status: 503, message: 'The checker is busy right now. Try again in a minute.' },
   // The provider's side (providers.js). Never 401 to the browser: the key is the AI's, not the user's session.
   KEY_MISSING: { status: 502, message: 'Connect an AI provider first: it needs a key.' },
   KEY_REFUSED: { status: 502, message: 'The AI provider refused the key. Check it, or use another one.' },

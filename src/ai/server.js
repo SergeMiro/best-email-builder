@@ -36,3 +36,5 @@ export { SUBJECTS_SYSTEM_PROMPT, createSubjectSuggester, emailWords, reviewSubje
 export { AI_MESSAGES } from './i18n/index.js';
 export { agentEmailModel, AGENT_PROTOCOL, AGENT_ERROR_CODES } from './agent.js';
 export { createAgentEndpoint, checkAgent } from './agentEndpoint.js';
+// Proofread without AI, on the server: `generator: { ...generator, proofread: createLanguageToolProofreader({ url }) }`.
+export { createLanguageToolProofreader, LANGUAGETOOL_PUBLIC_API } from './languagetool.js';

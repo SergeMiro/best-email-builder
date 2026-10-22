@@ -4,9 +4,11 @@ import { test, expect } from '@playwright/test';
  * THE AI in the static demo: the visitor's own key, with the provider they
  * choose in the builder's Connect dialog
  * (`createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'], askKey: true })`).
- * Proofread makes the calls: a typo in the subject, corrected. The providers
- * are answered by `page.route` — nothing leaves the machine; the tests check
- * what the browser would have sent.
+ * Suggest subjects makes the calls: three ideas for the subject, one picked.
+ * Proofread needs no key: LanguageTool reads the email
+ * (`proofread: createLanguageToolProofreader({ url: LANGUAGETOOL_PUBLIC_API })`).
+ * The providers and LanguageTool are answered by `page.route` — nothing
+ * leaves the machine; the tests check what the browser would have sent.
  */
 
 const HOME = '/best-email-builder/';
@@ -14,13 +16,14 @@ const API = 'https://openrouter.ai/api/v1/chat/completions';
 const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 const MISTRAL = 'https://api.mistral.ai/v1/chat/completions';
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages*';
+const LANGUAGETOOL = 'https://api.languagetool.org/v2/check';
 const KEY = 'sk-or-test-0000';
 const STORED = 'best-email-builder:ai-key:openrouter';
 const CHOICE = 'best-email-builder:ai-provider';
 
-/** A typo in the subject, and what the model answers for it. */
-const TYPO = 'Our sumer sale';
-const FIXES = { fixes: [{ id: 'subject', text: 'Our summer sale' }] };
+/** A subject, and the ideas the model answers for it. */
+const SUBJECT = 'Our summer sale';
+const IDEAS = { subjects: ['Summer sale: pick your favourites', 'What our summer sale holds for you', 'Your summer, on sale'] };
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST' };
 
@@ -44,6 +47,32 @@ async function fakeApi(page, url, reply) {
   return seen;
 }
 const fakeOpenRouter = (page, reply) => fakeApi(page, API, reply);
+
+/**
+ * LanguageTool's public API: each wrong word of `mistakes` found in the text it
+ * was sent, with its correction. Returns the requests seen.
+ */
+async function fakeLanguageTool(page, mistakes) {
+  const seen = [];
+  await page.route(LANGUAGETOOL, async (route) => {
+    const request = route.request();
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
+    const form = new URLSearchParams(request.postData() || '');
+    const sent = JSON.parse(form.get('data')).annotation.map((part) => part.text ?? part.markup).join('');
+    seen.push({ headers: request.headers(), form, sent });
+    const matches = Object.entries(mistakes)
+      .filter(([wrong]) => sent.includes(wrong))
+      .map(([wrong, right]) => ({
+        message: 'Possible spelling mistake found.',
+        offset: sent.indexOf(wrong),
+        length: wrong.length,
+        replacements: [{ value: right }],
+        rule: { id: 'MORFOLOGIK_RULE_EN_US', issueType: 'misspelling', category: { id: 'TYPOS' } },
+      }));
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ matches }) });
+  });
+  return seen;
+}
 
 /** Claude's answer, as the event stream the Anthropic SDK reads. */
 const claudeStream = (text) => {
@@ -75,19 +104,23 @@ async function reopenEditor(page) {
 
 const subjectField = (page, lang = 'en') => page.getByTestId('eb-properties').getByLabel(lang === 'fr' ? 'Objet' : 'Subject', { exact: true });
 
-/** The typo in the subject, then Proofread: its dialog. */
-async function proofreadSubject(page, lang = 'en') {
-  await subjectField(page, lang).fill(TYPO);
-  await page.getByRole('button', { name: lang === 'fr' ? 'Relire' : 'Proofread', exact: true }).click();
-  return page.getByTestId('eb-proofread');
+/** A subject, then Suggest subjects: the ideas' place under it. */
+async function suggestSubjects(page, lang = 'en') {
+  await subjectField(page, lang).fill(SUBJECT);
+  const box = page.getByTestId('eb-subject-ideas');
+  await box.getByRole('button', { name: lang === 'fr' ? 'Suggérer des objets' : 'Suggest subjects', exact: true }).click();
+  return box;
 }
 
-/** The model's correction listed, then applied: the subject corrected, the dialog closed. */
-async function applyCorrection(page, box) {
-  await expect(box.getByTestId('eb-proofread-fix')).toHaveCount(1, { timeout: 30_000 });
-  await box.getByTestId('eb-proofread-apply-all').click();
-  await expect(box).toBeHidden();
-  await expect(subjectField(page)).toHaveValue(FIXES.fixes[0].text);
+/** The model's ideas listed after the subject, the first one picked; Done keeps it. */
+async function pickIdea(page, box) {
+  const ideas = box.getByRole('radiogroup', { name: 'Subject ideas' }).getByRole('radio');
+  await expect(ideas).toHaveCount(1 + IDEAS.subjects.length, { timeout: 30_000 });
+  await ideas.nth(1).click();
+  await expect(subjectField(page)).toHaveValue(IDEAS.subjects[0]);
+  await box.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(ideas).toHaveCount(0);
+  await expect(subjectField(page)).toHaveValue(IDEAS.subjects[0]);
 }
 
 const connect = (page) => page.getByTestId('eb-ai-connect');
@@ -160,18 +193,19 @@ const modelStatus = (page) => connect(page).getByTestId('eb-ai-connect-models-st
 const modelList = (page) => connect(page).getByRole('listbox', { name: /^(Model|Modèle)$/ });
 
 test('without a key: the Connect dialog offers six providers and asks for a key; Cancel explains it, nothing is sent', async ({ page }) => {
-  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(FIXES)));
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(IDEAS)));
   // The page only: the canvas frame shares its storage, and would put the key back.
   await page.addInitScript(() => window === window.top && localStorage.setItem('best-email-builder-demo:anthropic-key', 'sk-ant-old'));
   await openEditor(page);
   const note = page.getByTestId('demo-ai-note');
   await expect(note).toContainText('your own key: OpenAI, Claude, Mistral, Gemini, OpenRouter or any OpenAI-compatible API.');
+  await expect(note).toContainText('“Proofread” finds the mistakes of the whole email without AI or key');
   await expect(note).not.toContainText('Connected to');
   await expect(note.getByRole('button', { name: 'Forget my key' })).toBeHidden();
   // The key of the demo's Anthropic days is no longer kept.
   expect(await page.evaluate(() => localStorage.getItem('best-email-builder-demo:anthropic-key'))).toBeNull();
 
-  const box = await proofreadSubject(page);
+  const box = await suggestSubjects(page);
   const dialog = connect(page);
   await expect(dialog.getByLabel('API key')).toBeFocused();
   // Six providers, the first one chosen; no icons on the cards.
@@ -236,15 +270,40 @@ test('without a key: the Connect dialog offers six providers and asks for a key;
   expect(await stored(page, CHOICE)).toBeNull();
 });
 
-test('with a key: OpenRouter is asked from the browser, the correction is applied; the key can be forgotten', async ({ page }) => {
-  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(FIXES)));
+test('Proofread without a key: LanguageTool reads the email, the correction is applied; no AI provider is asked', async ({ page }) => {
+  const checks = await fakeLanguageTool(page, { sumer: 'summer' });
+  const asked = await fakeOpenRouter(page, () => completion(JSON.stringify(IDEAS)));
   await openEditor(page);
-  const box = await proofreadSubject(page);
+  await subjectField(page).fill('Our sumer sale');
+  await page.getByRole('button', { name: 'Proofread', exact: true }).click();
+  const box = page.getByTestId('eb-proofread');
+  await expect(box).toContainText('Every text is checked for spelling, grammar and punctuation mistakes.');
+  await expect(box.getByTestId('eb-proofread-fix')).toHaveCount(1, { timeout: 30_000 });
+  await expect(connect(page)).toBeHidden();
+  await box.getByTestId('eb-proofread-apply-all').click();
+  await expect(box).toBeHidden();
+  await expect(subjectField(page)).toHaveValue('Our summer sale');
+
+  // One request, to LanguageTool's public API: the texts, no key, the interface's language preferred.
+  expect(checks).toHaveLength(1);
+  const [{ form, sent }] = checks;
+  expect(sent).toContain('Our sumer sale');
+  expect(form.get('language')).toBe('auto');
+  expect(form.get('preferredLanguages')).toBe('en');
+  expect(form.get('apiKey')).toBeNull();
+  expect(asked).toHaveLength(0);
+  expect(await stored(page, CHOICE)).toBeNull();
+});
+
+test('with a key: OpenRouter is asked from the browser, an idea is picked; the key can be forgotten', async ({ page }) => {
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(IDEAS)));
+  await openEditor(page);
+  const box = await suggestSubjects(page);
   await choose(page, 'OpenRouter');
   await connect(page).getByLabel('API key').fill(KEY);
   await page.keyboard.press('Enter');
   await expect(connect(page)).toBeHidden();
-  await applyCorrection(page, box);
+  await pickIdea(page, box);
 
   // One request, straight to OpenRouter, with the visitor's key.
   expect(seen).toHaveLength(1);
@@ -253,9 +312,9 @@ test('with a key: OpenRouter is asked from the browser, the correction is applie
   expect(headers['x-title']).toBe('Best Email Builder');
   expect(body.model).toBe('openrouter/free');
   expect(body.response_format.type).toBe('json_schema');
-  expect(body.response_format.json_schema.schema.required).toEqual(['fixes']);
+  expect(body.response_format.json_schema.schema.required).toEqual(['subjects']);
   expect(body.messages[0].role).toBe('system');
-  expect(body.messages[1].content).toContain(`<text id="subject" kind="subject line">\n${TYPO}\n</text>`);
+  expect(body.messages[1].content).toContain(`Current subject: ${SUBJECT}`);
 
   // Kept for the next request, with the choice, until the visitor forgets it.
   expect(await stored(page, STORED)).toBe(KEY);
@@ -271,10 +330,10 @@ test('with a key: OpenRouter is asked from the browser, the correction is applie
 
 test('a key OpenRouter refuses: the dialog asks again and says so; a good key gets the answer', async ({ page }) => {
   const seen = await fakeOpenRouter(page, (request) =>
-    request.headers().authorization === 'Bearer sk-or-good' ? completion(JSON.stringify(FIXES)) : refused
+    request.headers().authorization === 'Bearer sk-or-good' ? completion(JSON.stringify(IDEAS)) : refused
   );
   await openEditor(page);
-  const box = await proofreadSubject(page);
+  const box = await suggestSubjects(page);
   await choose(page, 'OpenRouter');
   await connect(page).getByLabel('API key').fill('sk-or-wrong');
   await connect(page).getByRole('button', { name: 'Connect' }).click();
@@ -284,22 +343,22 @@ test('a key OpenRouter refuses: the dialog asks again and says so; a good key ge
   expect(await stored(page, STORED)).toBeNull();
   await connect(page).getByLabel('API key').fill('sk-or-good');
   await connect(page).getByRole('button', { name: 'Connect' }).click();
-  await applyCorrection(page, box);
+  await pickIdea(page, box);
   expect(seen.map((request) => request.headers.authorization)).toEqual(['Bearer sk-or-wrong', 'Bearer sk-or-good']);
 });
 
 test('write and rewrite with AI: the same key, no second question, the selected text replaced', async ({ page }) => {
   const seen = await fakeOpenRouter(page, (request) => {
     const content = request.postDataJSON().messages[1].content;
-    if (content.includes('<text id=')) return completion(JSON.stringify(FIXES));
+    if (content.includes('Current subject:')) return completion(JSON.stringify(IDEAS));
     return completion(JSON.stringify({ text: content.includes('The user asks:') ? 'The sale ends Sunday' : 'Big news' }));
   });
   await openEditor(page);
-  const box = await proofreadSubject(page);
+  const box = await suggestSubjects(page);
   await choose(page, 'OpenRouter');
   await connect(page).getByLabel('API key').fill(KEY);
   await page.keyboard.press('Enter');
-  await applyCorrection(page, box);
+  await pickIdea(page, box);
 
   const canvas = page.frameLocator('.eb-canvas-frame');
   await canvas.getByText('Your headline', { exact: true }).click();
@@ -324,9 +383,9 @@ test('write and rewrite with AI: the same key, no second question, the selected 
 });
 
 test('in French: the Connect dialog and its texts', async ({ page }) => {
-  await fakeOpenRouter(page, () => completion(JSON.stringify(FIXES)));
+  await fakeOpenRouter(page, () => completion(JSON.stringify(IDEAS)));
   await openEditor(page, 'fr');
-  const box = await proofreadSubject(page, 'fr');
+  const box = await suggestSubjects(page, 'fr');
   const dialog = connect(page);
   await expect(dialog.getByRole('radiogroup', { name: "Fournisseur d'IA" })).toBeVisible();
   await choose(page, 'OpenRouter');
@@ -339,23 +398,23 @@ test('in French: the Connect dialog and its texts', async ({ page }) => {
 });
 
 test('Gemini, then Mistral: each provider its own key; the choice is remembered; "Change provider" in the note', async ({ page }) => {
-  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(FIXES)));
-  const mistral = await fakeApi(page, MISTRAL, () => completion(JSON.stringify(FIXES)));
+  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(IDEAS)));
+  const mistral = await fakeApi(page, MISTRAL, () => completion(JSON.stringify(IDEAS)));
   await openEditor(page);
-  let box = await proofreadSubject(page);
+  let box = await suggestSubjects(page);
   await choose(page, 'Google Gemini');
   await expect(connect(page).getByLabel('API key')).toHaveAttribute('placeholder', 'AIza…');
   await expect(connect(page).getByText('Free tier, with rate limits', { exact: true })).toBeVisible();
   await expect(connect(page).getByRole('link', { name: 'Get a key' })).toHaveAttribute('href', 'https://aistudio.google.com/apikey');
   await connect(page).getByLabel('API key').fill('AIza-test-gemini');
   await page.keyboard.press('Enter');
-  await applyCorrection(page, box);
+  await pickIdea(page, box);
 
   // Gemini's OpenAI-compatible endpoint, with Gemini's key.
   expect(gemini).toHaveLength(1);
   expect(gemini[0].headers.authorization).toBe('Bearer AIza-test-gemini');
   expect(gemini[0].body.model).toBe('gemini-3.5-flash-lite');
-  expect(gemini[0].body.messages[1].content).toContain(TYPO);
+  expect(gemini[0].body.messages[1].content).toContain(SUBJECT);
   expect(await stored(page, 'best-email-builder:ai-key:gemini')).toBe('AIza-test-gemini');
   expect(await stored(page, CHOICE)).toBe('gemini');
   const note = page.getByTestId('demo-ai-note');
@@ -363,8 +422,8 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
 
   // Back later: the same provider, its key, no question.
   await reopenEditor(page);
-  box = await proofreadSubject(page);
-  await applyCorrection(page, box);
+  box = await suggestSubjects(page);
+  await pickIdea(page, box);
   expect(gemini).toHaveLength(2);
 
   // "Change provider": Gemini in use, its key saved; Mistral needs its own.
@@ -387,8 +446,8 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
 
   // The next email: Mistral.
   await reopenEditor(page);
-  box = await proofreadSubject(page);
-  await applyCorrection(page, box);
+  box = await suggestSubjects(page);
+  await pickIdea(page, box);
   expect(mistral).toHaveLength(1);
   expect(mistral[0].headers.authorization).toBe('Bearer mistral-test-key');
   expect(mistral[0].body.model).toBe('mistral-small-latest');
@@ -406,11 +465,11 @@ test('Gemini, then Mistral: each provider its own key; the choice is remembered;
 test('Claude: the Anthropic SDK in the browser; a refused key is asked again; the email is read', async ({ page }) => {
   const seen = await fakeApi(page, ANTHROPIC, (request) =>
     request.headers()['x-api-key'] === 'sk-ant-good'
-      ? claudeStream(JSON.stringify(FIXES))
+      ? claudeStream(JSON.stringify(IDEAS))
       : { status: 401, contentType: 'application/json', body: JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }) }
   );
   await openEditor(page);
-  const box = await proofreadSubject(page);
+  const box = await suggestSubjects(page);
   await choose(page, 'Claude');
   await expect(connect(page).getByLabel('API key')).toHaveAttribute('placeholder', 'sk-ant-…');
   await expect(connect(page).getByRole('link', { name: 'Get a key' })).toHaveAttribute('href', 'https://console.anthropic.com/settings/keys');
@@ -422,7 +481,7 @@ test('Claude: the Anthropic SDK in the browser; a refused key is asked again; th
   expect(await stored(page, 'best-email-builder:ai-key:anthropic')).toBeNull();
   await connect(page).getByLabel('API key').fill('sk-ant-good');
   await page.keyboard.press('Enter');
-  await applyCorrection(page, box);
+  await pickIdea(page, box);
   await expect(page.getByTestId('demo-ai-note')).toContainText('Connected to Claude · claude-opus-5-5.');
 
   // Straight to Anthropic, the key in its own header, the answer streamed as structured output.
@@ -433,17 +492,17 @@ test('Claude: the Anthropic SDK in the browser; a refused key is asked again; th
   expect(body.model).toBe('claude-opus-5-5');
   expect(body.stream).toBe(true);
   expect(body.output_config.format.type).toBe('json_schema');
-  expect(body.output_config.format.schema.required).toEqual(['fixes']);
+  expect(body.output_config.format.schema.required).toEqual(['subjects']);
   expect(body.output_config.effort).toBe('low');
   expect(body.system).toBeTruthy();
-  expect(JSON.stringify(body.messages)).toContain(TYPO);
+  expect(JSON.stringify(body.messages)).toContain(SUBJECT);
 });
 
 test('the model: Gemini lists its models once the key is pasted; the one chosen is sent, remembered, and shown', async ({ page }) => {
   const lists = await fakeModels(page);
-  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(FIXES)));
+  const gemini = await fakeApi(page, GEMINI, () => completion(JSON.stringify(IDEAS)));
   await openEditor(page);
-  let box = await proofreadSubject(page);
+  let box = await suggestSubjects(page);
   await choose(page, 'Google Gemini');
   const dialog = connect(page);
   // No key yet: the provider's own model, and how to see the others.
@@ -488,7 +547,7 @@ test('the model: Gemini lists its models once the key is pasted; the one chosen 
   await expect(providerCard(page, 'Google Gemini')).toContainText('gemini-2.5-pro');
 
   await dialog.getByRole('button', { name: 'Connect' }).click();
-  await applyCorrection(page, box);
+  await pickIdea(page, box);
   expect(gemini).toHaveLength(1);
   expect(gemini[0].body.model).toBe('gemini-2.5-pro');
   expect(await stored(page, 'best-email-builder:ai-model:gemini')).toBe('gemini-2.5-pro');
@@ -497,8 +556,8 @@ test('the model: Gemini lists its models once the key is pasted; the one chosen 
 
   // Back later: the same model. Then a model the list does not have, by its id.
   await reopenEditor(page);
-  box = await proofreadSubject(page);
-  await applyCorrection(page, box);
+  box = await suggestSubjects(page);
+  await pickIdea(page, box);
   expect(gemini[1].body.model).toBe('gemini-2.5-pro');
   await note.getByRole('button', { name: 'Change provider or model' }).click();
   await expect(modelStatus(page)).toHaveText('3 models.');
@@ -516,9 +575,9 @@ test('the model: Gemini lists its models once the key is pasted; the one chosen 
 
 test('the model: OpenRouter lists its models without a key, the free ones first, marked; "Free only"', async ({ page }) => {
   const lists = await fakeModels(page);
-  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(FIXES)));
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify(IDEAS)));
   await openEditor(page);
-  await proofreadSubject(page);
+  await suggestSubjects(page);
   await choose(page, 'OpenRouter');
   await expect(modelStatus(page)).toHaveText('4 models, the free ones first.');
   const asked = lists.filter((request) => request.url.includes('openrouter'));
@@ -558,7 +617,7 @@ test('the model in French; Claude\'s list through the Anthropic SDK', async ({ p
     localStorage.setItem('best-email-builder:ai-provider', 'openrouter');
   });
   await openEditor(page, 'fr');
-  const box = await proofreadSubject(page, 'fr');
+  const box = await suggestSubjects(page, 'fr');
   const dialog = connect(page);
   await choose(page, 'OpenRouter');
   await expect(dialog.getByText('Modèle', { exact: true })).toBeVisible();
@@ -582,9 +641,9 @@ test('the model in French; Claude\'s list through the Anthropic SDK', async ({ p
 
 test('an OpenAI-compatible API of one\'s own: its address, no key, a model of its list; the email is read there', async ({ page }) => {
   const OWN = 'https://llm.example.test/v1';
-  const seen = await fakeApi(page, `${OWN}/chat/completions`, () => completion(JSON.stringify(FIXES)));
+  const seen = await fakeApi(page, `${OWN}/chat/completions`, () => completion(JSON.stringify(IDEAS)));
   await openEditor(page);
-  const box = await proofreadSubject(page);
+  const box = await suggestSubjects(page);
   await choose(page, 'OpenAI-compatible API');
   const dialog = connect(page);
   await expect(dialog.getByRole('heading', { name: 'Connect OpenAI-compatible API' })).toBeVisible();
@@ -611,7 +670,7 @@ test('an OpenAI-compatible API of one\'s own: its address, no key, a model of it
   await expect(modelField(page)).toContainText('qwen3-8b');
   await dialog.getByRole('button', { name: 'Connect' }).click();
   await expect(dialog).toBeHidden();
-  await applyCorrection(page, box);
+  await pickIdea(page, box);
 
   expect(seen).toHaveLength(1);
   expect(seen[0].url).toBe(`${OWN}/chat/completions`);

@@ -73,7 +73,7 @@ const TEXT = {
     note: 'Live demo: templates stay in this browser and the preview compiles in the browser. A real app compiles on its server.',
     // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
     variables: ['First name', 'Last name', 'Email address', 'Mobile number'],
-    aiNote: '“Proofread” finds the mistakes of the whole email, “Write with AI” writes the selected text on a topic or changes it as you say (or in one click: shorter, friendlier, translated…) and “Suggest subjects” offers three subject lines, with your own key: OpenAI, Claude, Mistral, Gemini, OpenRouter or any OpenAI-compatible API. Gemini and Mistral are free and answer in seconds; OpenRouter’s free models take minutes. The key stays in this browser and goes only to the provider you choose.',
+    aiNote: '“Proofread” finds the mistakes of the whole email without AI or key: LanguageTool reads the texts (here its public service, in an application your own server). “Write with AI” writes the selected text on a topic or changes it as you say (or in one click: shorter, friendlier, translated…) and “Suggest subjects” offers three subject lines, with your own key: OpenAI, Claude, Mistral, Gemini, OpenRouter or any OpenAI-compatible API. Gemini and Mistral are free and answer in seconds; OpenRouter’s free models take minutes. The key stays in this browser and goes only to the provider you choose.',
     aiConnected: 'Connected to {provider} · {model}.',
     aiChange: 'Change provider or model',
     aiForget: 'Forget my key',
@@ -88,6 +88,8 @@ const TEXT = {
       variables: 'your email provider’s tags (here Brevo’s), offered in the bar above the email',
       optional: 'Optional: without `ai`, no AI button and no AI code.',
       keys: 'Each user picks a provider and connects their own key:',
+      proofread: 'Proofread without AI or key: LanguageTool',
+      server: 'or your own server',
     },
   },
   fr: {
@@ -114,7 +116,7 @@ const TEXT = {
     note: 'Démo en direct : les modèles restent dans ce navigateur, l’aperçu est compilé dans le navigateur. Une vraie application compile sur son serveur.',
     // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
     variables: ['Prénom', 'Nom', 'Adresse e-mail', 'Numéro de mobile'],
-    aiNote: '« Relire » trouve les fautes de tout l’e-mail, « Écrire avec l’IA » rédige le texte sélectionné sur un sujet ou le modifie comme vous le dites (ou en un clic : plus court, plus chaleureux, traduit…) et « Suggérer des objets » propose trois objets, avec votre propre clé : OpenAI, Claude, Mistral, Gemini, OpenRouter ou toute API compatible OpenAI. Gemini et Mistral sont gratuits et répondent en quelques secondes ; les modèles gratuits d’OpenRouter prennent plusieurs minutes. La clé reste dans ce navigateur et n’est envoyée qu’au fournisseur choisi.',
+    aiNote: '« Relire » trouve les fautes de tout l’e-mail sans IA ni clé : LanguageTool lit les textes (ici son service public, dans une application votre propre serveur). « Écrire avec l’IA » rédige le texte sélectionné sur un sujet ou le modifie comme vous le dites (ou en un clic : plus court, plus chaleureux, traduit…) et « Suggérer des objets » propose trois objets, avec votre propre clé : OpenAI, Claude, Mistral, Gemini, OpenRouter ou toute API compatible OpenAI. Gemini et Mistral sont gratuits et répondent en quelques secondes ; les modèles gratuits d’OpenRouter prennent plusieurs minutes. La clé reste dans ce navigateur et n’est envoyée qu’au fournisseur choisi.',
     aiConnected: 'Connecté à {provider} · {model}.',
     aiChange: 'Changer de fournisseur ou de modèle',
     aiForget: 'Oublier ma clé',
@@ -129,6 +131,8 @@ const TEXT = {
       variables: 'les variables de votre outil d’e-mailing (ici Brevo), proposées dans la barre au-dessus de l’e-mail',
       optional: 'Facultatif : sans `ai`, ni bouton IA ni code IA.',
       keys: 'Chaque utilisateur choisit un fournisseur et connecte sa propre clé :',
+      proofread: 'Relire sans IA ni clé : LanguageTool',
+      server: 'ou votre propre serveur',
     },
   },
   de: {
@@ -155,7 +159,7 @@ const TEXT = {
     note: 'Live-Demo: Die Vorlagen bleiben in diesem Browser, die Vorschau wird im Browser kompiliert. Eine echte App kompiliert auf ihrem Server.',
     // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
     variables: ['Vorname', 'Nachname', 'E-Mail-Adresse', 'Handynummer'],
-    aiNote: '„Korrekturlesen“ findet die Fehler der ganzen E-Mail, „Mit KI schreiben“ schreibt den markierten Text zu einem Thema oder ändert ihn, wie Sie es sagen (oder mit einem Klick: kürzer, freundlicher, übersetzt…), und „Betreff vorschlagen“ bietet drei Betreffzeilen an — mit Ihrem eigenen Schlüssel: OpenAI, Claude, Mistral, Gemini, OpenRouter oder jede OpenAI-kompatible API. Gemini und Mistral sind kostenlos und antworten in Sekunden; die kostenlosen Modelle von OpenRouter brauchen Minuten. Der Schlüssel bleibt in diesem Browser und geht nur an den gewählten Anbieter.',
+    aiNote: '„Korrekturlesen“ findet die Fehler der ganzen E-Mail ohne KI und ohne Schlüssel: LanguageTool liest die Texte (hier sein öffentlicher Dienst, in einer Anwendung Ihr eigener Server). „Mit KI schreiben“ schreibt den markierten Text zu einem Thema oder ändert ihn, wie Sie es sagen (oder mit einem Klick: kürzer, freundlicher, übersetzt…), und „Betreff vorschlagen“ bietet drei Betreffzeilen an — mit Ihrem eigenen Schlüssel: OpenAI, Claude, Mistral, Gemini, OpenRouter oder jede OpenAI-kompatible API. Gemini und Mistral sind kostenlos und antworten in Sekunden; die kostenlosen Modelle von OpenRouter brauchen Minuten. Der Schlüssel bleibt in diesem Browser und geht nur an den gewählten Anbieter.',
     aiConnected: 'Verbunden mit {provider} · {model}.',
     aiChange: 'Anbieter oder Modell wechseln',
     aiForget: 'Meinen Schlüssel vergessen',
@@ -169,7 +173,9 @@ const TEXT = {
       opened: 'aus Ihrer eigenen Bibliothek geöffnet',
       variables: 'die Variablen Ihres E-Mail-Anbieters (hier Brevo), in der Leiste über der E-Mail',
       optional: 'Optional: ohne `ai` weder KI-Schaltfläche noch KI-Code.',
-      keys: 'Jeder Nutzer wählt einen Anbieter und verbindet seinen eigenen Schlüssel:',
+      keys: 'Jeder Nutzer wählt einen Anbieter, mit eigenem Schlüssel:',
+      proofread: 'Korrekturlesen ohne KI und Schlüssel: LanguageTool',
+      server: 'oder Ihr eigener Server',
     },
   },
   es: {
@@ -196,7 +202,7 @@ const TEXT = {
     note: 'Demo en vivo: las plantillas se quedan en este navegador y la vista previa se compila en el navegador. Una aplicación real compila en su servidor.',
     // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
     variables: ['Nombre', 'Apellido', 'Correo electrónico', 'Número de móvil'],
-    aiNote: '“Revisar” encuentra los errores de todo el correo, “Escribir con IA” redacta el texto seleccionado sobre un tema o lo cambia como digas (o con un clic: más corto, más cercano, traducido…) y “Sugerir asuntos” propone tres asuntos, con tu propia clave: OpenAI, Claude, Mistral, Gemini, OpenRouter o cualquier API compatible con OpenAI. Gemini y Mistral son gratuitos y responden en segundos; los modelos gratuitos de OpenRouter tardan minutos. La clave se queda en este navegador y solo se envía al proveedor que elijas.',
+    aiNote: '“Revisar” encuentra los errores de todo el correo sin IA ni clave: LanguageTool lee los textos (aquí su servicio público; en una aplicación, tu propio servidor). “Escribir con IA” redacta el texto seleccionado sobre un tema o lo cambia como digas (o con un clic: más corto, más cercano, traducido…) y “Sugerir asuntos” propone tres asuntos, con tu propia clave: OpenAI, Claude, Mistral, Gemini, OpenRouter o cualquier API compatible con OpenAI. Gemini y Mistral son gratuitos y responden en segundos; los modelos gratuitos de OpenRouter tardan minutos. La clave se queda en este navegador y solo se envía al proveedor que elijas.',
     aiConnected: 'Conectado a {provider} · {model}.',
     aiChange: 'Cambiar de proveedor o de modelo',
     aiForget: 'Olvidar mi clave',
@@ -211,6 +217,8 @@ const TEXT = {
       variables: 'las variables de tu proveedor de email (aquí, Brevo), en la barra sobre el email',
       optional: 'Opcional: sin `ai`, ni botón de IA ni código de IA.',
       keys: 'Cada usuario elige un proveedor y conecta su propia clave:',
+      proofread: 'Revisar sin IA ni clave: LanguageTool',
+      server: 'o tu propio servidor',
     },
   },
   pt: {
@@ -237,7 +245,7 @@ const TEXT = {
     note: 'Demo ao vivo: os modelos ficam neste navegador e a pré-visualização é compilada no navegador. Um app de verdade compila no próprio servidor.',
     // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
     variables: ['Nome', 'Sobrenome', 'Endereço de e-mail', 'Número de celular'],
-    aiNote: '“Revisar” encontra os erros de todo o e-mail, “Escrever com IA” redige o texto selecionado sobre um tema ou altera-o como disser (ou com um clique: mais curto, mais caloroso, traduzido…) e “Sugerir assuntos” propõe três assuntos, com a sua própria chave: OpenAI, Claude, Mistral, Gemini, OpenRouter ou qualquer API compatível com OpenAI. Gemini e Mistral são gratuitos e respondem em segundos; os modelos gratuitos do OpenRouter levam minutos. A chave fica neste navegador e só é enviada ao provedor que você escolher.',
+    aiNote: '“Revisar” encontra os erros de todo o e-mail sem IA nem chave: o LanguageTool lê os textos (aqui o seu serviço público; numa aplicação, o seu próprio servidor). “Escrever com IA” redige o texto selecionado sobre um tema ou altera-o como disser (ou com um clique: mais curto, mais caloroso, traduzido…) e “Sugerir assuntos” propõe três assuntos, com a sua própria chave: OpenAI, Claude, Mistral, Gemini, OpenRouter ou qualquer API compatível com OpenAI. Gemini e Mistral são gratuitos e respondem em segundos; os modelos gratuitos do OpenRouter levam minutos. A chave fica neste navegador e só é enviada ao provedor que você escolher.',
     aiConnected: 'Conectado a {provider} · {model}.',
     aiChange: 'Trocar de provedor ou de modelo',
     aiForget: 'Esquecer minha chave',
@@ -252,6 +260,8 @@ const TEXT = {
       variables: 'as variáveis do seu provedor de e-mail (aqui, Brevo), na barra acima do e-mail',
       optional: 'Opcional: sem `ai`, nem botão de IA nem código de IA.',
       keys: 'Cada usuário escolhe um provedor e conecta a própria chave:',
+      proofread: 'Revisar sem IA nem chave: LanguageTool',
+      server: 'ou o seu próprio servidor',
     },
   },
   ru: {
@@ -278,7 +288,7 @@ const TEXT = {
     note: 'Живое демо: шаблоны хранятся в этом браузере, предпросмотр компилируется тоже в браузере. Настоящее приложение компилирует на своём сервере.',
     // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
     variables: ['Имя', 'Фамилия', 'Адрес эл. почты', 'Мобильный телефон'],
-    aiNote: '«Проверить» находит ошибки во всём письме, «Написать с помощью ИИ» пишет выделенный текст на заданную тему или меняет его, как вы скажете (или в один клик: короче, теплее, перевод…), а «Предложить темы» даёт три варианта темы — с вашим собственным ключом: OpenAI, Claude, Mistral, Gemini, OpenRouter или любой OpenAI-совместимый API. Gemini и Mistral бесплатны и отвечают за секунды; бесплатным моделям OpenRouter нужны минуты. Ключ остаётся в этом браузере и уходит только выбранному провайдеру.',
+    aiNote: '«Проверить» находит ошибки во всём письме без ИИ и без ключа: тексты читает LanguageTool (здесь его открытый сервис, в приложении — ваш собственный сервер). «Написать с помощью ИИ» пишет выделенный текст на заданную тему или меняет его, как вы скажете (или в один клик: короче, теплее, перевод…), а «Предложить темы» даёт три варианта темы — с вашим собственным ключом: OpenAI, Claude, Mistral, Gemini, OpenRouter или любой OpenAI-совместимый API. Gemini и Mistral бесплатны и отвечают за секунды; бесплатным моделям OpenRouter нужны минуты. Ключ остаётся в этом браузере и уходит только выбранному провайдеру.',
     aiConnected: 'Подключено: {provider} · {model}.',
     aiChange: 'Сменить провайдера или модель',
     aiForget: 'Забыть мой ключ',
@@ -293,6 +303,8 @@ const TEXT = {
       variables: 'переменные вашего сервиса рассылок (здесь Brevo) — в полоске над письмом',
       optional: 'Необязательно: без `ai` нет ни кнопки ИИ, ни кода ИИ.',
       keys: 'Каждый пользователь выбирает провайдера и подключает свой ключ:',
+      proofread: 'Проверка без ИИ и без ключа: LanguageTool',
+      server: 'или ваш собственный сервер',
     },
   },
   zh: {
@@ -319,7 +331,7 @@ const TEXT = {
     note: '在线演示：模板保存在当前浏览器中，预览也在浏览器中编译。真实应用会在自己的服务器上编译。',
     // Brevo’s contact attributes, in the order of BREVO_VARIABLES.
     variables: ['名字', '姓氏', '电子邮箱', '手机号码'],
-    aiNote: '“校对”找出整封邮件中的错误，“AI 撰写”按主题写出选中的文字，或按您的要求修改（也可一键：更短、更亲切、翻译……），“推荐主题”给出三个邮件主题——使用您自己的密钥：OpenAI、Claude、Mistral、Gemini、OpenRouter 或任何 OpenAI 兼容 API。Gemini 和 Mistral 免费，几秒内即可回复；OpenRouter 的免费模型需要几分钟。密钥只保存在当前浏览器中，且只发送给您选择的服务商。',
+    aiNote: '“校对”无需 AI 和密钥即可找出整封邮件中的错误：由 LanguageTool 读取文字（此处为其公共服务，在应用中为您自己的服务器）。“AI 撰写”按主题写出选中的文字，或按您的要求修改（也可一键：更短、更亲切、翻译……），“推荐主题”给出三个邮件主题——使用您自己的密钥：OpenAI、Claude、Mistral、Gemini、OpenRouter 或任何 OpenAI 兼容 API。Gemini 和 Mistral 免费，几秒内即可回复；OpenRouter 的免费模型需要几分钟。密钥只保存在当前浏览器中，且只发送给您选择的服务商。',
     aiConnected: '已连接 {provider} · {model}。',
     aiChange: '更换服务商或模型',
     aiForget: '忘记我的密钥',
@@ -334,6 +346,8 @@ const TEXT = {
       variables: '您的邮件服务商的变量（此处为 Brevo），显示在邮件上方的栏中',
       optional: '可选：不传 `ai`，就没有 AI 按钮，也不加载 AI 代码。',
       keys: '每位用户选择一个服务商，并连接自己的密钥：',
+      proofread: '无需 AI 和密钥的校对：LanguageTool',
+      server: '或您自己的服务器',
     },
   },
 };
@@ -484,7 +498,11 @@ const variables = [
   {
     id: 'ai',
     code: (comments) => `import Anthropic from '@anthropic-ai/sdk';
-import { claudeProvider, createAi } from 'best-email-builder/ai';
+import {
+  claudeProvider,
+  createAi,
+  createLanguageToolProofreader,
+} from 'best-email-builder/ai';
 
 // ${comments.optional}
 const claude = claudeProvider({
@@ -503,6 +521,10 @@ const ai = createAi({
     'openai-compatible', // LM Studio, vLLM, a proxy…
   ],
   askKey: true,
+  // ${comments.proofread}
+  proofread: createLanguageToolProofreader({
+    url: 'https://api.languagetool.org', // ${comments.server}
+  }),
 });
 
 <EmailStudio storage={storage} ai={ai} />`,
