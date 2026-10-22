@@ -6,6 +6,7 @@ import {
   DEFAULT_VARIABLES,
   EXAMPLE_VARIABLES,
   defineVariables,
+  isLinkValue,
   keyFromLabel,
   labelOf,
   mergeVariables,
@@ -73,17 +74,31 @@ test('a system variable edited by a user: its name, group, sample, value if empt
   assert.equal(labelOf(brevo, t), 'Prénom');
   assert.equal(labelOf(merged, t), 'Given name');
 
-  // Whatever is stored under a system key changes no tag, no kind, and no link.
+  // Whatever is stored under a system key changes no tag and no kind; a link keeps a link.
   const forged = mergeVariables(SYSTEM, [
     { key: 'contact.firstname', label: 'Fake', token: '{{ evil }}', kind: 'link' },
-    { key: 'unsubscribe', label: 'Fake', token: '{{ evil }}', kind: 'text' },
+    { key: 'unsubscribe', label: 'Opt out', token: '{{ evil }}', kind: 'text', sample: 'javascript:alert(1)', fallback: '*|UNSUB|*' },
   ]);
   const firstname = forged.find((v) => v.key === 'contact.firstname');
   assert.equal(firstname.label, 'Fake');
   assert.equal(tokenOf(firstname), '{{contact.firstname}}');
   assert.equal(firstname.kind, undefined);
-  assert.deepEqual(forged.find((v) => v.key === 'unsubscribe'), DEFAULT_VARIABLES[0]);
+  assert.deepEqual(forged.find((v) => v.key === 'unsubscribe'), { ...DEFAULT_VARIABLES[0], label: 'Opt out', fallback: '*|UNSUB|*', edited: true });
   assert.equal(forged.length, SYSTEM.length);
+});
+
+test('the unsubscribe link is edited like the others: its values are an address or a provider’s tag', () => {
+  const [link] = DEFAULT_VARIABLES;
+  for (const value of ['', '#', 'https://example.com/stop', 'mailto:stop@example.com', '*|UNSUB|*', '[[UNSUB_LINK_EN]]', '{{ unsubscribe }}']) {
+    assert.ok(isLinkValue(value), value);
+    assert.equal(validateVariableEdit(link, { label: 'Stop', fallback: value }).variable?.fallback, value, value);
+  }
+  for (const value of ['javascript:alert(1)', 'java\tscript:alert(1)', ' JavaScript:x', 'data:text/html,x', 'vbscript:x']) {
+    assert.ok(!isLinkValue(value), value);
+    assert.ok(validateVariableEdit(link, { label: 'Stop', sample: value }).errors?.sample, value);
+  }
+  // Any value goes for a text variable.
+  assert.ok(validateVariableEdit(EXAMPLE_VARIABLES[0], { label: 'Name', sample: 'note: x' }).variable);
 });
 
 test('replacement: escaped values, inline and defined fallbacks, never a raw tag', () => {
@@ -138,7 +153,9 @@ test('memory storage keeps custom variables', async () => {
   assert.equal(saved.edited, true);
   const catalog = mergeVariables(SYSTEM, await storage.listVariables());
   assert.equal(catalog.find((v) => v.key === 'contact.firstname').sample, 'Jo');
-  await assert.rejects(storage.saveVariable({ key: 'unsubscribe', label: 'X' }), (e) => e.status === 404);
+  // The unsubscribe link too, with a link only.
+  assert.equal((await storage.saveVariable({ key: 'unsubscribe', label: 'Opt out', fallback: '*|UNSUB|*' })).fallback, '*|UNSUB|*');
+  await assert.rejects(storage.saveVariable({ key: 'unsubscribe', label: 'X', sample: 'javascript:x' }), (e) => e.status === 400);
   await storage.deleteVariable('contact.firstname');
   assert.equal(mergeVariables(SYSTEM, await storage.listVariables()).find((v) => v.key === 'contact.firstname').label, 'First name');
 });

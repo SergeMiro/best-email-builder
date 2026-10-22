@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from './primitives/overlays.jsx';
 import { TooltipWrap } from './primitives/misc.jsx';
-import { ColorPicker } from './primitives/color-picker.jsx';
+import { ColorPicker, colorToHex } from './primitives/color-picker.jsx';
 import { Button } from './primitives/button.jsx';
 import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Loader2, Upload } from 'lucide-react';
 import { cn } from './primitives/cn.js';
@@ -31,8 +31,10 @@ import { useT } from './context.jsx';
  *
  * -- WHAT CANNOT BE SENT IS REJECTED HERE -----------------------------------
  * An address the server would refuse (`javascript:`, non-https image) is
- * flagged under the field and not passed on; a color with transparency loses
- * its alpha channel, which no version of Outlook reads.
+ * flagged under the field and not passed on. A color with transparency is
+ * written `rgba()`, which MJML accepts (not `#RRGGBBAA`); classic Outlook,
+ * which reads neither, gets the opaque color it looks like over white (see
+ * server/compileMjml.js).
  *
  * -- AN EMPTY FIELD IS NOT ZERO ----------------------------------------------
  * A property left empty is rendered by MJML with its default (a section's
@@ -45,14 +47,23 @@ import { useT } from './context.jsx';
  * https address. Never `data:`: it would bloat the email.
  */
 
+/** A typed color code is committed after this pause. */
 const COLOR_DEBOUNCE_MS = 250;
+/** A color dragged in the picker paints the email at this pace: one undo step in all. */
+const COLOR_LIVE_MS = 60;
 
-/** `#RGB` or `#RRGGBB`; a `#RRGGBBAA` is reduced to `#RRGGBB`. */
+/**
+ * `#RGB` or `#RRGGBB`; with transparency (`#RGBA`, `#RRGGBBAA`, `rgba()`),
+ * `rgba(r, g, b, a)` — fully opaque, `#rrggbb`.
+ */
 export function emailColor(value) {
-  const v = String(value || '').trim();
+  let v = colorToHex(value);
   if (/^#[0-9a-f]{3}$/i.test(v) || /^#[0-9a-f]{6}$/i.test(v)) return v.toLowerCase();
-  if (/^#[0-9a-f]{8}$/i.test(v)) return v.slice(0, 7).toLowerCase();
-  return null;
+  if (/^#[0-9a-f]{4}$/i.test(v)) v = `#${[...v.slice(1)].map((c) => c + c).join('')}`;
+  if (!/^#[0-9a-f]{8}$/i.test(v)) return null;
+  const [r, g, b, a] = [1, 3, 5, 7].map((at) => parseInt(v.slice(at, at + 2), 16));
+  if (a === 255) return v.slice(0, 7).toLowerCase();
+  return `rgba(${r}, ${g}, ${b}, ${Math.round((a / 255) * 100) / 100})`;
 }
 
 /**
@@ -245,27 +256,36 @@ function SizeField({ id, property, value, fallback = '', onCommit }) {
   );
 }
 
-/** Color: swatch + hex code, committed after a short pause. */
+/**
+ * Color: swatch + hex code. Dragged in the picker, the color paints the email
+ * as it moves; typed, it is committed after a short pause.
+ */
 function ColorField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
-  const [draft, setDraft, ref] = useDraft(value, asText);
+  const [draft, setDraft, ref] = useDraft(value, colorToHex);
   const timer = useRef(null);
+  const lastCommit = useRef(0);
   const latest = useRef({ value, onCommit });
   latest.current = { value, onCommit };
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const change = (next) => {
+  const commit = (next) => {
+    lastCommit.current = Date.now();
+    const color = emailColor(next);
+    if (!String(next || '').trim()) {
+      if (latest.current.value) latest.current.onCommit(null);
+    } else if (color && color !== latest.current.value) {
+      latest.current.onCommit(color);
+    }
+  };
+
+  const change = (next, { live = false } = {}) => {
     setDraft(next);
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      const color = emailColor(next);
-      if (!String(next || '').trim()) {
-        if (latest.current.value) latest.current.onCommit(null);
-      } else if (color && color !== latest.current.value) {
-        latest.current.onCommit(color);
-      }
-    }, COLOR_DEBOUNCE_MS);
+    const wait = live ? COLOR_LIVE_MS - (Date.now() - lastCommit.current) : COLOR_DEBOUNCE_MS;
+    if (wait <= 0) commit(next);
+    else timer.current = setTimeout(() => commit(next), wait);
   };
 
   return (

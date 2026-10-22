@@ -44,7 +44,7 @@
 import { readDocument } from '../core/document.js';
 import { DEFAULT_ASSETS_PATH } from '../renderer/links.js';
 import { IMAGE_TYPES, imageUploadError } from '../validation/images.js';
-import { DEFAULT_VARIABLES, isEditable, mergeVariables, validateCustomVariable, validateVariableEdit } from '../features/variables/catalog.js';
+import { DEFAULT_VARIABLES, mergeVariables, validateCustomVariable, validateVariableEdit } from '../features/variables/catalog.js';
 import { cleanBrand } from '../features/brand/brand.js';
 import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/tags/tags.js';
 
@@ -464,7 +464,7 @@ export function createMemoryStorage({
     },
     async saveVariable(input, { create = false } = {}) {
       // A system variable's edit: kept under its key, laid over it by `mergeVariables`.
-      const system = !create && systemVariables.find((v) => v.key === String(input?.key) && isEditable(v));
+      const system = !create && systemVariables.find((v) => v.key === String(input?.key));
       if (system) {
         const { variable, errors } = validateVariableEdit(system, { ...customVariables.get(system.key), ...input });
         if (errors) throw new StorageError(Object.values(errors)[0], 400, 'INVALID_VARIABLE');

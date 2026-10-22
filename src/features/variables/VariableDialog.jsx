@@ -18,6 +18,10 @@ import { CUSTOM_GROUP, VARIABLE_LIMITS, keyFromLabel, labelOf, tokenOf, validate
  *   Sample value     used by the preview and test sends;
  *   Value if empty   what a recipient without a value sees.
  *
+ * For the unsubscribe link, both are links: the sample is the preview's, the
+ * value if empty is used when the sending gives none — typically the email
+ * provider's own tag (`*|UNSUB|*`).
+ *
  * @param {{
  *   open: boolean,
  *   onOpenChange: (open: boolean) => void,
@@ -33,6 +37,7 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
   const { t, notify, confirm } = useUi();
   const editing = Boolean(variable);
   const system = editing && !variable.custom;
+  const link = variable?.kind === 'link';
   const [form, setForm] = useState({ label: '', key: '', group: '', sample: '', fallback: '' });
   const [keyTouched, setKeyTouched] = useState(false);
   const [errors, setErrors] = useState({});
@@ -192,8 +197,13 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
             </datalist>
           </div>
           <div className="eb:grid eb:grid-cols-2 eb:gap-3">
-            {field('sample', t('Sample value'), { maxLength: VARIABLE_LIMITS.sample, placeholder: 'CMD-1042' }, t('Preview and tests'))}
-            {field('fallback', t('Value if empty'), { maxLength: VARIABLE_LIMITS.fallback }, t('When a recipient has none'))}
+            {field('sample', t('Sample value'), { maxLength: VARIABLE_LIMITS.sample, placeholder: link ? 'https://…' : 'CMD-1042' }, t('Preview and tests'))}
+            {field(
+              'fallback',
+              t('Value if empty'),
+              { maxLength: VARIABLE_LIMITS.fallback, placeholder: link ? '*|UNSUB|*' : undefined },
+              link ? t('When the sending gives no link') : t('When a recipient has none')
+            )}
           </div>
           <div className="eb:flex eb:items-center eb:gap-2 eb:pt-1">
             {system && variable.edited && (

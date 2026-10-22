@@ -317,12 +317,40 @@ test('a system variable edited by a user: its sample in the preview, its tag kep
 
   const preview = (await (await call('POST', '/api/email-builder/render', { mjml: MJML })).json()).data;
   assert.ok(preview.html.includes('Hello Joe'));
-  // The unsubscribe link is not edited, and a label is still required.
-  assert.equal((await put('unsubscribe', { label: 'X' })).status, 404);
+  // A label is still required.
   assert.equal((await put('contact.firstname', { label: '' })).status, 400);
 
   assert.equal((await call('DELETE', '/api/email-builder/variables/contact.firstname')).status, 200);
   assert.equal((await handler.catalog()).find((v) => v.key === 'contact.firstname').label, 'First name');
+});
+
+test('the unsubscribe link edited: its sample in the preview and tests, its value if empty when sending gives none', async () => {
+  const { call, handler, sent } = setup();
+  const put = (body) => call('PUT', '/api/email-builder/variables/unsubscribe', body);
+  const mjml = '<mjml><mj-body><mj-section><mj-column><mj-text><a href="{{ unsubscribe }}">Stop</a></mj-text></mj-column></mj-section></mj-body></mjml>';
+  const preview = async () => (await (await call('POST', '/api/email-builder/render', { mjml })).json()).data.html;
+  assert.ok((await preview()).includes('href="#"'), 'inert by default');
+
+  // Never a script, whatever the spacing.
+  assert.equal((await put({ label: 'Unsubscribe', sample: 'java\tscript:alert(1)' })).status, 400);
+  assert.equal((await put({ label: 'Unsubscribe', fallback: 'data:text/html,x' })).status, 400);
+  const edited = await put({ label: 'Opt out', sample: 'https://example.com/stop?a=1&b=2', fallback: '*|UNSUB|*', token: '{{ evil }}' });
+  assert.equal(edited.status, 200);
+  const link = (await handler.catalog()).find((v) => v.key === 'unsubscribe');
+  assert.deepEqual([link.label, link.kind, link.token, link.edited], ['Opt out', 'link', '{{ unsubscribe }}', true]);
+
+  assert.ok((await preview()).includes('href="https://example.com/stop?a=1&amp;b=2"'));
+  await call('POST', '/api/email-builder/test', { mjml, emails: ['a@example.com'] });
+  assert.ok(sent[0].html.includes('href="https://example.com/stop?a=1&amp;b=2"'));
+
+  const compiled = '<a href="{{ unsubscribe }}">Stop</a>';
+  const catalog = await handler.catalog();
+  assert.equal(personalize(compiled, { values: {}, variables: catalog }), '<a href="*|UNSUB|*">Stop</a>');
+  assert.equal(personalize(compiled, { values: {}, unsubscribeUrl: 'https://u/1', variables: catalog }), '<a href="https://u/1">Stop</a>');
+  assert.equal(personalize(compiled, { values: {}, variables: VARIABLES }), '<a href="#">Stop</a>');
+
+  assert.equal((await call('DELETE', '/api/email-builder/variables/unsubscribe')).status, 200);
+  assert.ok((await preview()).includes('href="#"'));
 });
 
 test('custom variables without a store: listing is empty, writes are 501', async () => {

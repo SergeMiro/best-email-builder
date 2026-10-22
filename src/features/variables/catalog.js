@@ -19,13 +19,16 @@
  *     `EXAMPLE_VARIABLES` is a ready-made set. Users may edit their name,
  *     group, sample and value if empty, never their tag (`validateVariableEdit`):
  *     the storage keeps the edit beside the custom variables, under the same
- *     key, and `mergeVariables` lays it over the application's;
+ *     key, and `mergeVariables` lays it over the application's. The
+ *     unsubscribe link is edited as well: each email provider has its own;
  *   - CUSTOM variables, created by users in the builder and kept by the
  *     storage (`listVariables` / `saveVariable` / `deleteVariable`), shared by
  *     every template.
  *
  * The unsubscribe link is `{{ unsubscribe }}`: the sending pipeline replaces it
- * with the right link (see `applyServiceLinks`).
+ * with the right link (see `applyServiceLinks`); without one, with the link's
+ * value if empty — the email provider's own tag (`*|UNSUB|*`) or an address —
+ * and its sample in a preview or a test.
  *
  * Dependency-free: shared by the browser and the server.
  */
@@ -95,13 +98,8 @@ const SYSTEM_KEY_SHAPE = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)*$/;
 /** What a user may change in a system variable: its tag, kind and token stay the application's. */
 const EDITABLE_FIELDS = /** @type {const} */ (['label', 'group', 'sample', 'fallback', 'description']);
 
-/**
- * Whether users may edit a variable: all but a link (the unsubscribe link is
- * filled in by the sending pipeline).
- *
- * @param {EmailVariable} variable
- */
-export const isEditable = (variable) => variable.kind !== 'link';
+/** A link's fields that hold a link. */
+const LINK_VALUES = /** @type {const} */ (['sample', 'fallback']);
 
 /**
  * The name shown: a system variable's is translated, unless a user wrote it.
@@ -165,6 +163,19 @@ export function defineVariables(variables) {
 const clean = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 
 /**
+ * A link's value: an address, an anchor, or an email provider's own tag
+ * (`*|UNSUB|*`, `[[UNSUB_LINK_EN]]`) — never another scheme (`javascript:`).
+ * The scheme is read without whitespace or control characters ("java\tscript:").
+ *
+ * @param {string|null|undefined} value
+ */
+export function isLinkValue(value) {
+  // eslint-disable-next-line no-control-regex -- control characters are exactly what is stripped
+  const compact = String(value ?? '').replace(/[\s\u0000-\u001f\u007f]+/g, '').toLowerCase();
+  return /^(https?:|mailto:)/.test(compact) || !/^[a-z][a-z0-9+.-]*:/.test(compact);
+}
+
+/**
  * Validates and normalizes a CUSTOM variable typed by a user.
  * Returns `{ variable }` or `{ errors: { field: message } }`.
  *
@@ -205,7 +216,8 @@ export function validateCustomVariable(input, { existing = [], editing = null, t
 
 /**
  * Validates a user's edit of a SYSTEM variable (`validateCustomVariable`'s
- * rules; its key cannot change, an empty group is the application's).
+ * rules; its key cannot change, an empty group is the application's; a link's
+ * sample and value if empty are links, see `isLinkValue`).
  * Returns `{ variable }`, the edit to store under its key, or `{ errors }`.
  *
  * @param {EmailVariable} system
@@ -214,17 +226,24 @@ export function validateCustomVariable(input, { existing = [], editing = null, t
  */
 export function validateVariableEdit(system, input, { t = identity } = {}) {
   const group = clean(input?.group, VARIABLE_LIMITS.group) || system.group;
-  const { variable, errors } = validateCustomVariable({ ...system, ...input, group }, { editing: system.key, t });
-  if (errors) return { errors };
-  const { custom: _custom, ...edit } = /** @type {EmailVariable} */ (variable);
+  const checked = validateCustomVariable({ ...system, ...input, group }, { editing: system.key, t });
+  /** @type {Record<string, string>} */
+  const errors = { ...checked.errors };
+  if (system.kind === 'link') {
+    for (const field of LINK_VALUES) {
+      if (!isLinkValue(input?.[field] ?? system[field])) errors[field] = t('An address, or your email provider’s tag');
+    }
+  }
+  if (Object.keys(errors).length) return { errors };
+  const { custom: _custom, ...edit } = /** @type {EmailVariable} */ (checked.variable);
   return { variable: edit };
 }
 
 /**
  * System variables first, then custom ones. A stored variable under a system
  * variable's key is a user's edit of it: it changes its name, group, sample,
- * value if empty and description, never its tag, kind or token (nor a link at
- * all), and marks it `edited`.
+ * value if empty and description, never its tag, kind or token, and marks it
+ * `edited`. A link keeps only a link (see `isLinkValue`).
  *
  * @param {EmailVariable[]} system
  * @param {EmailVariable[]} custom
@@ -234,8 +253,10 @@ export function mergeVariables(system, custom = []) {
   const edits = new Map(custom.filter((v) => keys.has(v.key)).map((v) => [v.key, v]));
   const withEdit = (/** @type {EmailVariable} */ variable) => {
     const edit = edits.get(variable.key);
-    if (!edit || !isEditable(variable)) return variable;
-    const fields = Object.fromEntries(EDITABLE_FIELDS.filter((field) => edit[field] !== undefined).map((field) => [field, edit[field]]));
+    if (!edit) return variable;
+    // A forged link value is dropped: the application's stays.
+    const kept = (field) => edit[field] !== undefined && (variable.kind !== 'link' || !LINK_VALUES.includes(field) || isLinkValue(edit[field]));
+    const fields = Object.fromEntries(EDITABLE_FIELDS.filter(kept).map((field) => [field, edit[field]]));
     return { ...variable, ...fields, edited: true };
   };
   return [...system.map(withEdit), ...custom.filter((v) => !keys.has(v.key)).map((v) => ({ ...v, custom: true }))];

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HexAlphaColorPicker } from 'react-colorful';
+import { HexAlphaColorPicker, HexColorPicker } from 'react-colorful';
 import { Check } from 'lucide-react';
 import { useT } from '../context.jsx';
 import { Input } from './fields.jsx';
@@ -24,17 +24,41 @@ function normalizeHex(v) {
   return s.toUpperCase();
 }
 
+const RGBA = /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,\s*(\d*\.?\d+)(%?)\s*)?\)$/i;
+
 /**
- * Colour field: a swatch opening a full-spectrum picker (with alpha), a hex
- * input and presets. `value` is `#RRGGBB` or `#RRGGBBAA`; `onChange(hex)`.
- * `dense`: the height of the properties panel's fields.
+ * A colour as the hex code the fields show: `rgba(r, g, b, a)` (how a colour
+ * with transparency is kept in the email) is `#RRGGBBAA`, `#RRGGBB` when
+ * opaque; anything else is returned as is.
+ *
+ * @param {string|null|undefined} value
  */
-export function ColorPicker({ value, onChange, id, className, placeholder = '', dense = false }) {
+export function colorToHex(value) {
+  const text = String(value || '').trim();
+  const m = RGBA.exec(text);
+  if (!m) return text;
+  const alpha = m[4] === undefined ? 1 : Number(m[4]) / (m[5] ? 100 : 1);
+  const byte = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+  return `#${byte(Number(m[1]))}${byte(Number(m[2]))}${byte(Number(m[3]))}${alpha < 1 ? byte(alpha * 255) : ''}`.toUpperCase();
+}
+
+/**
+ * Colour field: a swatch opening a full-spectrum picker, a hex input and
+ * presets. `value` is `#RRGGBB`, `#RRGGBBAA` or `rgba()`.
+ *
+ * `onChange(hex, { live })`: `live` while the colour is dragged in the
+ * picker or picked from the presets — what it paints should follow at once —
+ * not while a code is typed. `alpha`: the transparency slider (off for a
+ * colour that must stay opaque). `dense`: the height of the properties
+ * panel's fields.
+ */
+export function ColorPicker({ value, onChange, id, className, placeholder = '', alpha = true, dense = false }) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const valid = isValidHex(value);
-  const normalized = valid ? normalizeHex(value) : '';
-  const emit = (hex) => onChange(normalizeHex(hex));
+  const hex = colorToHex(value);
+  const valid = isValidHex(hex);
+  const normalized = valid ? normalizeHex(hex) : '';
+  const Picker = alpha ? HexAlphaColorPicker : HexColorPicker;
 
   return (
     <div className={cn('eb:flex eb:gap-2', className)}>
@@ -52,25 +76,25 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '', 
             {/* Empty: the colour MJML renders by default, faded. */}
             <span
               className="eb:absolute eb:inset-0"
-              style={{ backgroundColor: valid ? value : placeholder || 'transparent', opacity: valid ? 1 : 0.45 }}
+              style={{ backgroundColor: valid ? hex : colorToHex(placeholder) || 'transparent', opacity: valid ? 1 : 0.45 }}
               aria-hidden
             />
           </button>
         </PopoverTrigger>
         <PopoverContent align="start" className="eb:w-64 eb:space-y-3 eb:p-3">
           <div className="eb-picker">
-            <HexAlphaColorPicker color={valid ? value : FALLBACK_COLOR} onChange={emit} />
+            <Picker color={valid ? hex : FALLBACK_COLOR} onChange={(next) => onChange(normalizeHex(next), { live: true })} />
           </div>
           <div className="eb:flex eb:items-center eb:gap-2">
             <span
               className="eb-checker eb:relative eb:size-8 eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:ring-1 eb:ring-black/10 eb:ring-inset"
               aria-hidden
             >
-              <span className="eb:absolute eb:inset-0" style={{ backgroundColor: valid ? value : 'transparent' }} />
+              <span className="eb:absolute eb:inset-0" style={{ backgroundColor: valid ? hex : 'transparent' }} />
             </span>
             <Input
-              value={value || ''}
-              onChange={(e) => emit(e.target.value)}
+              value={hex}
+              onChange={(e) => onChange(normalizeHex(e.target.value))}
               placeholder="#RRGGBB"
               maxLength={9}
               aria-label={t('Hex code')}
@@ -82,7 +106,7 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '', 
               <button
                 key={c}
                 type="button"
-                onClick={() => onChange(c)}
+                onClick={() => onChange(c, { live: true })}
                 title={c}
                 aria-label={c}
                 className="eb:relative eb:size-6 eb:rounded-lg2 eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-110"
@@ -98,10 +122,10 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '', 
       </Popover>
       <Input
         id={id}
-        value={value || ''}
+        value={hex}
         onChange={(e) => onChange(e.target.value)}
         maxLength={9}
-        placeholder={placeholder || '#RRGGBB'}
+        placeholder={colorToHex(placeholder) || '#RRGGBB'}
         dense={dense}
         className={cn('eb:flex-1 eb:font-mono', dense ? 'eb:text-[12px]' : 'eb:text-[13px]')}
       />

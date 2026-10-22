@@ -26,7 +26,26 @@ All notable changes are documented here. The format follows
   image when the page cannot load its path itself (images on another origin,
   no server). The template keeps the path.
 
+- The unsubscribe link is edited like the other variables, since each email
+  provider has its own: its *value if empty* is used when the sending gives
+  no `unsubscribeUrl` (an address, or the provider's tag such as `*|UNSUB|*`),
+  its *sample value* in the preview and test sends (`#` otherwise). Both must
+  be an address or a tag, never `javascript:`.
+- Colors keep their transparency: the picker's alpha slider is written
+  `rgba()` in the email (MJML refuses `#RRGGBBAA`) and shown as `#RRGGBBAA` in
+  the field. Classic Outlook, which reads no `rgba()`, gets in `bgcolor` the
+  opaque color it looks like over white.
+
 ### Fixed
+- A color dragged in the picker (the area, the hue or the transparency
+  slider) paints the block as it moves, rather than when the mouse is
+  released. The whole drag is one undo step.
+- Bold, italic… on a text only selected (not being edited) formatted it but
+  left it open with everything selected: the next emoji or variable replaced
+  the whole text. The format is applied to the whole text and the text is
+  closed at once; the ribbon shows the format of its words.
+- An emoji clicked in the panel showed twice for a moment, and the grid moved
+  under the pointer as *Recently used* appeared.
 - The live demo showed no uploaded image: it had no server to serve
   `/email-assets/`. It now keeps uploads in the browser (Cache Storage, so
   they outlive a reload) and shows them in the canvas and the preview.
@@ -44,6 +63,17 @@ All notable changes are documented here. The format follows
   `{ reveal: true }` for that, and `editor.showWorking(id)` shows the shimmer.
 - The **×** of a variable cut over two lines sits at the variable's end, top
   right of its last line, rather than after its first piece.
+- The *Variables* panel shows the unsubscribe link among the others, with
+  its pencil, without a line between them. The panels beside the canvas show
+  no heading (their button names them), only their **×**; no line before the
+  ribbon's *Emojis* and *Variables* buttons.
+- The *Brand* dialog: its fields are as high as the properties panel's; the
+  logo's square, larger and square, opens the file explorer (the *Upload*
+  button is gone); the preview is as tall as the fields beside it; the color
+  pickers have no transparency slider (brand colors stay opaque).
+- `unsubscribeUrl` is optional: without it, `personalize` and `renderEmail`
+  use the link's value if empty, `sendTestEmail` its sample; the handler's
+  `previewUnsubscribeUrl` defaults to `null` (the sample, otherwise `#`).
 
 ## [0.15.0] — 2026-10-22
 

@@ -204,7 +204,7 @@ test.describe('Emoji panel', () => {
 
   async function openEmojis(page) {
     await ribbon(page).locator('[data-drawer="emoji"]').click();
-    await expect(emojis(page).getByRole('heading', { name: 'Emojis' })).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Emojis' })).toBeVisible();
     await expect(grinningFace(page)).toBeVisible();
     // Done sliding open: an emoji reached while it slides would move from under the pointer.
     await expect.poll(() => emojis(page).evaluate((aside) => aside.parentElement.offsetWidth)).toBe(256);
@@ -269,7 +269,7 @@ test.describe('Emoji panel', () => {
     await openBuilder(page, { lang: 'fr' });
     await ribbon(page).locator('[data-drawer="emoji"]').click();
     const box = page.getByTestId('eb-panel-emoji');
-    await expect(box.getByRole('heading', { name: 'Émojis' })).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Émojis' })).toBeVisible();
     await expect(box.getByRole('button', { name: 'visage rieur', exact: true })).toBeVisible();
     await box.getByLabel('Rechercher un émoji').fill('coeur rouge');
     await expect(box.locator('[data-emoji="❤️"]')).toBeVisible();

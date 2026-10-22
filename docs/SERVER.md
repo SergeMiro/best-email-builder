@@ -75,7 +75,7 @@ const handler = createEmailBuilderHandler({
 | `locale` | `'en'` | The language of error messages (see [Languages](LANGUAGES.md)). |
 | `messages` | — | Extra or overriding translations for those messages. |
 | `lang` | `locale.slice(0, 2)` | The `<html lang>` of compiled emails. The AI also writes in this language when the browser does not send one. |
-| `previewUnsubscribeUrl` | `'#'` | Where the unsubscribe link points in previews. |
+| `previewUnsubscribeUrl` | `null` | Where the unsubscribe link points in previews and test sends. Without it, the link's sample value, otherwise `#`. |
 | `maxVersions` | `50` | How many versions each template keeps. |
 | `maxTestRecipients` | `10` | The most addresses one test send accepts. |
 | `rateLimits` | see below | Per user, per hour. |

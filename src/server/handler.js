@@ -52,7 +52,7 @@ import { applyVariablesToText, sampleValues } from '../features/variables/servic
 import { MAX_IMAGE_BYTES } from '../validation/images.js';
 import { createAssetService } from './assets.js';
 import { HttpError, statusOf } from './errors.js';
-import { compileTemplate, personalize } from './render.js';
+import { compileTemplate, personalize, sampleUnsubscribeUrl } from './render.js';
 import { MAX_TEST_RECIPIENTS, sendTestEmail } from './sendTest.js';
 import { createTemplateService } from './templates.js';
 import { createVariableService } from './variables.js';
@@ -87,7 +87,7 @@ import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
  *   locale?: string,
  *   messages?: Record<string, string>,
  *   lang?: string,
- *   previewUnsubscribeUrl?: string,
+ *   previewUnsubscribeUrl?: string|null,
  *   maxVersions?: number,
  *   maxTestRecipients?: number,
  *   rateLimits?: {testPerHour?: number, uploadsPerHour?: number, proofreadPerHour?: number, rewritePerHour?: number, subjectsPerHour?: number, brandImportsPerHour?: number},
@@ -153,7 +153,7 @@ export function createEmailBuilderHandler(options) {
     locale = 'en',
     messages,
     lang = locale.slice(0, 2),
-    previewUnsubscribeUrl = '#',
+    previewUnsubscribeUrl = null,
     maxVersions,
     maxTestRecipients = MAX_TEST_RECIPIENTS,
     rateLimits = {},
@@ -309,7 +309,8 @@ export function createEmailBuilderHandler(options) {
       );
       // Same origin as the application: uploaded images stay relative.
       const values = sampleValues(catalog);
-      const html = personalize(compiled, { values, unsubscribeUrl: previewUnsubscribeUrl, variables: catalog });
+      const unsubscribeUrl = previewUnsubscribeUrl || sampleUnsubscribeUrl(catalog);
+      const html = personalize(compiled, { values, unsubscribeUrl, variables: catalog });
       return json({
         data: {
           html,

@@ -14,6 +14,10 @@
  *                   would lose work for a mistyped attribute value; safety is
  *                   enforced upstream by `validation/`.
  *
+ * A color with transparency is kept as `rgba()` (MJML refuses `#RRGGBBAA`).
+ * Classic Outlook paints backgrounds from `bgcolor`, and reads no `rgba()`
+ * there: it gets the opaque color the transparent one looks like over white.
+ *
  * Two lines are added to MJML's <head>, as email best practice asks:
  *   x-apple-disable-message-reformatting  Apple Mail (macOS, iOS) does not
  *                   rescale the email it judges too wide;
@@ -32,6 +36,21 @@ export function withClientMetas(html) {
   const viewport = /<meta name="viewport"[^>]*>/i.exec(html);
   if (viewport) return html.slice(0, viewport.index + viewport[0].length) + CLIENT_METAS + html.slice(viewport.index + viewport[0].length);
   return html.replace(/<head>/i, (head) => head + CLIENT_METAS);
+}
+
+/**
+ * `bgcolor="rgba(r, g, b, a)"` → the opaque `#rrggbb` it looks like over white.
+ * @param {string} html
+ */
+export function opaqueBgcolors(html) {
+  return html.replace(/\bbgcolor="rgba\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d*\.?\d+)\s*\)"/gi, (_, r, g, b, a) => {
+    const alpha = Math.min(1, Number(a));
+    const over = (/** @type {string} */ channel) =>
+      Math.round(Math.min(255, Number(channel)) * alpha + 255 * (1 - alpha))
+        .toString(16)
+        .padStart(2, '0');
+    return `bgcolor="#${over(r)}${over(g)}${over(b)}"`;
+  });
 }
 
 import mjml2html from 'mjml';
@@ -54,7 +73,7 @@ export async function compileMjml(mjml) {
     fonts: {},
   });
   return {
-    html: withClientMetas(String(result?.html || '')),
+    html: withClientMetas(opaqueBgcolors(String(result?.html || ''))),
     warnings: (result?.errors || []).map((/** @type {any} */ e) => ({
       line: e.line,
       message: String(e.formattedMessage || e.message || e),

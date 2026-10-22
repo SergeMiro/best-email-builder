@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Globe, ImageOff, Loader2, Palette, Trash2, TriangleAlert, Upload, WandSparkles } from 'lucide-react';
+import { Globe, ImageOff, Loader2, Palette, Trash2, TriangleAlert, WandSparkles } from 'lucide-react';
 import { useUi } from '../../ui/context.jsx';
 import { Button } from '../../ui/primitives/button.jsx';
 import { Input, Label } from '../../ui/primitives/fields.jsx';
@@ -30,6 +30,8 @@ import { BRAND_NOTES } from './messages.js';
  * The quickest way is the first field: the company's website, read by the
  * server (logo, colors, font filled in, nothing saved yet). Everything can
  * then be changed by hand, and the small preview shows the result at once.
+ * A click on the logo's square picks an image. The colors are opaque: the
+ * text on a button or a banner is chosen by their contrast.
  *
  * Saving keeps the brand for every new email, template and block, and (the
  * box is ticked by default) repaints the email being edited: one step, Ctrl+Z
@@ -53,6 +55,9 @@ const toForm = (/** @type {Brand} */ brand) => ({
 
 /** The builder's own paragraph size: what the size list shows until one is picked. */
 const TEXT_SIZE = 15;
+
+const LOGO_SQUARE =
+  'eb-checker eb:flex eb:size-20 eb:shrink-0 eb:items-center eb:justify-center eb:overflow-hidden eb:rounded-lg2 eb:ring-1 eb:ring-border eb:ring-inset';
 
 /** A logo address the builder accepts: uploaded (relative) or https. @param {string} url */
 const isLogoUrl = (url) => !url || url.startsWith('/') || (/^https:\/\//i.test(url) && isSafeUrl(url, 'image'));
@@ -196,6 +201,13 @@ export default function BrandButton({ context }) {
   };
 
   const swatch = brand?.primary;
+  const logoShown = uploading ? (
+    <Loader2 className="eb:size-4 eb:animate-spin eb:text-foreground-muted" aria-hidden="true" />
+  ) : form.logoUrl && !logoInvalid ? (
+    <img src={form.logoUrl} alt={t('Logo')} className="eb:max-h-16 eb:max-w-16 eb:object-contain" />
+  ) : (
+    <ImageOff className="eb:size-4 eb:text-foreground-muted" aria-hidden="true" />
+  );
 
   return (
     <>
@@ -242,11 +254,12 @@ export default function BrandButton({ context }) {
                       placeholder="acme.com"
                       inputMode="url"
                       autoComplete="url"
+                      dense
                       className="eb:pl-8"
                       disabled={reading}
                     />
                   </div>
-                  <Button type="submit" size="sm" disabled={reading || !form.website.trim()}>
+                  <Button type="submit" size="sm" className="eb:h-6.5" disabled={reading || !form.website.trim()}>
                     {reading ? <Loader2 className="eb:animate-spin" /> : <WandSparkles />}
                     {t('Get my brand')}
                   </Button>
@@ -274,62 +287,67 @@ export default function BrandButton({ context }) {
               </form>
             )}
 
-            <div className="eb:grid eb:gap-6 eb:sm:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="eb:grid eb:gap-6 eb:sm:grid-cols-[minmax(0,1fr)_240px]">
               <fieldset disabled={reading} className="eb:m-0 eb:flex eb:min-w-0 eb:flex-col eb:gap-4 eb:border-0 eb:p-0">
                 <legend className="eb:sr-only">{t('Your brand')}</legend>
 
                 <div className="eb:flex eb:flex-col eb:gap-1.5">
                   <Label htmlFor="eb-brand-logo">{t('Logo')}</Label>
-                  <div className="eb:flex eb:items-center eb:gap-3">
-                    <div className="eb-checker eb:flex eb:h-12 eb:w-24 eb:shrink-0 eb:items-center eb:justify-center eb:overflow-hidden eb:rounded-lg2 eb:ring-1 eb:ring-border eb:ring-inset">
-                      {form.logoUrl && !logoInvalid ? (
-                        <img src={form.logoUrl} alt={t('Logo')} className="eb:max-h-10 eb:max-w-20 eb:object-contain" />
-                      ) : (
-                        <ImageOff className="eb:size-4 eb:text-foreground-muted" aria-hidden="true" />
-                      )}
-                    </div>
-                    <div className="eb:flex eb:flex-wrap eb:gap-2">
-                      {canUpload && (
-                        <>
-                          <input
-                            ref={fileRef}
-                            type="file"
-                            accept="image/png,image/jpeg,image/gif"
-                            className="eb:sr-only"
-                            tabIndex={-1}
-                            aria-hidden="true"
-                            data-testid="eb-brand-logo-file"
-                            onChange={pickLogo}
-                          />
-                          <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
-                            {uploading ? <Loader2 className="eb:animate-spin" /> : <Upload />}
-                            {t('Upload')}
-                          </Button>
-                        </>
-                      )}
+                  <div className="eb:flex eb:items-start eb:gap-3">
+                    {/* The square itself picks an image: the file explorer opens. */}
+                    {canUpload ? (
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        onClick={() => fileRef.current?.click()}
+                        aria-label={t('Choose a logo image')}
+                        title={t('Choose a logo image')}
+                        data-testid="eb-brand-logo-pick"
+                        className={cn(LOGO_SQUARE, 'eb:cursor-pointer eb:outline-none eb:transition-shadow eb:hover:ring-primary/60 eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:cursor-wait')}
+                      >
+                        {logoShown}
+                      </button>
+                    ) : (
+                      <div className={LOGO_SQUARE}>{logoShown}</div>
+                    )}
+                    {canUpload && (
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/gif"
+                        className="eb:sr-only"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        data-testid="eb-brand-logo-file"
+                        onChange={pickLogo}
+                      />
+                    )}
+                    <div className="eb:flex eb:min-w-0 eb:flex-1 eb:flex-col eb:items-start eb:gap-1.5">
+                      <Input
+                        id="eb-brand-logo"
+                        dense
+                        value={form.logoUrl}
+                        onChange={(event) => set({ logoUrl: event.target.value.trim(), logoWidth: 0 })}
+                        placeholder={t('or an image address: https://…')}
+                        aria-invalid={logoInvalid || undefined}
+                        className="eb:text-[12px]"
+                      />
+                      {logoInvalid && <p className="eb:text-[12px] eb:text-destructive">{t('An https:// address is required')}</p>}
                       {form.logoUrl && (
-                        <Button type="button" variant="ghost" size="sm" onClick={() => set({ logoUrl: '', logoWidth: 0 })}>
+                        <Button type="button" variant="ghost" size="xs" onClick={() => set({ logoUrl: '', logoWidth: 0 })}>
                           <Trash2 />
                           {t('Remove')}
                         </Button>
                       )}
                     </div>
                   </div>
-                  <Input
-                    id="eb-brand-logo"
-                    value={form.logoUrl}
-                    onChange={(event) => set({ logoUrl: event.target.value.trim(), logoWidth: 0 })}
-                    placeholder={t('or an image address: https://…')}
-                    aria-invalid={logoInvalid || undefined}
-                    className="eb:text-[12px]"
-                  />
-                  {logoInvalid && <p className="eb:text-[12px] eb:text-destructive">{t('An https:// address is required')}</p>}
                 </div>
 
                 <div className="eb:flex eb:flex-col eb:gap-1.5">
                   <Label htmlFor="eb-brand-name">{t('Company name')}</Label>
                   <Input
                     id="eb-brand-name"
+                    dense
                     value={form.name}
                     maxLength={80}
                     onChange={(event) => set({ name: event.target.value })}
@@ -340,12 +358,12 @@ export default function BrandButton({ context }) {
                 <div className="eb:grid eb:gap-4 eb:sm:grid-cols-2">
                   <div className="eb:flex eb:flex-col eb:gap-1.5">
                     <Label htmlFor="eb-brand-primary">{t('Main color')}</Label>
-                    <ColorPicker id="eb-brand-primary" value={form.primary} onChange={(primary) => set({ primary })} placeholder={PALETTE.navy} />
+                    <ColorPicker id="eb-brand-primary" value={form.primary} onChange={(primary) => set({ primary })} placeholder={PALETTE.navy} alpha={false} dense />
                     <p className="eb:text-[11px] eb:text-foreground-muted">{t('Buttons, banners, links')}</p>
                   </div>
                   <div className="eb:flex eb:flex-col eb:gap-1.5">
                     <Label htmlFor="eb-brand-heading">{t('Headings color')}</Label>
-                    <ColorPicker id="eb-brand-heading" value={form.heading} onChange={(heading) => set({ heading })} placeholder={PALETTE.navy} />
+                    <ColorPicker id="eb-brand-heading" value={form.heading} onChange={(heading) => set({ heading })} placeholder={PALETTE.navy} alpha={false} dense />
                   </div>
                 </div>
 
@@ -353,7 +371,7 @@ export default function BrandButton({ context }) {
                   <div className="eb:flex eb:flex-col eb:gap-1.5">
                     <Label htmlFor="eb-brand-font">{t('Font')}</Label>
                     <Select value={form.font || FONT_STACK} onValueChange={(font) => set({ font })}>
-                      <SelectTrigger id="eb-brand-font">
+                      <SelectTrigger id="eb-brand-font" dense>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -368,7 +386,7 @@ export default function BrandButton({ context }) {
                   <div className="eb:flex eb:flex-col eb:gap-1.5">
                     <Label htmlFor="eb-brand-font-size">{t('Font size')}</Label>
                     <Select value={String(form.fontSize || TEXT_SIZE)} onValueChange={(size) => set({ fontSize: Number(size) })}>
-                      <SelectTrigger id="eb-brand-font-size" aria-describedby="eb-brand-font-size-hint">
+                      <SelectTrigger id="eb-brand-font-size" dense aria-describedby="eb-brand-font-size-hint">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -443,13 +461,14 @@ function BrandPreview({ brand, fallbackName }) {
   return (
     <div className="eb:flex eb:flex-col eb:gap-1.5">
       <span className="eb:text-[12px] eb:font-medium eb:text-foreground-muted">{t('Preview')}</span>
+      {/* As tall as the fields beside it: the email's body takes the room. */}
       <div
-        className="eb:overflow-hidden eb:rounded-lg2 eb:p-2.5 eb:ring-1 eb:ring-border"
+        className="eb:flex eb:flex-1 eb:flex-col eb:overflow-hidden eb:rounded-lg2 eb:p-2.5 eb:ring-1 eb:ring-border"
         style={{ backgroundColor: PALETTE.canvas, fontFamily: font }}
         data-testid="eb-brand-preview"
         aria-hidden="true"
       >
-        <div className="eb:overflow-hidden eb:rounded-[3px]" style={{ backgroundColor: PALETTE.white }}>
+        <div className="eb:flex eb:flex-1 eb:flex-col eb:overflow-hidden eb:rounded-[3px]" style={{ backgroundColor: PALETTE.white }}>
           <div className="eb:px-3 eb:pt-3 eb:pb-2">
             {brand.logoUrl ? (
               <img src={brand.logoUrl} alt="" style={{ width: Math.round((brand.logoWidth || 140) * 0.45), maxWidth: '100%' }} />
@@ -463,7 +482,7 @@ function BrandPreview({ brand, fallbackName }) {
             <div className="eb:text-[13px] eb:leading-tight eb:font-bold">{t('Big news')}</div>
             <div className="eb:mt-1 eb:text-[9px] eb:opacity-90">{t('A short line under the title.')}</div>
           </div>
-          <div className="eb:flex eb:flex-col eb:gap-1.5 eb:px-3 eb:py-3">
+          <div className="eb:flex eb:flex-1 eb:flex-col eb:gap-1.5 eb:px-3 eb:py-3">
             <div className="eb:text-[11px] eb:leading-tight eb:font-bold" style={{ color: heading }}>
               {t('A headline')}
             </div>

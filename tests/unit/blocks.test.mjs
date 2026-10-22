@@ -10,7 +10,7 @@ import { emailBlocks } from '../../src/blocks/index.js';
 import { validateMjml } from '../../src/validation/mjmlValidator.js';
 import { resolveBlock } from '../../src/core/EmailEditor.js';
 import { translatorFor } from '../../src/i18n/index.js';
-import { compileMjml } from '../../src/server/compileMjml.js';
+import { compileMjml, opaqueBgcolors } from '../../src/server/compileMjml.js';
 import { parseSpacing, formatSpacing, toAttributes, toValues, cleanAttributeValue } from '../../src/core/mjmlAttributes.js';
 import { STARTER_MJML, createStarterMjml } from '../../src/features/templates/starter.js';
 
@@ -136,4 +136,17 @@ test('template gallery: every template validates, compiles cleanly and carries t
   assert.ok(gallery.every((entry) => entry.tags.length > 0), 'every base has a tag');
   assert.deepEqual(fr.find((g) => g.id === 'newsletter').tags, ['Marketing', 'Actualités']);
   assert.deepEqual(buildGallery({ templates: [{ id: 'x', name: 'X', description: '', create: () => '' }] })[0].tags, []);
+});
+
+test('a color with transparency: rgba() for the clients, an opaque bgcolor for classic Outlook', async () => {
+  assert.equal(opaqueBgcolors('<td bgcolor="rgba(0, 0, 0, 0.5)" style="background:rgba(0, 0, 0, 0.5)">'), '<td bgcolor="#808080" style="background:rgba(0, 0, 0, 0.5)">');
+  assert.equal(opaqueBgcolors('<td bgcolor="#ffffff">'), '<td bgcolor="#ffffff">');
+  const { html, warnings } = await compileMjml(
+    '<mjml><mj-body><mj-section background-color="rgba(255, 0, 0, 0.25)"><mj-column><mj-text color="rgba(0, 0, 255, 0.5)">Hi</mj-text></mj-column></mj-section></mj-body></mjml>'
+  );
+  assert.deepEqual(warnings, []);
+  assert.ok(html.includes('bgcolor="#ffbfbf"'), 'bgcolor flattened over white');
+  assert.ok(!/bgcolor="rgba/.test(html));
+  assert.ok(html.includes('background-color:rgba(255, 0, 0, 0.25)') || html.includes('background:rgba(255, 0, 0, 0.25)'), 'CSS keeps the transparency');
+  assert.ok(html.includes('color:rgba(0, 0, 255, 0.5)'));
 });

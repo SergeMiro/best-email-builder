@@ -222,8 +222,9 @@ service like an upload.
 
 The editor only inserts tags (`{{contact.firstname}}`); rendering replaces
 them per recipient, HTML-escaped, never leaving a raw tag. The unsubscribe link
-(`{{ unsubscribe }}`) is replaced by the sending pipeline (`unsubscribeUrl`);
-previews and tests get an inert link.
+(`{{ unsubscribe }}`) is replaced by the sending pipeline (`unsubscribeUrl`),
+otherwise by the link's value if empty; previews and tests get its sample, or
+an inert link.
 
 ## Images
 

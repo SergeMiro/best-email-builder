@@ -15,6 +15,13 @@ There are none by default, apart from the unsubscribe link
 with `unsubscribeUrl`. Users then create their own from the *Variables* panel
 (see [Custom variables](#custom-variables)).
 
+The unsubscribe link is edited like the others, since each email provider
+has its own. Its *value if empty* is used when the sending gives no
+`unsubscribeUrl`: an address, or the provider's own tag (`*|UNSUB|*`,
+`[[UNSUB_LINK_EN]]`); its *sample value* is the link of the preview and the
+test sends, inert (`#`) when empty. Both must be an address or a tag:
+`javascript:` and other schemes are refused.
+
 To give them a list of your own, define it with `defineVariables([...])`,
 keep the unsubscribe link, and pass the same list to both sides:
 
@@ -64,8 +71,7 @@ custom one, with its tag frozen. What the user changes (name, group, sample
 value, value if empty) is stored like a custom variable, under the system
 variable's key: `PUT {base}/variables/:key` on the server, `saveVariable` in
 the storage. `mergeVariables` lays it over your variable and marks it
-`edited`; its tag, kind and token stay yours, and the unsubscribe link is
-never edited. Once edited, the dialog offers *Restore the default*: it
+`edited`; its tag, kind and token stay yours. Once edited, the dialog offers *Restore the default*: it
 deletes the edit (`DELETE {base}/variables/:key`) and your values are back.
 This needs the `variableStore` repository, as custom variables do.
 

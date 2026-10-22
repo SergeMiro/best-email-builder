@@ -3,7 +3,7 @@ import { Link2, Pencil, Plus } from 'lucide-react';
 import { useUi } from '../../ui/context.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { TooltipWrap } from '../../ui/primitives/misc.jsx';
-import { isEditable, labelOf, tokenOf } from './catalog.js';
+import { labelOf, tokenOf } from './catalog.js';
 import VariableDialog from './VariableDialog.jsx';
 
 const BADGE =
@@ -24,9 +24,10 @@ const BADGE =
  * There are none by default: when the storage supports it, users create
  * their own here (the + button) and edit or delete them with the pencil of
  * their badge; they are shared by every template. The application's get a
- * pencil too: their name, sample… change, their tag does not, and the dialog
- * restores the application's. The unsubscribe link is inserted as a link (or
- * becomes the URL of the selected button), so it shows no typed preview.
+ * pencil too, the unsubscribe link included: their name, sample… change,
+ * their tag does not, and the dialog restores the application's. The
+ * unsubscribe link is inserted as a link (or becomes the URL of the selected
+ * button), so it shows no typed preview.
  */
 export default function VariablesPanel({ context }) {
   const { editor, ready, variables, storage, canManageVariables, reloadVariables } = context;
@@ -34,8 +35,8 @@ export default function VariablesPanel({ context }) {
   const [dialog, setDialog] = useState(null); // { variable } | {}
   // Leaving the panel: no tag stays typed in the email.
   useEffect(() => () => editor.clearPreview(), [editor]);
-  const fields = variables.filter((v) => v.kind !== 'link');
-  const links = variables.filter((v) => v.kind === 'link');
+  // Links last, as the unsubscribe link ends an email.
+  const ordered = [...variables.filter((v) => v.kind !== 'link'), ...variables.filter((v) => v.kind === 'link')];
 
   const insert = (variable) => {
     const done =
@@ -48,7 +49,6 @@ export default function VariablesPanel({ context }) {
   const badge = (variable) => {
     const link = variable.kind === 'link';
     const label = labelOf(variable, t);
-    const editable = canManageVariables && isEditable(variable);
     const button = (
       <button
         type="button"
@@ -59,7 +59,7 @@ export default function VariablesPanel({ context }) {
         onFocus={link ? undefined : () => editor.previewText(tokenOf(variable))}
         onBlur={link ? undefined : () => editor.clearPreview()}
         onClick={() => insert(variable)}
-        className={cn(BADGE, editable && 'eb:rounded-r-none eb:border-r-0 eb:pr-1.5')}
+        className={cn(BADGE, canManageVariables && 'eb:rounded-r-none eb:border-r-0 eb:pr-1.5')}
       >
         {link && <Link2 className="eb:size-3" aria-hidden="true" />}
         {label}
@@ -70,7 +70,7 @@ export default function VariablesPanel({ context }) {
         {button}
       </TooltipWrap>
     );
-    if (!editable) return <Fragment key={variable.key}>{tip}</Fragment>;
+    if (!canManageVariables) return <Fragment key={variable.key}>{tip}</Fragment>;
     return (
       <span key={variable.key} className="eb:inline-flex">
         {tip}
@@ -97,8 +97,8 @@ export default function VariablesPanel({ context }) {
         // No mousedown: the text being edited keeps its caret.
         onMouseDown={(event) => event.preventDefault()}
       >
-        {fields.map(badge)}
-        {!fields.length && <span className="eb:text-[11px] eb:text-foreground-muted">{t('No variables yet.')}</span>}
+        {ordered.map(badge)}
+        {!ordered.length && <span className="eb:text-[11px] eb:text-foreground-muted">{t('No variables yet.')}</span>}
         {canManageVariables && (
           <TooltipWrap label={t('New variable')} delayDuration={100} hoverable={false}>
             <button
@@ -112,8 +112,6 @@ export default function VariablesPanel({ context }) {
             </button>
           </TooltipWrap>
         )}
-        {links.length > 0 && <span className="eb:my-1 eb:block eb:h-px eb:basis-full eb:bg-border" aria-hidden="true" />}
-        {links.map(badge)}
       </div>
       {canManageVariables && (
         <VariableDialog

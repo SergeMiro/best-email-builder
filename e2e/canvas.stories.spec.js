@@ -166,6 +166,78 @@ test.describe('Drag and drop from the sidebar', () => {
   });
 });
 
+test.describe('Color field', () => {
+  /** The background the first section shows in the canvas. */
+  const shownBackground = (page) =>
+    page.locator('.eb-canvas-frame').evaluate((frame) => {
+      const doc = /** @type {HTMLIFrameElement} */ (frame).contentDocument;
+      const text = [...doc.querySelectorAll('div')].find((el) => el.textContent.trim() === 'Top');
+      for (let el = text; el; el = el.parentElement) {
+        const color = getComputedStyle(el).backgroundColor;
+        if (color !== 'rgba(0, 0, 0, 0)') return color;
+      }
+      return null;
+    });
+  const sectionColor = async (page) => (await nodes(page, 'mj-section'))[0].attributes['background-color'];
+
+  test('dragged in the picker, the color paints the block as it moves; its transparency is kept; one undo step', async ({ page }) => {
+    await openBuilder(page);
+    await loadSample(page);
+    await canvas(page).getByText('Top').click();
+    await canvas(page).getByRole('button', { name: 'Select the parent' }).click();
+    await canvas(page).getByRole('button', { name: 'Select the parent' }).click();
+    await expect(panel(page).getByRole('heading', { name: '1 column' })).toBeVisible();
+    expect(await shownBackground(page)).toBe('rgb(255, 255, 255)');
+
+    const field = panel(page).getByLabel('Background', { exact: true });
+    await field.locator('xpath=..').getByRole('button', { name: 'Pick a colour' }).click();
+    const area = await page.locator('.react-colorful__saturation').boundingBox();
+    await page.mouse.move(area.x + area.width * 0.2, area.y + area.height * 0.2);
+    await page.mouse.down();
+    await page.mouse.move(area.x + area.width * 0.9, area.y + area.height * 0.3, { steps: 8 });
+    // Still held: the block already shows the color under the pointer.
+    await expect.poll(() => sectionColor(page)).toMatch(/^#[0-9a-f]{6}$/);
+    const moving = await sectionColor(page);
+    await expect.poll(() => shownBackground(page)).not.toBe('rgb(255, 255, 255)');
+    await page.mouse.move(area.x + area.width * 0.9, area.y + area.height * 0.8, { steps: 8 });
+    await expect.poll(() => sectionColor(page)).not.toBe(moving);
+    await page.mouse.up();
+    // The whole drag is one step (its last move is painted within 60 ms).
+    await page.waitForTimeout(200);
+    const dragged = await sectionColor(page);
+    await page.evaluate(() => window.__emailEditor.undo());
+    expect(await sectionColor(page)).toBe('#ffffff');
+    await page.evaluate(() => window.__emailEditor.redo());
+    expect(await sectionColor(page)).toBe(dragged);
+
+    // The hue slider follows as well.
+    const before = await sectionColor(page);
+    const hue = await page.locator('.react-colorful__hue').boundingBox();
+    await page.mouse.move(hue.x + 4, hue.y + hue.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(hue.x + hue.width * 0.6, hue.y + hue.height / 2, { steps: 8 });
+    await expect.poll(() => sectionColor(page)).not.toBe(before);
+    await page.mouse.up();
+
+    // Transparency: kept as rgba(), shown as such, and as #RRGGBBAA in the field.
+    const alpha = await page.locator('.react-colorful__alpha').boundingBox();
+    await page.mouse.move(alpha.x + alpha.width - 2, alpha.y + alpha.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(alpha.x + alpha.width * 0.5, alpha.y + alpha.height / 2, { steps: 8 });
+    await expect.poll(() => sectionColor(page)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.(49|5|51)\)$/);
+    await page.mouse.up();
+    await expect.poll(() => shownBackground(page)).toMatch(/^rgba\(\d+, \d+, \d+, 0\.(49|5|51)\d*\)$/);
+    await expect(field).toHaveValue(/^#[0-9A-F]{6}(7F|80|82)$/);
+    expect(await mjml(page)).toMatch(/<mj-section background-color="rgba\(/);
+
+    // Typed: a fully opaque code is a plain hex again.
+    await field.fill('#12345678');
+    await expect.poll(() => sectionColor(page)).toBe('rgba(18, 52, 86, 0.47)');
+    await field.fill('#123456FF');
+    await expect.poll(() => sectionColor(page)).toBe('#123456');
+  });
+});
+
 test.describe('Moving, selecting, the toolbar', () => {
   test('a section dragged by its handle goes above the previous one', async ({ page }) => {
     await openBuilder(page);

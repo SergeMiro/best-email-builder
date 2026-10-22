@@ -620,7 +620,10 @@ test.describe('Variables', () => {
 
     await openBar(page);
     await expect(button).toHaveAttribute('aria-pressed', 'true');
-    await expect(variablesPanel(page).getByRole('heading', { name: 'Variables' })).toBeVisible();
+    // Named as its button, with no heading: the close button only.
+    await expect(page.getByRole('complementary', { name: 'Variables' })).toBeVisible();
+    await expect(variablesPanel(page).getByRole('heading')).toHaveCount(0);
+    await expect(variablesPanel(page).getByRole('button', { name: 'Close the panel' })).toBeVisible();
     // Beside the canvas, between the email and the properties: it narrows the email, covers nothing.
     const frame = await page.locator('.eb-canvas-frame').boundingBox();
     const aside = await variablesPanel(page).boundingBox();
@@ -643,7 +646,7 @@ test.describe('Variables', () => {
     expect(await mjml(page)).not.toMatch(/\{\{(?! unsubscribe )/);
     const badges = await openBar(page);
     await expect(badges.locator('[data-variable]')).toHaveText(['Unsubscribe link']);
-    await expect(badges.getByText('No variables yet.')).toBeVisible();
+    await expect(badges.getByRole('button', { name: 'Edit “Unsubscribe link”' })).toBeVisible();
     const plus = badges.getByRole('button', { name: 'New variable' });
     await plus.hover();
     await expect(page.getByRole('tooltip')).toHaveText('New variable');
@@ -658,7 +661,6 @@ test.describe('Variables', () => {
 
     await openBar(page);
     await expect(badges.locator('[data-variable]')).toHaveText(['First name', 'Unsubscribe link']);
-    await expect(badges.getByText('No variables yet.')).toHaveCount(0);
     await expect(badges.getByRole('button', { name: 'Edit “First name”' })).toBeVisible();
   });
 
@@ -667,7 +669,7 @@ test.describe('Variables', () => {
     await canvas(page).getByText('Learn more').click();
     await expect(panel(page).getByRole('heading', { name: 'Button' })).toBeVisible();
     const badges = await openBar(page);
-    const unsubscribe = badges.getByRole('button', { name: 'Unsubscribe link' });
+    const unsubscribe = badges.getByRole('button', { name: 'Unsubscribe link', exact: true });
     // A link: no typed preview, its tag in the tooltip.
     await unsubscribe.hover();
     await expect(page.getByRole('tooltip')).toHaveText('{{ unsubscribe }}');
@@ -681,7 +683,7 @@ test.describe('Variables', () => {
     await canvas(page).getByText('Your headline').dblclick();
     await page.keyboard.press('End');
     const badges = await openBar(page);
-    await badges.getByRole('button', { name: 'Unsubscribe link' }).click();
+    await badges.getByRole('button', { name: 'Unsubscribe link', exact: true }).click();
     await expect.poll(() => mjml(page)).toMatch(/Your headline\s*<a href="\{\{ unsubscribe \}\}">Unsubscribe<\/a>/);
   });
 
@@ -814,9 +816,8 @@ test.describe('Variables', () => {
   test('the application’s variables are edited too: name and sample change, the tag stays; restored', async ({ page }) => {
     await openBuilder(page);
     let badges = await openBar(page);
-    await expect(badges.getByRole('button', { name: /^Edit “/ })).toHaveCount(5);
-    // The unsubscribe link is the sending pipeline's: no pencil.
-    await expect(badges.getByRole('button', { name: 'Edit “Unsubscribe link”' })).toHaveCount(0);
+    // Every one, the unsubscribe link included.
+    await expect(badges.getByRole('button', { name: /^Edit “/ })).toHaveCount(6);
 
     await badges.getByRole('button', { name: 'Edit “First name”' }).click();
     const edit = page.getByRole('dialog').filter({ hasText: 'Edit variable' });
@@ -843,6 +844,25 @@ test.describe('Variables', () => {
     expect((await stored(page)).variables).toEqual([]);
     badges = await openBar(page);
     await expect(badges.locator('[data-variable="contact.firstname"]')).toHaveText('First name');
+  });
+
+  test('the unsubscribe link is edited like the others: its provider’s tag, never a script', async ({ page }) => {
+    await openBuilder(page);
+    const badges = await openBar(page);
+    await badges.getByRole('button', { name: 'Edit “Unsubscribe link”' }).click();
+    const edit = page.getByRole('dialog').filter({ hasText: 'Edit variable' });
+    await expect(edit.getByLabel('Tag')).toBeDisabled();
+    await expect(edit.getByText('{{ unsubscribe }}')).toBeVisible();
+    await expect(edit.getByText('When the sending gives no link')).toBeVisible();
+    await edit.getByLabel('Value if empty').fill('javascript:alert(1)');
+    await edit.getByRole('button', { name: 'Save' }).click();
+    await expect(edit.getByText('An address, or your email provider’s tag')).toBeVisible();
+    await edit.getByLabel('Name').fill('Opt out');
+    await edit.getByLabel('Value if empty').fill('*|UNSUB|*');
+    await edit.getByRole('button', { name: 'Save' }).click();
+    await expect(notice(page, 'Variable “Opt out” saved.')).toBeVisible();
+    expect((await stored(page)).variables).toEqual([expect.objectContaining({ key: 'unsubscribe', label: 'Opt out', fallback: '*|UNSUB|*' })]);
+    await expect(badges.locator('[data-variable="unsubscribe"]')).toHaveText('Opt out');
   });
 
   test('{ } button of the subject: search and keyboard — type, arrows, Enter', async ({ page }) => {

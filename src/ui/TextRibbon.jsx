@@ -237,7 +237,7 @@ export default function TextRibbon({ editor, ready, selection, format, drawers, 
       </div>
 
       {drawers.length > 0 && (
-        <div className="eb:flex eb:h-full eb:shrink-0 eb:items-center eb:gap-0.5 eb:border-l eb:border-border eb:px-1.5">
+        <div className="eb:flex eb:h-full eb:shrink-0 eb:items-center eb:gap-0.5 eb:px-1.5">
           {drawers.map(({ id, icon: Icon, label, title }) => (
             <Tip key={id} label={t(title || label)}>
               <button

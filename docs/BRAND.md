@@ -7,9 +7,11 @@ font, and can repaint the email being edited.
 
 The first field is the company's website. *Get my brand* reads the site's
 logo, main color, headings color, font and name, and fills in the fields
-below. You can then change everything by hand (upload a logo, pick a color).
+below. You can then change everything by hand: a click on the logo's square
+picks an image, or type its address; pick a color (brand colors are opaque,
+since the text on a button or a banner is chosen by their contrast).
 *Font size* sets the size of paragraphs, from 13 to 18 px (15 px until one
-is picked). A small preview follows every change.
+is picked). A small preview, as tall as the fields, follows every change.
 
 *Save* keeps the brand for the whole workspace:
 

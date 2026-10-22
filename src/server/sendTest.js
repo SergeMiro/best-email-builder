@@ -19,7 +19,7 @@ import { identity } from '../i18n/index.js';
 import { DEFAULT_VARIABLES } from '../features/variables/catalog.js';
 import { applyVariablesToText, sampleValues } from '../features/variables/service.js';
 import { HttpError } from './errors.js';
-import { compileTemplate, htmlToText, personalize } from './render.js';
+import { compileTemplate, htmlToText, personalize, sampleUnsubscribeUrl } from './render.js';
 
 export const MAX_TEST_RECIPIENTS = 10;
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -37,7 +37,7 @@ const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
  *   emails: string[]|string,
  *   transport: EmailTransport,
  *   baseUrl?: string|null,
- *   unsubscribeUrl?: string,
+ *   unsubscribeUrl?: string|null,
  *   variables?: import('../features/variables/catalog.js').EmailVariable[],
  *   maxRecipients?: number,
  *   t?: import('../i18n/index.js').Translate,
@@ -51,7 +51,7 @@ export async function sendTestEmail({
   emails,
   transport,
   baseUrl = null,
-  unsubscribeUrl = '#',
+  unsubscribeUrl = null,
   variables = DEFAULT_VARIABLES,
   maxRecipients = MAX_TEST_RECIPIENTS,
   t = identity,
@@ -74,7 +74,7 @@ export async function sendTestEmail({
   for (const email of valid) {
     try {
       const values = sampleValues(variables, { 'contact.email': email });
-      const html = personalize(compiled, { values, unsubscribeUrl, baseUrl, variables });
+      const html = personalize(compiled, { values, unsubscribeUrl: unsubscribeUrl || sampleUnsubscribeUrl(variables), baseUrl, variables });
       const personal = applyVariablesToText(String(subject || '').trim(), values, variables) || t('No subject');
       await transport.send({ to: email, subject: `[TEST] ${personal}`.slice(0, 200), html, text: htmlToText(html) });
       results.push({ email, ok: true, error: null });

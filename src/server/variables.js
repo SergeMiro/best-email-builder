@@ -15,7 +15,7 @@
  */
 
 import { identity } from '../i18n/index.js';
-import { DEFAULT_VARIABLES, isEditable, mergeVariables, validateCustomVariable, validateVariableEdit } from '../features/variables/catalog.js';
+import { DEFAULT_VARIABLES, mergeVariables, validateCustomVariable, validateVariableEdit } from '../features/variables/catalog.js';
 import { HttpError } from './errors.js';
 
 /**
@@ -56,7 +56,7 @@ export function createVariableService({ repository = null, system = DEFAULT_VARI
   };
 
   const systemKeys = new Set(system.map((v) => v.key));
-  const editable = (/** @type {string} */ key) => system.find((v) => v.key === key && isEditable(v)) || null;
+  const editable = (/** @type {string} */ key) => system.find((v) => v.key === key) || null;
 
   const service = {
     /** Custom variables, and the edits of system ones (no `custom` flag). */

@@ -3,7 +3,7 @@ import { Pencil, Plus, Search } from 'lucide-react';
 import { useT } from '../../ui/context.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { SEARCH_KEYS, SearchKeyHint, useSearchShortcut } from '../../ui/primitives/searchShortcut.jsx';
-import { isEditable, labelOf, tokenOf } from './catalog.js';
+import { labelOf, tokenOf } from './catalog.js';
 
 /**
  * List of variables with a search field — opened by the buttons next to the
@@ -126,7 +126,7 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
                       <span className="eb:min-w-0 eb:flex-1 eb:truncate">{labelOf(variable, t)}</span>
                       <code className="eb:shrink-0 eb:font-mono eb:text-[10.5px] eb:text-foreground-muted">{tokenOf(variable)}</code>
                     </button>
-                    {onEdit && isEditable(variable) && (
+                    {onEdit && (
                       <button
                         type="button"
                         aria-label={t('Edit “{name}”', { name: labelOf(variable, t) })}

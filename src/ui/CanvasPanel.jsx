@@ -41,8 +41,9 @@ export default function CanvasPanel({ feature, context, compact, onClose }) {
 
   const shown = feature || last;
   if (!shown?.drawer) return null;
-  // Named as its button: its title is the button's tooltip.
-  const { icon: Icon, label, panel: Panel } = shown.drawer;
+  // Named as its button (its title is the button's tooltip), which already
+  // says what it holds: no heading, the close button only.
+  const { label, panel: Panel } = shown.drawer;
   const name = t(label);
 
   return (
@@ -61,9 +62,7 @@ export default function CanvasPanel({ feature, context, compact, onClose }) {
         data-testid={`eb-panel-${shown.id}`}
         className="eb:flex eb:h-full eb:w-64 eb:flex-col eb:border-l eb:border-border eb:bg-background"
       >
-        <header className="eb:flex eb:h-10 eb:shrink-0 eb:items-center eb:gap-2 eb:pr-1.5 eb:pl-3">
-          {Icon && <Icon className="eb:size-3.5 eb:shrink-0 eb:text-foreground-muted" aria-hidden="true" />}
-          <h3 className="eb:min-w-0 eb:flex-1 eb:truncate eb:text-[12px] eb:font-medium eb:text-foreground">{name}</h3>
+        <header className="eb:flex eb:h-10 eb:shrink-0 eb:items-center eb:justify-end eb:pr-1.5">
           <Button variant="ghost" size="icon-sm-compact" onClick={onClose} aria-label={t('Close the panel')}>
             <X />
           </Button>

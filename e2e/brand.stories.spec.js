@@ -128,6 +128,38 @@ test.describe('Brand', () => {
     await expect(dialog(page).getByLabel('Main color')).toHaveValue('#0060df');
   });
 
+  test('the logo’s square opens the file explorer; fields as high as the properties panel’s; the preview as tall as them', async ({ page }) => {
+    await openBuilder(page);
+    await page.getByTestId('eb-brand-button').click();
+    const box = dialog(page);
+    await expect(box.getByRole('button', { name: 'Upload' })).toHaveCount(0);
+    const square = box.getByRole('button', { name: 'Choose a logo image' });
+    // Once the dialog has zoomed in.
+    await expect.poll(async () => Object.values(await square.boundingBox()).slice(2)).toEqual([80, 80]);
+    const chooser = page.waitForEvent('filechooser');
+    await square.click();
+    await (await chooser).setFiles({
+      name: 'logo.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+    });
+    await expect(box.getByLabel('Logo', { exact: true })).toHaveValue(/\/[a-f0-9]{32}\.png$/);
+    await expect(square.getByRole('img', { name: 'Logo' })).toBeVisible();
+
+    for (const field of [box.getByLabel('Your website'), box.getByLabel('Company name'), box.getByLabel('Main color'), box.getByLabel('Font', { exact: true })]) {
+      expect((await field.boundingBox()).height).toBe(26);
+    }
+    // A brand color stays opaque: no transparency slider.
+    await box.getByLabel('Main color').locator('xpath=..').getByRole('button', { name: 'Pick a colour' }).click();
+    await expect(page.locator('.react-colorful__saturation')).toBeVisible();
+    await expect(page.locator('.react-colorful__alpha')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    const preview = await box.getByTestId('eb-brand-preview').boundingBox();
+    const hint = await box.getByText('Paragraphs; headings keep theirs').boundingBox();
+    expect(Math.abs(preview.y + preview.height - (hint.y + hint.height))).toBeLessThanOrEqual(2);
+  });
+
   test('a website that cannot be read says why; Cancel keeps nothing', async ({ page }) => {
     await openBuilder(page);
     const before = await mjml(page);
