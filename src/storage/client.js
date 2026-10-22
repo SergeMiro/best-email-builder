@@ -13,6 +13,9 @@
  *   listVersions(id)            → versions, newest first
  *   getVersion(id, versionId)   → version, project included
  *   uploadImage(file)           → { path }: RELATIVE path of the uploaded image
+ *   imageUrl(path)              → where the canvas shows an uploaded image  (optional:
+ *                                 when the page cannot load the path itself —
+ *                                 images on another origin, no server at all)
  *   render(input)               → { html, warnings, quality }   (optional: preview)
  *   sendTest(input)             → { sent, failed, invalid, results } (optional: test send)
  *   listVariables()             → custom variables            (optional: user-defined
@@ -104,6 +107,7 @@ import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/
  *   listVersions: (id: number|string) => Promise<TemplateVersion[]>,
  *   getVersion: (id: number|string, versionId: number|string) => Promise<TemplateVersion & {document: EmailDocument, mjml: string}>,
  *   uploadImage: (file: Blob & {name?: string}) => Promise<{path: string}>,
+ *   imageUrl?: (path: string) => string,
  *   render?: (input: RenderInput) => Promise<RenderResult>,
  *   sendTest?: (input: RenderInput & {emails: string[]}) => Promise<SendTestResult>,
  *   listVariables?: () => Promise<EmailVariable[]>,

@@ -14,14 +14,15 @@ import { translatorFor } from './i18n/index.js';
 /**
  * An editor wired to the default engine and the built-in registries.
  *
- * @param {{locale?: string, t?: import('./i18n/index.js').Translate}} [options]
+ * @param {{locale?: string, t?: import('./i18n/index.js').Translate, imageUrl?: ((path: string) => string)|null}} [options]
  *   `t`: the interface's translator (texts of inserted blocks, names in the
  *   canvas); by default the built-in one of `locale` (`'en'`).
+ *   `imageUrl`: where the canvas shows an uploaded image from (the storage's `imageUrl`).
  */
 export function createDefaultEmailEditor(options = {}) {
-  const { locale = 'en', t = translatorFor(locale) } = options;
+  const { locale = 'en', t = translatorFor(locale), imageUrl = null } = options;
   return createEmailEditor({
-    adapter: createNativeAdapter(),
+    adapter: createNativeAdapter({ imageUrl }),
     blocks: emailBlocks,
     features: emailBuilderFeatures,
     t,

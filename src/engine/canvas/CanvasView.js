@@ -53,6 +53,7 @@ const EDGE = 56;
  *   compile: (mjml: string) => Promise<{html: string, errors: any[]}>,
  *   getRoot: () => EmailNode,
  *   t: (key: string, values?: Record<string, any>) => string,
+ *   imageUrl?: ((path: string) => string)|null,
  *   info: (id: string) => {label: string, tag: string, canRemove: boolean, canDuplicate: boolean, canMove: boolean, canStep: boolean, canStepBack: boolean, canStepForward: boolean, vertical: boolean, hasParent: boolean, parentLabel: string}|null,
  *   onSelect: (id: string|null) => void,
  *   onAction: (action: 'parent'|'duplicate'|'remove'|'back'|'forward', id: string) => void,
@@ -65,7 +66,7 @@ const EDGE = 56;
  * }} options
  */
 export function createCanvasView(options) {
-  const { container, compile, getRoot, t, info } = options;
+  const { container, compile, getRoot, t, info, imageUrl = null } = options;
   const parentDocument = container.ownerDocument;
 
   const host = parentDocument.createElement('div');
@@ -302,7 +303,7 @@ export function createCanvasView(options) {
    */
   async function render() {
     const token = ++renderToken;
-    const source = canvasMjml(getRoot(), { t });
+    const source = canvasMjml(getRoot(), { t, imageUrl });
     let result;
     try {
       result = await compile(source);

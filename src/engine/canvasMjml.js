@@ -18,6 +18,8 @@
  */
 
 import { serializeMjml } from './mjml.js';
+import { isAssetPath } from '../renderer/links.js';
+import { IMAGE_ATTRIBUTES } from '../validation/urls.js';
 
 /** @typedef {import('./model.js').EmailNode} EmailNode */
 
@@ -108,11 +110,28 @@ function imageWidths(root) {
 }
 
 /**
+ * Uploaded images (`/email-assets/<key>`) at the address the page can show
+ * them from: the template keeps the path.
+ * @param {Record<string, string>} attributes
+ * @param {(path: string) => string} imageUrl
+ */
+function shownImages(attributes, imageUrl) {
+  /** @type {Record<string, string>|null} */ let shown = null;
+  for (const [name, value] of Object.entries(attributes)) {
+    if (!IMAGE_ATTRIBUTES.has(name) || !isAssetPath(value)) continue;
+    shown = shown || { ...attributes };
+    shown[name] = imageUrl(value.trim()) || value;
+  }
+  return shown || attributes;
+}
+
+/**
  * @param {EmailNode} root
- * @param {{t?: (key: string) => string}} [options]
+ * @param {{t?: (key: string) => string, imageUrl?: ((path: string) => string)|null}} [options]
+ *   `imageUrl`: where the page shows an uploaded image from (see the storage's `imageUrl`).
  * @returns {string}
  */
-export function canvasMjml(root, { t = (key) => key } = {}) {
+export function canvasMjml(root, { t = (key) => key, imageUrl = null } = {}) {
   const imageLabel = t('Choose an image in the panel');
   const widths = imageWidths(root);
   const dropLabel = t('Drop a block here');
@@ -123,11 +142,12 @@ export function canvasMjml(root, { t = (key) => key } = {}) {
   return serializeMjml(root, {
     pretty: false,
     attributes(node) {
-      if (!MARKED_TAGS.has(node.tag)) return node.attributes;
+      const shown = imageUrl ? shownImages(node.attributes, imageUrl) : node.attributes;
+      if (!MARKED_TAGS.has(node.tag)) return shown;
       const own = node.attributes['css-class'] ? `${node.attributes['css-class']} ` : '';
       /** @type {Record<string, string>} */
       const attributes = {
-        ...node.attributes,
+        ...shown,
         'css-class': `${own}${NODE_CLASS} ${ID_CLASS_PREFIX}${node.id} ${TAG_CLASS_PREFIX}${node.tag}`,
       };
       if (node.tag === 'mj-image' && !node.attributes.src) {

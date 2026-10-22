@@ -95,10 +95,12 @@ async function defaultLoadCompiler() {
 /**
  * @param {{
  *   loadCompiler?: () => Promise<(mjml: string) => Promise<{html: string, errors: any[]}>>,
+ *   imageUrl?: ((path: string) => string)|null,
  * }} [options]
+ *   `imageUrl`: where the canvas shows an uploaded image from (the storage's `imageUrl`).
  * @returns {EmailEditorAdapter & {readonly view: any, readonly root: EmailNode|null}}
  */
-export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {}) {
+export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageUrl = null } = {}) {
   /** @type {EmailNode|null} */ let root = null;
   /** @type {string|null} */ let selectedId = null;
   /** @type {ReturnType<typeof createCanvasView>|null} */ let view = null;
@@ -547,6 +549,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler } = {})
         compile,
         getRoot: () => /** @type {EmailNode} */ (root),
         t,
+        imageUrl,
         info: canvasInfo,
         onSelect: (id) => adapter.select(id),
         onAction: (action, id) => {

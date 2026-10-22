@@ -248,6 +248,19 @@ test('canvas: an empty column says where to drop, an image without file shows a 
   assert.match(decodeURIComponent(src), /width="250"/, 'half of 600 px minus the default padding');
 });
 
+test('canvas: uploaded images are shown from the storage’s imageUrl, the template keeps the path', () => {
+  const upload = '/email-assets/0123456789abcdef0123456789abcdef.png';
+  const root = parseMjml(
+    `<mjml><mj-body><mj-section background-url="${upload}"><mj-column><mj-image src="${upload}" />` +
+      '<mj-image src="https://example.com/a.png" /></mj-column></mj-section></mj-body></mjml>'
+  );
+  const source = canvasMjml(root, { imageUrl: (path) => `blob:shown${path}` });
+  assert.equal(source.split(`"blob:shown${upload}"`).length - 1, 2, 'the image and the background');
+  assert.match(source, /src="https:\/\/example\.com\/a\.png"/);
+  assert.ok(canvasMjml(root).includes(`src="${upload}"`), 'without imageUrl, the path as is');
+  assert.ok(serializeMjml(root).includes(`src="${upload}"`) && !serializeMjml(root).includes('blob:'));
+});
+
 /* ── MJML defaults, checked against the installed MJML ───────────────── */
 
 test('MJML_DEFAULTS match the defaults of the installed mjml components', async () => {

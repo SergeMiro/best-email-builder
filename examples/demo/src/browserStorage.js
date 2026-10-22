@@ -32,6 +32,50 @@ import { qualityReport } from '../../../src/validation/quality.js';
 import { validateMjml } from '../../../src/validation/mjmlValidator.js';
 import { claudeProvider, createAi } from 'best-email-builder/ai';
 
+/**
+ * Uploaded images: a server would store them and serve `/email-assets/<key>`.
+ * The demo has no server: it keeps them in Cache Storage, so they outlive a
+ * reload, and shows them in the canvas through `imageUrl`, as blob URLs. The
+ * preview frame, sandboxed, has no origin to load those from: its images go
+ * in as data.
+ */
+const ASSETS_CACHE = 'best-email-builder-demo:email-assets';
+const UPLOADS = /\/email-assets\/[a-f0-9]{32}\.(?:png|jpg|gif)/g;
+const cacheKey = (path) => new URL(path, location.origin).href;
+
+const dataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+
+/** path → {blob, url}: the uploads of this browser. */
+const uploads = new Map();
+const keepUpload = (path, blob) => {
+  if (!uploads.has(path)) uploads.set(path, { blob, url: URL.createObjectURL(blob) });
+};
+
+/** The uploads of earlier visits. */
+async function readUploads() {
+  if (!globalThis.caches) return;
+  const cache = await caches.open(ASSETS_CACHE);
+  for (const request of await cache.keys()) {
+    const stored = await cache.match(request);
+    if (stored) keepUpload(new URL(request.url).pathname, await stored.blob());
+  }
+}
+
+async function inlineUploads(html) {
+  let inlined = html;
+  for (const path of new Set(html.match(UPLOADS) || [])) {
+    const upload = uploads.get(path);
+    if (upload) inlined = inlined.split(path).join(await dataUrl(upload.blob));
+  }
+  return inlined;
+}
+
 const TEMPLATES_KEY = 'best-email-builder-demo:templates';
 const VARIABLES_KEY = 'best-email-builder-demo:variables';
 const BRAND_KEY = 'best-email-builder-demo:brand';
@@ -127,7 +171,7 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
     // MJML 5 compiles asynchronously.
     const result = await mjml2html(prepareMjml(mjml, { title: subject, preheader, emptyImages: 'keep' }), { validationLevel: 'soft' });
     const values = sampleValues(catalog);
-    const html = applyServiceLinks(applyVariables(result.html, values, catalog), { unsubscribeUrl: '#' });
+    const html = await inlineUploads(applyServiceLinks(applyVariables(result.html, values, catalog), { unsubscribeUrl: '#' }));
     const quality = qualityReport({ mjml, html: result.html, subject }, { t });
     const unknown = unknownVariables([mjml, subject || '', preheader || ''].join('\n'), catalog);
     if (unknown.length) {
@@ -193,6 +237,7 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
   }
 
   const ready = (async () => {
+    await readUploads().catch(() => {});
     // A system variable's key: a visitor's edit of it, not a variable of their own.
     const systemKeys = new Set(variables.map((variable) => variable.key));
     for (const variable of read(VARIABLES_KEY)) {
@@ -256,6 +301,17 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
     setLocale(code) {
       t = translatorFor(code);
     },
+    async uploadImage(file) {
+      const uploaded = await storage.uploadImage(file);
+      keepUpload(uploaded.path, file);
+      // Kept for the next visit, where the browser allows it.
+      await globalThis.caches
+        ?.open(ASSETS_CACHE)
+        .then((cache) => cache.put(cacheKey(uploaded.path), new Response(file, { headers: { 'Content-Type': file.type } })))
+        .catch(() => {});
+      return uploaded;
+    },
+    imageUrl: (path) => uploads.get(path)?.url ?? path,
     async listVariables() {
       await ready;
       return storage.listVariables();

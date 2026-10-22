@@ -6,6 +6,16 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- The storage may give `imageUrl(path)`: where the canvas shows an uploaded
+  image when the page cannot load its path itself (images on another origin,
+  no server). The template keeps the path.
+
+### Fixed
+- The live demo showed no uploaded image: it had no server to serve
+  `/email-assets/`. It now keeps uploads in the browser (Cache Storage, so
+  they outlive a reload) and shows them in the canvas and the preview.
+
 ## [0.15.0] — 2026-10-22
 
 ### Added

@@ -106,11 +106,19 @@ function Builder({
   // from the host must not rebuild the editor (and lose the email).
   const tRef = useRef(t);
   tRef.current = t;
+  const storage = useMemo(() => injectedStorage || createHttpStorage(), [injectedStorage]);
+  const storageRef = useRef(storage);
+  storageRef.current = storage;
   const editor = useMemo(
-    () => injected || createDefaultEmailEditor({ locale, t: (key, values) => tRef.current(key, values) }),
+    () =>
+      injected ||
+      createDefaultEmailEditor({
+        locale,
+        t: (key, values) => tRef.current(key, values),
+        imageUrl: (path) => storageRef.current.imageUrl?.(path) ?? path,
+      }),
     [injected, locale]
   );
-  const storage = useMemo(() => injectedStorage || createHttpStorage(), [injectedStorage]);
   const systemVariables = useMemo(() => defineVariables(variablesProp || DEFAULT_VARIABLES), [variablesProp]);
   const [customVariables, setCustomVariables] = useState([]);
   const variables = useMemo(() => mergeVariables(systemVariables, customVariables), [systemVariables, customVariables]);

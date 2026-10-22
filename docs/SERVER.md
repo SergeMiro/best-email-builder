@@ -114,6 +114,7 @@ interface TemplateStorage {
   listVersions(id): Promise<Version[]>;
   getVersion(id, versionId): Promise<Version & { document; mjml }>;
   uploadImage(file): Promise<{ path }>;
+  imageUrl?(path): string;                 // where the canvas shows an uploaded image
   render?(input): Promise<{ html; warnings; quality }>;   // enables Preview
   sendTest?(input): Promise<{ sent; failed; invalid; results }>; // enables Send test
   listVariables?(): Promise<Variable[]>;                 // enable user-created variables
@@ -143,6 +144,13 @@ interface TemplateStorage {
 demos, tests and playgrounds. Give it `compile` (`({ mjml, subject, preheader })
 => ({ html })`) and its templates keep their HTML, as the server does: the
 library then shows *Copy HTML* and *Download*.
+
+An uploaded image keeps the path the storage gives it (`/email-assets/<key>`
+by default), and the canvas loads it from that path on the page's origin.
+When the page cannot load it there (images served from another origin, or no
+server at all, as in the live demo), give the storage an `imageUrl(path)`
+that returns the address to show it from. Only the canvas uses it: the
+template keeps the path.
 
 ## Repositories
 

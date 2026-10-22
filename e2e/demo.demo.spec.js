@@ -347,6 +347,34 @@ test('the preview’s points to check are in the page’s language, after a swit
   await expect(points).toContainText('Texte alternatif manquant (2 image(s))');
 });
 
+test('an uploaded image shows in the canvas and the preview, and after a reload', async ({ page }) => {
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    'base64'
+  );
+  const loaded = (image) => image.evaluate((img) => img.complete && img.naturalWidth);
+  await page.goto(`${HOME}?lang=en#/editor/new`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByTestId('eb-properties').getByLabel(/^Name/).fill('With a picture');
+  await page.locator('[data-block-id="image"]').click();
+  await page.getByTestId('eb-properties').getByTestId('eb-prop-src-file').setInputFiles({ name: 'pixel.png', mimeType: 'image/png', buffer: png });
+  // The template keeps the path a server would give; the canvas shows the file.
+  await expect.poll(() => page.evaluate(() => document.querySelector('#eb-prop-src')?.value || '')).toMatch(/^\/email-assets\/[a-f0-9]{32}\.png$/);
+  const canvasImage = page.frameLocator('.eb-canvas-frame').locator('img[src^="blob:"]');
+  await expect.poll(() => loaded(canvasImage)).toBe(1);
+
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const previewImage = page.getByRole('dialog').frameLocator('iframe[title="Email preview"]').locator('img[src^="data:image/png"]');
+  await expect.poll(() => loaded(previewImage), { timeout: 30_000 }).toBe(1);
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText(/^Saved at/)).toBeVisible();
+  await page.reload();
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await expect.poll(() => loaded(page.frameLocator('.eb-canvas-frame').locator('img[src^="blob:"]'))).toBe(1);
+});
+
 test('brand: set by hand in the demo, kept after a reload, new emails start in it', async ({ page }) => {
   await page.goto(`${HOME}?lang=en#/editor/new`);
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
