@@ -11,11 +11,12 @@ import { validateMjml } from '../../src/validation/mjmlValidator.js';
 import { resolveBlock } from '../../src/core/EmailEditor.js';
 import { translatorFor } from '../../src/i18n/index.js';
 import { compileMjml, opaqueBgcolors } from '../../src/server/compileMjml.js';
-import { parseSpacing, formatSpacing, toAttributes, toValues, cleanAttributeValue } from '../../src/core/mjmlAttributes.js';
+import { parseSpacing, formatSpacing, parseBorder, formatBorder, toAttributes, toValues, cleanAttributeValue } from '../../src/core/mjmlAttributes.js';
 import { STARTER_MJML, createStarterMjml } from '../../src/features/templates/starter.js';
 
-const PROPERTY_TYPES = new Set(['text', 'textarea', 'color', 'size', 'select', 'align', 'url', 'image', 'spacing']);
+const PROPERTY_TYPES = new Set(['text', 'textarea', 'color', 'size', 'select', 'align', 'url', 'image', 'spacing', 'border']);
 const KINDS = new Set(['content', 'layout', 'structure']);
+const BOX_ROLES = new Set(['margin', 'border', 'padding']);
 const doc = (inner) => `<mjml><mj-body>${inner}</mj-body></mjml>`;
 
 test('attributes: longhand paddings, safe values', () => {
@@ -49,6 +50,54 @@ test('attributes: longhand paddings, safe values', () => {
   );
 });
 
+test('attributes: a border is one value, written per side only when the widths differ', () => {
+  assert.deepEqual(parseBorder('2px dashed #ff0000'), { widths: [2, 2, 2, 2], style: 'dashed', color: '#ff0000' });
+  assert.deepEqual(parseBorder('1px 4px double rgba(0, 0, 0, 0.5)'), { widths: [1, 4, 1, 4], style: 'double', color: 'rgba(0, 0, 0, 0.5)' });
+  assert.deepEqual(parseBorder('dotted'), { widths: [3, 3, 3, 3], style: 'dotted', color: '' }, 'CSS default width');
+  assert.deepEqual(parseBorder('thin solid red').widths, [1, 1, 1, 1]);
+  assert.equal(parseBorder('99px solid red').widths[0], 20, 'width clamped');
+  for (const none of ['', 'none', '0px solid red', '2px red', '1px hidden']) assert.equal(parseBorder(none), null, none);
+  assert.equal(formatBorder({ widths: [2, 2, 2, 2], style: 'solid', color: '#000' }), '2px solid #000');
+  assert.equal(formatBorder({ widths: [0, 3, 0, 3], style: 'ridge', color: '' }), '0px 3px ridge');
+  assert.equal(formatBorder({ widths: [0, 0, 0, 0], style: 'solid', color: '#000' }), '');
+
+  const even = toAttributes({ border: '2px dashed #f00' });
+  assert.equal(even.border, '2px dashed #f00');
+  for (const side of ['top', 'right', 'bottom', 'left']) assert.equal(even[`border-${side}`], null, 'sides cleared');
+  const sides = toAttributes({ border: '1px 0px 3px double #f00' });
+  assert.equal(sides.border, null);
+  assert.equal(sides['border-top'], '1px double #f00');
+  assert.equal(sides['border-right'], null, 'a 0 side has no line');
+  assert.equal(sides['border-bottom'], '3px double #f00');
+  assert.equal(sides['border-left'], null);
+  const removed = toAttributes({ border: '' });
+  assert.equal(removed.border, null);
+  assert.equal(removed['border-top'], null);
+
+  assert.equal(toValues(sides, [{ key: 'border' }]).border, '1px 0px 3px double #f00', 'round trip');
+  assert.equal(toValues({ border: '2px solid #000', 'border-left': 'none' }, [{ key: 'border' }]).border, '2px 2px 2px 0px solid #000', 'a side wins over the border');
+  assert.equal(toValues({ 'border-bottom': '4px dotted #00f' }, [{ key: 'border' }]).border, '0px 0px 4px dotted #00f', 'one side alone');
+  assert.equal(toValues({}, [{ key: 'border' }]).border, '');
+});
+
+test('borders render in the email: same widths, or per side', async () => {
+  const sides = Object.entries(toAttributes({ border: '1px 0px 3px double #ff0000' }))
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}="${v}"`)
+    .join(' ');
+  const mjml = doc(`<mj-section border="2px dashed #ff0000"><mj-column ${sides}>
+    <mj-image src="https://example.com/a.png" border="4px ridge #00ff00"></mj-image>
+    <mj-button href="https://example.com" border="2px dotted #0000ff">Go</mj-button>
+  </mj-column></mj-section>`);
+  const { ok, issues } = validateMjml(mjml);
+  assert.ok(ok, JSON.stringify(issues));
+  const { html, warnings } = await compileMjml(mjml);
+  assert.deepEqual(warnings, []);
+  for (const css of ['border:2px dashed #ff0000', 'border-top:1px double #ff0000', 'border-bottom:3px double #ff0000', 'border:4px ridge #00ff00', 'border:2px dotted #0000ff']) {
+    assert.ok(html.replace(/;\s+/g, ';').includes(css), css);
+  }
+});
+
 test('registry: unique ids, structures present', () => {
   const all = emailBlocks.list();
   assert.ok(all.length > 0);
@@ -65,6 +114,13 @@ for (const block of emailBlocks.list()) {
       assert.ok(PROPERTY_TYPES.has(property.type), `${property.key}: known type`);
       assert.ok(property.label && property.group, `${property.key}: label and group`);
       if (['select', 'align'].includes(property.type)) assert.ok((property.options || []).length > 1, `${property.key}: options`);
+    }
+    // The box diagram: one property per zone, a border only where MJML draws one.
+    const boxes = block.properties.filter((p) => p.box);
+    assert.equal(new Set(boxes.map((p) => p.box)).size, boxes.length, 'one property per zone');
+    for (const property of boxes) {
+      assert.ok(BOX_ROLES.has(property.box), `${property.key}: known zone`);
+      assert.equal(property.type === 'border', property.box === 'border', `${property.key}: the border zone is the border`);
     }
     if (block.kind === 'structure') {
       assert.ok(!block.mjml, 'a structure cannot be inserted');

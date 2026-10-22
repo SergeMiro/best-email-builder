@@ -60,8 +60,8 @@ export const socialBlock = {
         { value: 'vertical', label: 'Vertical' },
       ],
     },
+    prop.padding(undefined, undefined, 'margin'),
     prop.padding('inner-padding', 'Space around each icon'),
-    prop.padding(),
   ],
 };
 

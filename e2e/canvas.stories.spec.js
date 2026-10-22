@@ -484,6 +484,59 @@ test.describe('Names and defaults', () => {
     await expect(panel(page).getByLabel('Padding — Left', { exact: true })).toHaveValue('32');
   });
 
+  test('box diagram: margin, border and padding where the block has them; the border written per side, styled, colored', async ({ page }) => {
+    await openBuilder(page);
+    await page.locator('[data-block-id="button"]').click();
+    const box = panel(page).getByTestId('eb-box-model');
+    // Outside in, as in a browser's developer tools; the content in the middle.
+    await expect(box.locator('[data-box]')).toHaveCount(4);
+    expect(await box.locator('[data-box]').evaluateAll((zones) => zones.map((z) => z.getAttribute('data-box')))).toEqual(['margin', 'border', 'padding', 'content']);
+    await expect(box.locator('[data-box="content"]')).toHaveText('Button');
+    const hint = panel(page).getByTestId('eb-box-model-hint');
+    await expect(hint).toHaveText('In pixels. Point at a zone to see what it sets.');
+    await box.locator('[data-box="margin"]').hover({ position: { x: 6, y: 6 } });
+    await expect(hint).toHaveText(/^Margin: the space outside/);
+    await box.locator('[data-box="padding"]').hover({ position: { x: 6, y: 6 } });
+    await expect(hint).toHaveText(/^Padding: the space inside/);
+
+    // The margin is the button's padding in MJML, the padding its inner padding.
+    await box.getByLabel('Margin — Top', { exact: true }).fill('30');
+    await box.getByLabel('Margin — Top', { exact: true }).press('Enter');
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*padding-top="30px"/);
+    await box.getByLabel('Padding — Left', { exact: true }).fill('40');
+    await box.getByLabel('Padding — Left', { exact: true }).press('Enter');
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*inner-padding="12px 28px 12px 40px"/);
+
+    // No border yet; a style draws one, all round, in a grey any background shows.
+    await expect(box.getByRole('radio', { name: 'No border' })).toHaveAttribute('aria-checked', 'true');
+    await box.getByRole('radio', { name: 'Dashed' }).click();
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*border="1px dashed #cbd5e1"/);
+    await expect(box.getByLabel('Border — Top', { exact: true })).toHaveValue('1');
+    // Another width on one side: one attribute per side.
+    await box.getByLabel('Border — Bottom', { exact: true }).fill('4');
+    await box.getByLabel('Border — Bottom', { exact: true }).press('Enter');
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*border-top="1px dashed #cbd5e1"[^>]*border-bottom="4px dashed #cbd5e1"/);
+    expect(await mjml(page)).not.toMatch(/<mj-button[^>]* border="/);
+    // A double line needs 3 px: the thinner sides grow to it.
+    await box.getByRole('radio', { name: 'Double' }).click();
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*border-top="3px double #cbd5e1"[^>]*border-bottom="4px double #cbd5e1"/);
+    await panel(page).locator('#eb-prop-box-border-color').fill('#c2603e');
+    await panel(page).locator('#eb-prop-box-border-color').press('Enter');
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*border-bottom="4px double #c2603e"/);
+    // The canvas draws it.
+    await expect
+      .poll(() => canvas(page).locator('.eb-tag-mj-button td[style*="border-bottom"]').first().evaluate((td) => getComputedStyle(td).borderBottomStyle))
+      .toBe('double');
+    // Removed: no border attribute left.
+    await box.getByRole('radio', { name: 'No border' }).click();
+    await expect.poll(() => mjml(page)).not.toMatch(/<mj-button[^>]*border-(top|right|bottom|left)=/);
+
+    // A text has its padding only: MJML gives it no margin and no border.
+    await canvas(page).getByText('Your headline').click();
+    await expect(box.locator('[data-box]')).toHaveCount(2);
+    await expect(box.getByRole('radiogroup')).toHaveCount(0);
+  });
+
   test('image: added without a dialog, its frame in the canvas, its fields in the panel', async ({ page }) => {
     await openBuilder(page);
     await page.locator('[data-block-id="image"]').click();

@@ -73,6 +73,6 @@ export const navbarLinkBlock = {
         { value: 'capitalize', label: 'First letters' },
       ],
     },
-    prop.padding(),
+    prop.padding(undefined, undefined, 'padding'),
   ],
 };

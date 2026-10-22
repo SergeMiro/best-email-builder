@@ -58,6 +58,6 @@ export const textBlock = {
     prop.color('Text'),
     prop.background('container-background-color', 'Background'),
     { ...prop.align(), options: [...prop.align().options || [], { value: 'justify', label: 'Justify' }] },
-    prop.padding(),
+    prop.padding(undefined, undefined, 'padding'),
   ],
 };

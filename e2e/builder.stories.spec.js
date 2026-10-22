@@ -87,8 +87,8 @@ test.describe('Interface', () => {
     await props.getByLabel('Weight').click();
     await page.getByRole('option', { name: 'Normal', exact: true }).click();
     await props.getByRole('radio', { name: 'Right' }).click();
-    await props.getByLabel('Padding — Top', { exact: true }).fill('30');
-    await props.getByLabel('Padding — Top', { exact: true }).press('Enter');
+    await props.getByLabel('Margin — Top', { exact: true }).fill('30');
+    await props.getByLabel('Margin — Top', { exact: true }).press('Enter');
 
     await expect.poll(() => mjml(page), { timeout: 5_000 }).toContain('background-color="#c2603e"');
     const source = await mjml(page);

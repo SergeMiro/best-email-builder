@@ -51,6 +51,6 @@ export const dividerBlock = {
       ],
     },
     prop.align(),
-    prop.padding(),
+    prop.padding(undefined, undefined, 'margin'),
   ],
 };

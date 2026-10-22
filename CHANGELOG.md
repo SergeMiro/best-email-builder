@@ -22,6 +22,17 @@ All notable changes are documented here. The format follows
   THIRD-PARTY-NOTICES.md).
 - A feature may declare `drawer: {icon, label, title, panel}`: its button at
   the end of the ribbon opens its panel beside the canvas, one at a time.
+- The Spacing section of the properties is a box diagram, as in a browser's
+  developer tools: the margin outside, the border, the padding inside, the
+  block's content in the middle, each zone with its four sides typed in
+  place and a line saying what it sets. A block shows the zones MJML gives
+  it (a button all three, a text its padding only).
+- Borders on sections, columns, images and buttons: a width per side, a
+  style (solid, dashed, dotted, double, groove, ridge) and a color. Equal
+  widths write one `border` attribute; different ones write `border-top`,
+  `border-right`… A double, groove or ridge line starts at 3 px, the least
+  that draws it. A block property may take `type: 'border'`, and `box:
+  'margin' | 'border' | 'padding'` to place it in the diagram.
 - The storage may give `imageUrl(path)`: where the canvas shows an uploaded
   image when the page cannot load its path itself (images on another origin,
   no server). The template keeps the path.
@@ -68,6 +79,9 @@ All notable changes are documented here. The format follows
   they outlive a reload) and shows them in the canvas and the preview.
 
 ### Changed
+- The space around a button, an image, a divider or the social icons is
+  called its margin (MJML's `padding` of these blocks); the button's inner
+  padding is its padding.
 - The *Email provider variables* bar above the canvas is now the *Variables*
   panel beside it, opened by the *Variables* button at the end of the ribbon.
   It stays open while you insert, rather than growing under the pointer.

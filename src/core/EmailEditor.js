@@ -41,11 +41,18 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  * MJML ATTRIBUTE (`color`, `padding`, `href`…) — the email's language, not
  * the engine's.
  *
+ * `box`: its place in the panel's box diagram — `margin` (the space outside
+ * the block's edge: a button's `padding`), `border`, `padding` (the space
+ * inside: a section's `padding`, a button's `inner-padding`). A `border`
+ * property (`type: 'border'`) is edited as one value: widths, style, color
+ * (see mjmlAttributes).
+ *
  * @typedef {{
  *   key: string,
  *   label: string,
- *   type: 'text'|'textarea'|'color'|'size'|'select'|'align'|'url'|'image'|'spacing',
+ *   type: 'text'|'textarea'|'color'|'size'|'select'|'align'|'url'|'image'|'spacing'|'border',
  *   group: string,
+ *   box?: 'margin'|'border'|'padding',
  *   options?: {value: string, label: string}[],
  *   placeholder?: string,
  *   min?: number,

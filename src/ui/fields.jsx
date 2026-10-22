@@ -71,7 +71,7 @@ export function emailColor(value) {
  * elsewhere (undo, redo) - except while typing, which must not be
  * overwritten under the user's fingers.
  */
-function useDraft(value, toDraft) {
+export function useDraft(value, toDraft) {
   const [draft, setDraft] = useState(() => toDraft(value));
   const ref = useRef(null);
   const convert = useRef(toDraft);
@@ -391,21 +391,30 @@ const SIDE_LABELS = [
  */
 const asSides = (v) => (v ? parseSpacing(v).map((s) => String(Number.parseFloat(s) || 0)) : ['', '', '', '']);
 
+/**
+ * Four sides typed → the spacing to commit, or null when it does not change.
+ * Untouched sides keep what MJML renders (its default, `defaults`), never 0.
+ * @param {string[]} sides @param {string} value @param {string[]} defaults
+ */
+export function spacingFromSides(sides, value, defaults) {
+  if (!value && sides.every((s) => String(s).trim() === '')) return null;
+  const next = formatSpacing(
+    sides.map((s, i) => {
+      const raw = String(s).trim() === '' ? defaults[i] : s;
+      return `${Math.max(0, Math.min(200, Number.parseFloat(raw) || 0))}px`;
+    })
+  );
+  return next !== (value || '') ? next : null;
+}
+
 function SpacingField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
   const [draft, setDraft, ref] = useDraft(value, asSides);
   const defaults = parseSpacing(fallback || '0px').map((s) => String(Number.parseFloat(s) || 0));
 
   const commit = (sides = draft) => {
-    // Untouched sides keep what MJML renders (its default), never 0.
-    if (!value && sides.every((s) => String(s).trim() === '')) return;
-    const next = formatSpacing(
-      sides.map((s, i) => {
-        const raw = String(s).trim() === '' ? defaults[i] : s;
-        return `${Math.max(0, Math.min(200, Number.parseFloat(raw) || 0))}px`;
-      })
-    );
-    if (next !== (value || '')) onCommit(next);
+    const next = spacingFromSides(sides, value, defaults);
+    if (next !== null) onCommit(next);
   };
 
   return (

@@ -8,6 +8,7 @@ import { TruncatedText as FadedText } from './primitives/misc.jsx';
 import { Trash2, X } from 'lucide-react';
 import { GROUPS } from '../blocks/shared.js';
 import { PropertyField } from './fields.jsx';
+import BoxModel, { boxRole } from './BoxModel.jsx';
 import { useT } from './context.jsx';
 import VariableInsertButton from '../features/variables/VariableInsertButton.jsx';
 
@@ -45,22 +46,35 @@ function grouped(properties) {
 
 function PropertyGroups({ editor, element, block, idPrefix, services = null }) {
   const t = useT();
-  return grouped(block?.properties || []).map(([group, properties]) => (
-    <section key={group} className="eb:space-y-3">
-      <SectionLabel>{t(group)}</SectionLabel>
-      {properties.map((property) => (
-        <PropertyField
-          key={`${element.id}:${property.key}`}
-          idPrefix={idPrefix}
-          property={property}
-          value={element.values[property.key]}
-          fallback={element.defaults?.[property.key]}
-          services={services}
-          onCommit={(value) => editor.updateProperties({ [property.key]: value }, element.id)}
-        />
-      ))}
-    </section>
-  ));
+  return grouped(block?.properties || []).map(([group, properties]) => {
+    // Margin, border, padding: one diagram, as in a browser's developer tools.
+    const box = properties.filter(boxRole);
+    return (
+      <section key={group} className="eb:space-y-3">
+        <SectionLabel>{t(group)}</SectionLabel>
+        {box.length > 0 && (
+          <BoxModel
+            key={`${element.id}:box`}
+            idPrefix={idPrefix}
+            element={element}
+            properties={box}
+            onCommit={(key, value) => editor.updateProperties({ [key]: value }, element.id)}
+          />
+        )}
+        {properties.filter((property) => !boxRole(property)).map((property) => (
+          <PropertyField
+            key={`${element.id}:${property.key}`}
+            idPrefix={idPrefix}
+            property={property}
+            value={element.values[property.key]}
+            fallback={element.defaults?.[property.key]}
+            services={services}
+            onCommit={(value) => editor.updateProperties({ [property.key]: value }, element.id)}
+          />
+        ))}
+      </section>
+    );
+  });
 }
 
 const LABEL_PROPERTY = { key: 'content', label: 'Label', type: 'text', group: GROUPS.content };

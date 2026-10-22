@@ -60,7 +60,8 @@ export const buttonBlock = {
       ],
     },
     prop.align(),
-    prop.padding('inner-padding', 'Button padding'),
-    prop.padding(),
+    prop.padding(undefined, undefined, 'margin'),
+    prop.border(),
+    prop.padding('inner-padding', 'Button padding', 'padding'),
   ],
 };

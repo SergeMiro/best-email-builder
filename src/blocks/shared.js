@@ -87,8 +87,15 @@ export const prop = {
   background: (key = 'background-color', label = 'Background') => ({ key, label, type: 'color', group: GROUPS.colors }),
   /** @returns {BlockProperty} */
   align: (options = ALIGN_OPTIONS) => ({ key: 'align', label: 'Alignment', type: 'align', group: GROUPS.layout, options }),
-  /** @returns {BlockProperty} */
-  padding: (key = 'padding', label = 'Padding') => ({ key, label, type: 'spacing', group: GROUPS.spacing }),
+  /**
+   * `box`: where the box diagram shows it — `margin` when the space is outside
+   * what the reader sees as the block (a button, an image), `padding` inside.
+   * @param {'margin'|'padding'} [box]
+   * @returns {BlockProperty}
+   */
+  padding: (key = 'padding', label = 'Padding', box = undefined) => ({ key, label, type: 'spacing', group: GROUPS.spacing, ...(box ? { box } : {}) }),
+  /** A line around the block: widths, style, color, in one value. @returns {BlockProperty} */
+  border: () => ({ key: 'border', label: 'Border', type: 'border', group: GROUPS.spacing, box: 'border' }),
   /** @returns {BlockProperty} */
   href: (label = 'Link URL') => ({ key: 'href', label, type: 'url', group: GROUPS.link, placeholder: 'https://' }),
   /** @returns {BlockProperty} */

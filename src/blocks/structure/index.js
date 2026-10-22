@@ -85,7 +85,8 @@ export const sectionBlock = {
         { value: 'full-width', label: 'Whole screen' },
       ],
     },
-    prop.padding('padding', 'Padding'),
+    prop.border(),
+    prop.padding('padding', 'Padding', 'padding'),
     prop.radius(24),
   ],
 };
@@ -116,7 +117,8 @@ export const columnBlock = {
       ],
     },
     prop.background('background-color', 'Background'),
-    prop.padding('padding', 'Padding'),
+    prop.border(),
+    prop.padding('padding', 'Padding', 'padding'),
     {
       key: 'vertical-align',
       label: 'Vertical alignment',

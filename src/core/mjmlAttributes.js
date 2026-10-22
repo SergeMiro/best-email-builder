@@ -14,6 +14,11 @@
  *
  * `inner-padding` (button) has no longhand in MJML: it stays as is.
  *
+ * ── A BORDER IS ONE VALUE IN THE PANEL ──────────────────────────────────────
+ * The panel edits a border as one value: one to four widths, a line style, a
+ * color ("2px 0px dashed #cccccc"). Written, it becomes `border` when the four
+ * sides are the same, `border-top`… otherwise; read, both come back as one.
+ *
  * ── NO QUOTES IN A VALUE ───────────────────────────────────────────────────
  * The engine export writes attributes unescaped: a `"` in a value would break
  * the MJML. Double quotes, angle brackets and line breaks are stripped on
@@ -24,6 +29,64 @@
 export const LONGHAND_SPACING = new Set(['padding']);
 
 export const SIDES = /** @type {const} */ (['top', 'right', 'bottom', 'left']);
+
+/** Border attributes edited as one value: `border` and its four sides. */
+export const LONGHAND_BORDER = new Set(['border']);
+
+/** The line styles offered: CSS's, which the email clients draw (a dot-dash line is not one of them). */
+export const BORDER_STYLES = /** @type {const} */ (['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge']);
+
+/** The widest border written, in pixels. */
+export const MAX_BORDER = 20;
+
+/** Every CSS line style, to read what an email already has. */
+const LINE_STYLES = new Set([...BORDER_STYLES, 'inset', 'outset', 'none', 'hidden']);
+/** CSS's width keywords, in pixels as browsers draw them. */
+const WIDTH_KEYWORDS = { thin: 1, medium: 3, thick: 5 };
+
+/**
+ * @typedef {{widths: [number, number, number, number], style: string, color: string}} Border
+ *   `widths`: in pixels, top, right, bottom, left; `color`: '' for the text's.
+ */
+
+/**
+ * A CSS border ("2px dashed #cccccc", in any order) or the panel's form, with
+ * up to four widths ("2px 0px dashed #cccccc"). No border (`none`, `0`, no
+ * style, nothing): null. Without a width, CSS's `medium` (3 px).
+ * @param {string|null|undefined} value
+ * @returns {Border|null}
+ */
+export function parseBorder(value) {
+  const tokens = String(value || '').trim().match(/[^\s(]+\([^)]*\)|\S+/g) || [];
+  /** @type {number[]} */
+  const widths = [];
+  let style = '';
+  const color = [];
+  for (const token of tokens) {
+    const word = token.toLowerCase();
+    if (/^(\d+\.?\d*|\.\d+)(px)?$/.test(word)) widths.push(Number.parseFloat(word));
+    else if (word in WIDTH_KEYWORDS) widths.push(WIDTH_KEYWORDS[/** @type {keyof typeof WIDTH_KEYWORDS} */ (word)]);
+    else if (LINE_STYLES.has(word)) style = word;
+    else color.push(token);
+  }
+  if (!style || style === 'none' || style === 'hidden') return null;
+  const [t = 3, r = t, b = t, l = r] = widths.slice(0, 4).map((width) => Math.max(0, Math.min(MAX_BORDER, Math.round(width))));
+  if (!t && !r && !b && !l) return null;
+  return { widths: [t, r, b, l], style, color: color.join(' ') };
+}
+
+/**
+ * The panel's form of a border: its widths in their shortest form, its style,
+ * its color. No border: ''.
+ * @param {Border|null} border
+ */
+export function formatBorder(border) {
+  if (!border || border.widths.every((width) => !width)) return '';
+  return [formatSpacing(border.widths.map((width) => `${width}px`)), border.style, border.color].filter(Boolean).join(' ');
+}
+
+/** One side's (or the four sides') CSS border. @param {Border} border @param {number} width */
+const borderLine = (border, width) => [`${width}px`, border.style, border.color].filter(Boolean).join(' ');
 
 /**
  * "10px 25px" → ['10px', '25px', '10px', '25px'] (CSS 1-to-4 value rule).
@@ -74,6 +137,13 @@ export function toAttributes(values) {
         out[`${key}-${side}`] = sides ? sides[i] : null;
       });
       out[key] = null;
+    } else if (LONGHAND_BORDER.has(key)) {
+      const border = parseBorder(value);
+      const same = border && border.widths.every((width) => width === border.widths[0]);
+      out[key] = border && same ? borderLine(border, border.widths[0]) : null;
+      SIDES.forEach((side, i) => {
+        out[`${key}-${side}`] = border && !same && border.widths[i] ? borderLine(border, border.widths[i]) : null;
+      });
     } else {
       out[key] = value || null;
     }
@@ -100,6 +170,16 @@ export function toValues(attributes, properties) {
       });
       const hasAny = attributes[key] || SIDES.some((side) => attributes[`${key}-${side}`]);
       values[key] = hasAny ? formatSpacing(sides) : '';
+    } else if (LONGHAND_BORDER.has(key)) {
+      const base = parseBorder(String(attributes[key] ?? ''));
+      // A side written on its own wins over `border` (`none` included).
+      const sides = SIDES.map((side) => {
+        const v = attributes[`${key}-${side}`];
+        return v === undefined || v === null || v === '' ? undefined : parseBorder(String(v));
+      });
+      const line = base || sides.find(Boolean);
+      const widths = /** @type {Border['widths']} */ (SIDES.map((_, i) => (sides[i] === undefined ? base?.widths[i] ?? 0 : sides[i]?.widths[0] ?? 0)));
+      values[key] = line ? formatBorder({ ...line, widths }) : '';
     } else {
       const v = attributes[key];
       values[key] = v === undefined || v === null ? '' : String(v);

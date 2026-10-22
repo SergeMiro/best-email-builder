@@ -277,6 +277,8 @@ function sampleFor(property, current) {
       return `${Math.min(property.max ?? 40, Math.max(property.min ?? 0, 2) + 7)}px`;
     case 'spacing':
       return '12px 18px 14px 16px';
+    case 'border':
+      return '1px 3px dotted #123456';
     case 'url':
       return 'https://example.com/essai';
     case 'image':
@@ -296,6 +298,10 @@ function expectedFragments(property, value) {
   if (property.key === 'padding') {
     const [t, r, b, l] = value.split(' ');
     return [`padding-top="${t}"`, `padding-right="${r}"`, `padding-bottom="${b}"`, `padding-left="${l}"`];
+  }
+  // Widths that differ: one attribute per side.
+  if (property.type === 'border') {
+    return ['border-top="1px dotted #123456"', 'border-right="3px dotted #123456"', 'border-bottom="1px dotted #123456"', 'border-left="3px dotted #123456"'];
   }
   // Not an MJML attribute: written as a wrapper around the sections (engine/mjml.js).
   if (property.key === 'content-background-color') {
