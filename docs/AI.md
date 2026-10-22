@@ -9,8 +9,7 @@ Given to the editor, the module adds four things:
 | Feature | Where | What it does |
 |---|---|---|
 | **Proofread** | the toolbar | Finds the spelling, grammar and punctuation mistakes of every text in the email, and shows each correction word by word, to apply. |
-| **Write with AI** | the properties of a text | Writes that text anew on a topic you give, to fit the rest of the email. |
-| **Rewrite with AI** | the properties of a text or a button | Rewrites that one text: shorter, longer, fixed, friendlier, more formal, translated, or as you describe. |
+| **Write with AI** | the properties of a text or a button | One field: writes that text on a topic you give, or changes it as you say, to fit the rest of the email. One click makes it shorter, longer, fixed, friendlier, more formal or translated. |
 | **Suggest subjects** | under the subject | Proposes three other subject lines drawn from the email. |
 
 ```jsx
@@ -20,9 +19,8 @@ import { createAi } from 'best-email-builder/ai';
 ```
 
 Pass `proofread: false`, `rewrite: false` or `suggestSubjects: false` to leave
-a feature out, along with its button (`rewrite: false` removes *Write* and
-*Rewrite with AI* both). You can also pass functions of your own for any of
-them.
+a feature out, along with its button (`rewrite: false` removes *Write with
+AI*). You can also pass functions of your own for any of them.
 
 ## Where the model runs
 
@@ -271,23 +269,27 @@ again is left out, and the other corrections still come back.
   from `best-email-builder/ai/server`, and `diffWords` (the word-by-word
   difference the dialog shows) from both entries.
 
-## Write and rewrite with AI
+## Write with AI
 
-The same generator writes or rewrites one text. Select a text block, and its
-properties show *Write with AI*: a field for the topic ("the sale ends
-Sunday"). The text is written anew to fit the rest of the email, a title as
-one line. Where a fact is missing (a date, a price, a name), the model writes a
-`[placeholder]` instead of inventing it.
+The same generator writes or rewrites one text. Select a text block or a
+button, and its properties show *Write with AI*: ONE field for your words.
+Say what to change ("in two lines", "mention free delivery") and the text is
+changed so; give a topic ("the sale ends Sunday") and a new text is written
+in its place — the model tells which. Either way it fits the rest of the
+email (its language, its tone, nothing it already says), a title stays one
+line, and where a fact is missing (a date, a price, a name) the model writes
+a `[placeholder]` instead of inventing it. The field takes several lines:
+Enter sends, Shift+Enter starts a new line.
 
-Under it, and for a button too, *Rewrite with AI* offers *Shorter*,
-*Longer*, *Fix mistakes*, *Friendlier*, *More formal*, *Translate* (13
-languages, each under its own name), and a field to say what to change. Both
-fields take several lines: Enter sends, Shift+Enter starts a new line.
+Under it, one click: *Shorter*, *Longer*, *Fix mistakes*, *Friendlier*,
+*More formal*, *Translate* (13 languages, each under its own name).
 
-The answer replaces the text at once, as one step of the history. Ctrl+Z
-brings the previous text back, so there is nothing to accept or compare.
-Selecting another element cancels a rewrite in progress. If the user edits
-the text in the meantime, their words win and the answer is dropped.
+While the AI works, the text shimmers on the canvas; its answer comes in word
+by word (at once with reduced motion). It replaces the text as one step of
+the history: Ctrl+Z brings the previous text back, so there is nothing to
+accept or compare. Selecting another element cancels a rewrite in progress.
+If the user edits the text in the meantime, their words win and the answer
+is dropped.
 
 - On a server, it is `POST {base}/rewrite`. A generator without `rewrite`
   answers 501.
@@ -295,8 +297,10 @@ the text in the meantime, their words win and the answer is dropped.
   none added) must survive, and the HTML must pass the validator. A fallback
   after `|` may be translated. Otherwise the model gets one more turn, and
   then nothing changes. A button label comes back as plain words.
-- A model of your own gets `task: 'rewrite'` in its request; a text written
-  on a topic is `{ action: 'write', instruction: topic, context }`.
+- A model of your own gets `task: 'rewrite'` in its request. The field sends
+  `{ action: 'custom', instruction, context, role, language }`: on a text
+  with no words yet the instruction is a topic to write about. `{ action:
+  'write', instruction: topic }` still writes a text anew.
 - `REWRITE_ACTIONS`, `REWRITE_LANGUAGES` and `REWRITE_SYSTEM_PROMPT` are
   exported.
 

@@ -60,7 +60,7 @@ test('block B alone: the builder entry does not reach the library', async () => 
 });
 
 /** Words only the AI module has: its buttons, its prompts. */
-const AI_MARKERS = ['Suggest subjects', 'Rewrite with AI', 'Proofread the email', 'Suggérer des objets', 'You write email subject lines', 'You proofread an email'];
+const AI_MARKERS = ['Suggest subjects', 'Ask the AI', 'Proofread the email', 'Suggérer des objets', 'You write email subject lines', 'You proofread an email'];
 
 for (const entry of ['src/index.js', 'src/builder.js', 'src/library.js', 'src/server/index.js']) {
   test(`without the AI module: ${entry} reaches none of its code, texts or SDK`, async () => {

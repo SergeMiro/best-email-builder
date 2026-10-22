@@ -44,7 +44,7 @@ test('actions and languages: unique ids, each with a label and a change to ask f
 test('input: an action, a language for translate, the user words for custom; empty text refused', () => {
   assert.match(cleanRewriteInput({ action: 'shorter', text: GREETING }).change, /shorter/);
   assert.match(cleanRewriteInput({ action: 'translate', text: 'Hi', targetLanguage: 'de' }).change, /German/);
-  assert.equal(cleanRewriteInput({ action: 'custom', text: 'Hi', instruction: '  Say hello  ' }).change, 'Say hello');
+  assert.match(cleanRewriteInput({ action: 'custom', text: 'Hi', instruction: '  Say hello  ' }).change, /^The user asks: Say hello /);
   assert.equal(cleanRewriteInput({ action: 'fix', text: 'Hi', format: 'plain' }).format, 'plain');
   assert.equal(cleanRewriteInput({ action: 'fix', text: 'Hi', format: 'weird' }).format, 'html');
   for (const input of [
@@ -80,6 +80,20 @@ test('write: a topic is enough (the text may be empty); the shape, the language 
   assert.match(cleanRewriteInput({ action: 'write', text: 'Shop', instruction: 'book a seat', format: 'plain' }).change, /a button label/);
   assert.throws(() => cleanRewriteInput({ action: 'write', text: 'Hi', instruction: '  ' }), (error) => error.code === 'NOTHING_TO_REWRITE');
   assert.doesNotMatch(buildRewritePrompt(cleanRewriteInput({ action: 'fix', text: 'Hi' })), /<email>/);
+});
+
+test('custom: one field for a change or a topic — the model tells which; on an empty text, a topic', () => {
+  const asked = cleanRewriteInput({ action: 'custom', text: GREETING, instruction: 'the sale ends Sunday', role: 'heading', context: 'Bonjour' });
+  assert.match(asked.change, /^The user asks: the sale ends Sunday /);
+  assert.match(asked.change, /If this says how to change the text, change it so/);
+  assert.match(asked.change, /write a new one instead: a title: one short line/);
+  assert.match(asked.change, /only the current links and merge tags stay/);
+  assert.match(asked.change, /\[placeholder in square brackets\]/);
+  assert.match(cleanRewriteInput({ action: 'custom', text: 'Shop', instruction: 'book a seat', format: 'plain' }).change, /a button label/);
+
+  const empty = cleanRewriteInput({ action: 'custom', text: '<p><br></p>', instruction: 'the sale ends Sunday', language: 'fr' });
+  assert.match(empty.change, /^Write a new text about: the sale ends Sunday/);
+  assert.match(empty.change, /Write in French/);
 });
 
 test('write: a title comes back without its paragraph; the links and merge tags of the old text stay', async () => {

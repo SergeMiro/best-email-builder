@@ -63,6 +63,14 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
   box-shadow: 0 0 0 1.5px #fff, 0 2px 6px rgba(16, 24, 40, 0.3); }
 .eb-ui-tag-clear:hover, .eb-ui-tag-clear:focus-visible { background: #e5484d; }
 .eb-ui-tag-clear svg { width: 10px; height: 10px; stroke-width: 3; }
+.eb-ui-working { border-radius: 4px; background: linear-gradient(100deg, transparent 25%, rgba(91, 79, 240, 0.16) 50%,
+  transparent 75%) 0 0 / 250% 100%; animation: eb-working 1.4s ease-in-out infinite; }
+@keyframes eb-working { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.eb-reveal { animation: eb-reveal 0.55s cubic-bezier(0.2, 0.65, 0.3, 1) both; }
+@keyframes eb-reveal { from { opacity: 0; filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .eb-ui-working { animation: none; background: rgba(91, 79, 240, 0.08); }
+}
 ${FRAME_SCROLLBAR_CSS}
 `;
 

@@ -29,12 +29,11 @@ import { createEmailGenerator } from '../src/ai/generator.js';
  *                          each), else corrects the typos of TYPOS wherever
  *                          they are; `__proofreadDelay` (ms) and
  *                          `__proofreadFail` (an error message) drive it
- *   window.__rewritten     what "Write with AI" and "Rewrite with AI" asked
- *                          (action, text, format…); the fake model answers
- *                          `__rewriteAnswers` in turn, else the text with
- *                          "Rewritten:" in front (a text written: "Written
- *                          about" the topic); `__rewriteDelay`, `__rewriteFail`
- *                          as above
+ *   window.__rewritten     what "Write with AI" asked (action, text, format…);
+ *                          the fake model answers `__rewriteAnswers` in turn,
+ *                          else the text with "Rewritten:" in front (for the
+ *                          user's own words: "Written about" them);
+ *                          `__rewriteDelay`, `__rewriteFail` as above
  *   window.__subjectAsks   what "Suggest subjects" asked (subject, text, avoid…);
  *                          the fake model answers `__subjectAnswers` in turn
  *                          (an array of subjects each), else three fixed ones;
@@ -48,7 +47,7 @@ import { createEmailGenerator } from '../src/ai/generator.js';
  * `?lang=fr` in the story URL switches the interface to French. The AI module
  * (`createAi`) is given by default; `?ai=off` opens the builder without it, as
  * an application that does not install it, and `?ai=rewrite` with only
- * "Rewrite with AI" (`createAi({ rewrite })`).
+ * "Write with AI" (`createAi({ rewrite })`).
  */
 export default {
   title: 'Builder',
@@ -111,7 +110,8 @@ const fakeGenerator = createEmailGenerator({
       await wait(window.__rewriteDelay ?? 300, signal);
       if (window.__rewriteFail) throw new Error(window.__rewriteFail);
       if (window.__rewriteAnswers?.length) return JSON.stringify({ text: window.__rewriteAnswers.shift() });
-      const topic = /^Change: Write a new text about: (.*?) It is /.exec(asking)?.[1];
+      // A topic, or the user's own words: written about, as a model would.
+      const topic = /^Change: (?:Write a new text about|The user asks): ([\s\S]*?) (?:It is|If this says) /.exec(asking)?.[1];
       const asked = /<text>\n([\s\S]*)\n<\/text>/.exec(asking)?.[1] ?? '';
       return JSON.stringify({ text: topic ? `<p>Written about ${topic}.</p>` : `Rewritten: ${asked}` });
     }

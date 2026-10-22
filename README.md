@@ -67,9 +67,10 @@ once and given away.
 **AI, optional**
 - *Proofread* the whole email: spelling, grammar and punctuation in every
   text, each correction shown word by word, applied in one step.
-- *Write* a text on a topic, to fit the rest of the email.
-- *Rewrite* any text: shorter, longer, fixed, friendlier, more formal, or
-  translated into 13 languages.
+- *Write with AI*, in one field: a text on a topic, or a change in your own
+  words, to fit the rest of the email; or in one click: shorter, longer,
+  fixed, friendlier, more formal, translated into 13 languages. The answer
+  comes in word by word.
 - *Suggest* three subject lines drawn from the email.
 - OpenRouter, Gemini, Groq, Mistral, OpenAI, DeepSeek, Cerebras, Ollama, any
   OpenAI-compatible API, Claude or your own agent. The model runs on your
@@ -145,7 +146,7 @@ the layout, Next.js, Express and image hosting.
 | [Editor and library](docs/EDITOR.md) | The three ways to mount them, every prop, theming. |
 | [Server](docs/SERVER.md) | Routes, handler options, the storage contract, your database. |
 | [Variables and sending](docs/VARIABLES.md) | Merge tags, custom variables, personalizing at send time. |
-| [AI](docs/AI.md) | Proofread, Write, Rewrite, Subjects. Where the model runs, and the providers. |
+| [AI](docs/AI.md) | Proofread, Write with AI, Subjects. Where the model runs, and the providers. |
 | [Your own AI agent](docs/AGENT.md) | The `agent@1` protocol. |
 | [Brand](docs/BRAND.md) | Logo, colors and font, read from a website. |
 | [Languages](docs/LANGUAGES.md) | Seven built in, your own strings, adding one. |

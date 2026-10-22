@@ -17,6 +17,13 @@ All notable changes are documented here. The format follows
   they outlive a reload) and shows them in the canvas and the preview.
 
 ### Changed
+- *Write with AI* and *Rewrite with AI* are one section with ONE field: say
+  what to change in the text, or give a topic to write about — the model
+  tells which (`action: 'custom'` now does both; on a text with no words, the
+  words are a topic). The one-click rewrites stay under it.
+- While the AI works on a text, it shimmers on the canvas; the answer comes
+  in word by word (at once with reduced motion). `editor.setContent` takes
+  `{ reveal: true }` for that, and `editor.showWorking(id)` shows the shimmer.
 - The **×** of a variable cut over two lines sits at the variable's end, top
   right of its last line, rather than after its first piece.
 

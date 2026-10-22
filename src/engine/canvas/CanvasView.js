@@ -126,6 +126,9 @@ export function createCanvasView(options) {
   tagClear.hidden = true;
   tagClear.innerHTML = ICONS.x;
   ui.appendChild(tagClear);
+  // A text the AI is working on: a shimmer over it until its new words come.
+  const workBox = make('eb-ui-box eb-ui-working');
+  workBox.setAttribute('data-testid', 'eb-canvas-working');
 
   /** @type {string|null} */ let selectedId = null;
   /** Ctrl+A: the sections drawn as selected, and their boxes. */
@@ -138,6 +141,11 @@ export function createCanvasView(options) {
   /** @type {HTMLElement|null} */ let editingEl = null;
   /** @type {Range|null} */ let savedRange = null;
   /** @type {null | {payload: DragPayload, target: DropTarget|null, cancel: () => void}} */ let drag = null;
+  /** @type {string|null} */ let workingId = null;
+  /** The text whose words come in at the next render (the AI's answer), until when. */
+  /** @type {{id: string, until: number}|null} */ let revealNext = null;
+  /** Words coming in: the text nodes cut into them, and the timer that puts them back. */
+  /** @type {{swaps: {node: Text, parts: Node[]}[], timer: number}|null} */ let reveal = null;
   let renderToken = 0;
   let destroyed = false;
   let lastHead = '';
@@ -265,6 +273,12 @@ export function createCanvasView(options) {
     refreshTextState();
   }
 
+  function drawWorking() {
+    const box = workingId ? docBoxOf(workingId) : null;
+    workBox.hidden = !box;
+    if (box) place(workBox, box);
+  }
+
   function drawMulti() {
     while (multiBoxes.length < multiIds.length) {
       const box = make('eb-ui-box eb-ui-select');
@@ -285,6 +299,7 @@ export function createCanvasView(options) {
     drawHover();
     drawTextTools();
     drawTag();
+    drawWorking();
   }
 
   function scheduleOverlays() {
@@ -318,6 +333,7 @@ export function createCanvasView(options) {
       doc.head.innerHTML = head;
       lastHead = head;
     }
+    settleReveal();
     syncAttributes(doc.body, parsed.body);
     morphChildren(doc.body, parsed.body, (element) => element === editingEl);
     if (preview && !preview.el.isConnected) dropPreview();
@@ -329,7 +345,62 @@ export function createCanvasView(options) {
         editingEl = again;
       } else finishEditing();
     }
+    if (revealNext) {
+      const { id, until } = revealNext;
+      revealNext = null;
+      const el = Date.now() < until ? elementOf(id) : null;
+      if (el) revealWords(el);
+    }
     refreshOverlays();
+  }
+
+  /**
+   * A text the AI just wrote comes in word by word, each fading in after the
+   * one before. The words are spans only while they come: then the text
+   * nodes they were cut from are put back, so nothing of it is ever edited
+   * or saved.
+   * @param {HTMLElement} el
+   */
+  function revealWords(el) {
+    settleReveal();
+    if (win.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    /** @type {Text[]} */
+    const texts = [];
+    const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) if (/\S/.test(/** @type {Text} */ (node).data)) texts.push(/** @type {Text} */ (node));
+    const count = texts.reduce((sum, node) => sum + (node.data.match(/\S+/g) || []).length, 0);
+    if (!count) return;
+    // A long text comes in no slower than a short one: about a second in all.
+    const step = Math.min(70, 1100 / count);
+    let index = 0;
+    const swaps = texts.map((node) => {
+      const parts = node.data
+        .split(/(\s+)/)
+        .filter(Boolean)
+        .map((part) => {
+          if (!/\S/.test(part)) return doc.createTextNode(part);
+          const word = doc.createElement('span');
+          word.className = 'eb-reveal';
+          word.style.animationDelay = `${Math.round(index++ * step)}ms`;
+          word.textContent = part;
+          return word;
+        });
+      node.replaceWith(...parts);
+      return { node, parts };
+    });
+    reveal = { swaps, timer: win.setTimeout(settleReveal, Math.round(index * step) + 600) };
+  }
+
+  /** The words that came in become the text again. */
+  function settleReveal() {
+    if (!reveal) return;
+    win.clearTimeout(reveal.timer);
+    for (const { node, parts } of reveal.swaps) {
+      if (!parts[0]?.isConnected) continue;
+      parts[0].parentNode?.insertBefore(node, parts[0]);
+      for (const part of parts) part.parentNode?.removeChild(part);
+    }
+    reveal = null;
   }
 
   /* ── Selection and hover ───────────────────────────────────────────────── */
@@ -643,6 +714,7 @@ export function createCanvasView(options) {
     if (editingId === id) return;
     finishEditing();
     dropPreview();
+    settleReveal();
     const el = editableOf(id);
     if (!el) return;
     editingId = id;
@@ -1200,9 +1272,19 @@ export function createCanvasView(options) {
     previewText,
     hidePreview,
     settlePreview,
+    /** A shimmer over the element while the AI works on it (null: none). @param {string|null} id */
+    setWorking(id) {
+      workingId = id;
+      drawWorking();
+    },
+    /** The element's words come in, one after the other, at the next render. @param {string} id */
+    revealOnRender(id) {
+      revealNext = { id, until: Date.now() + 5000 };
+    },
     destroy() {
       destroyed = true;
       dropPreview();
+      settleReveal();
       cancelDrag();
       resizeObserver.disconnect();
       if (overlayFrame) win.cancelAnimationFrame(overlayFrame);

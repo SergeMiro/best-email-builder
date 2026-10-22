@@ -292,7 +292,7 @@ test('write and rewrite with AI: the same key, no second question, the selected 
   const seen = await fakeOpenRouter(page, (request) => {
     const content = request.postDataJSON().messages[1].content;
     if (content.includes('<text id=')) return completion(JSON.stringify(FIXES));
-    return completion(JSON.stringify({ text: content.includes('Write a new text about') ? 'The sale ends Sunday' : 'Big news' }));
+    return completion(JSON.stringify({ text: content.includes('The user asks:') ? 'The sale ends Sunday' : 'Big news' }));
   });
   await openEditor(page);
   const box = await proofreadSubject(page);
@@ -314,13 +314,13 @@ test('write and rewrite with AI: the same key, no second question, the selected 
   expect(body.response_format.json_schema.schema.required).toEqual(['text']);
   expect(body.messages[1].content).toContain('<text>\nYour headline\n</text>');
 
-  // A text written anew, on a topic.
-  const write = page.getByTestId('eb-write');
-  await write.getByLabel('What the text is about').fill('the sale ends Sunday');
+  // The user's own words: a change, or what to write instead.
+  const write = page.getByTestId('eb-rewrite');
+  await write.getByLabel('Ask the AI').fill('the sale ends Sunday');
   await write.getByRole('button', { name: 'Write', exact: true }).click();
   await expect(canvas.getByText('The sale ends Sunday', { exact: true })).toBeVisible({ timeout: 30_000 });
   expect(seen).toHaveLength(3);
-  expect(seen[2].body.messages[1].content).toContain('Write a new text about: the sale ends Sunday');
+  expect(seen[2].body.messages[1].content).toContain('The user asks: the sale ends Sunday');
 });
 
 test('in French: the Connect dialog and its texts', async ({ page }) => {

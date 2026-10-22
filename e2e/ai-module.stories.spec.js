@@ -22,14 +22,14 @@ const panel = (page) => page.getByTestId('eb-properties');
 const canvas = (page) => page.frameLocator('.eb-canvas-frame');
 const proofreadButton = (page, name = 'Proofread') => page.getByTestId('email-builder').getByRole('button', { name, exact: true });
 
-/** Selects the headline: a text block, where "Write with AI" and "Rewrite with AI" would be. */
+/** Selects the headline: a text block, where "Write with AI" would be. */
 async function selectHeadline(page) {
   await canvas(page).getByText('Your headline', { exact: true }).click();
   await expect(panel(page).getByRole('button', { name: 'Deselect' })).toBeVisible();
 }
 
 test.describe('The AI module', () => {
-  test('without it (?ai=off): no Proofread, no Write or Rewrite with AI, no Suggest subjects — the rest is all there', async ({ page }) => {
+  test('without it (?ai=off): no Proofread, no Write with AI, no Suggest subjects — the rest is all there', async ({ page }) => {
     await openBuilder(page, '&ai=off');
     await expect(page.getByTestId('eb-variables-bar')).toBeVisible();
     await expect(proofreadButton(page)).toHaveCount(0);
@@ -37,7 +37,6 @@ test.describe('The AI module', () => {
     await expect(page.getByTestId('eb-subject-ideas')).toHaveCount(0);
     await selectHeadline(page);
     await expect(page.getByTestId('eb-rewrite')).toHaveCount(0);
-    await expect(page.getByTestId('eb-write')).toHaveCount(0);
     await expect(panel(page)).not.toContainText(/Rewrite with AI|Write with AI/);
     await expect(page.getByTestId('eb-ai-connect')).toHaveCount(0);
   });
@@ -50,21 +49,21 @@ test.describe('The AI module', () => {
     await expect(page.getByTestId('email-builder')).not.toContainText(/Relire|Suggérer des objets|Réécrire avec l'IA|Écrire avec l'IA/);
   });
 
-  test('createAi({ rewrite }): only Write and Rewrite with AI', async ({ page }) => {
+  test('createAi({ rewrite }): only Write with AI', async ({ page }) => {
     await openBuilder(page, '&ai=rewrite');
     await expect(proofreadButton(page)).toHaveCount(0);
     await expect(page.getByTestId('eb-subject-ideas')).toHaveCount(0);
     await selectHeadline(page);
-    await expect(page.getByTestId('eb-write').getByText('Write with AI')).toBeVisible();
-    await expect(page.getByTestId('eb-rewrite').getByText('Rewrite with AI')).toBeVisible();
+    await expect(page.getByTestId('eb-rewrite').getByText('Write with AI')).toBeVisible();
+    await expect(page.getByTestId('eb-rewrite').getByRole('textbox', { name: 'Ask the AI' })).toBeVisible();
   });
 
-  test('the whole module: Proofread, Suggest subjects, Write and Rewrite with AI — in French too', async ({ page }) => {
+  test('the whole module: Proofread, Suggest subjects, Write with AI — in French too', async ({ page }) => {
     await openBuilder(page);
     await expect(proofreadButton(page)).toBeVisible();
     await expect(page.getByTestId('eb-subject-ideas').getByRole('button', { name: 'Suggest subjects' })).toBeVisible();
     await selectHeadline(page);
-    await expect(page.getByTestId('eb-rewrite').getByText('Rewrite with AI')).toBeVisible();
+    await expect(page.getByTestId('eb-rewrite').getByText('Write with AI')).toBeVisible();
     // Its texts come with it.
     await openBuilder(page, '&lang=fr');
     await expect(proofreadButton(page, 'Relire')).toBeVisible();

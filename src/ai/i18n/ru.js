@@ -4,7 +4,6 @@
 /** @type {Record<string, string>} */
 export const ru = {
   "The AI answer could not be read. Try again.": "Не удалось прочитать ответ ИИ. Попробуйте ещё раз.",
-  "Rewrite with AI": "Переписать с помощью ИИ",
   "Shorter": "Короче",
   "Longer": "Длиннее",
   "Fix mistakes": "Исправить ошибки",
@@ -12,9 +11,6 @@ export const ru = {
   "More formal": "Официальнее",
   "Translate": "Перевести",
   "Translate into": "Перевести на",
-  "Or say what to change…": "Или опишите, что изменить…",
-  "What to change": "Что изменить",
-  "Rewrite": "Переписать",
   "Rewriting…": "ИИ переписывает текст…",
   "Suggest subjects": "Предложить темы",
   "Subject ideas": "Идеи для темы",
@@ -100,8 +96,8 @@ export const ru = {
   "The email could not be checked.": "Не удалось проверить письмо.",
   "The email has no text to check yet.": "В письме пока нет текста для проверки.",
   "The text could not be written.": "Не удалось написать текст.",
-  "What should it say? e.g. the sale ends Sunday": "О чём написать? например, распродажа до воскресенья",
-  "What the text is about": "О чём текст",
+  "What should it say, or what should change? e.g. the sale ends Sunday": "О чём написать или что изменить? например, распродажа до воскресенья",
+  "Ask the AI": "Спросить ИИ",
   "Write": "Написать",
   "Write with AI": "Написать с помощью ИИ",
   "Writing…": "ИИ пишет…",

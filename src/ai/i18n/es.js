@@ -4,7 +4,6 @@
 /** @type {Record<string, string>} */
 export const es = {
   "The AI answer could not be read. Try again.": "No se pudo leer la respuesta de la IA. Inténtalo de nuevo.",
-  "Rewrite with AI": "Reescribir con IA",
   "Shorter": "Más corto",
   "Longer": "Más largo",
   "Fix mistakes": "Corregir errores",
@@ -12,9 +11,6 @@ export const es = {
   "More formal": "Más formal",
   "Translate": "Traducir",
   "Translate into": "Traducir a",
-  "Or say what to change…": "O di qué cambiar…",
-  "What to change": "Qué cambiar",
-  "Rewrite": "Reescribir",
   "Rewriting…": "Reescribiendo…",
   "Suggest subjects": "Sugerir asuntos",
   "Subject ideas": "Ideas de asunto",
@@ -100,8 +96,8 @@ export const es = {
   "The email could not be checked.": "No se pudo revisar el correo.",
   "The email has no text to check yet.": "El correo aún no tiene texto que revisar.",
   "The text could not be written.": "No se pudo escribir el texto.",
-  "What should it say? e.g. the sale ends Sunday": "¿Qué debe decir? p. ej., la oferta termina el domingo",
-  "What the text is about": "De qué trata el texto",
+  "What should it say, or what should change? e.g. the sale ends Sunday": "¿Qué debe decir o qué cambiar? p. ej., la oferta termina el domingo",
+  "Ask the AI": "Preguntar a la IA",
   "Write": "Escribir",
   "Write with AI": "Escribir con IA",
   "Writing…": "Escribiendo…",

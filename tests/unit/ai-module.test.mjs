@@ -165,7 +165,7 @@ test('dictionaries: the AI’s texts are in its own, not in the core’s; the co
   for (const [locale, core] of Object.entries(LOCALES)) {
     if (locale === 'en') continue;
     const ai = AI_MESSAGES[locale];
-    for (const key of ['Suggest subjects', 'Rewrite with AI', 'Write with AI', 'Proofread the email', 'More ideas', 'No usable subject came back. Try again.']) {
+    for (const key of ['Suggest subjects', 'Ask the AI', 'Write with AI', 'Proofread the email', 'More ideas', 'No usable subject came back. Try again.']) {
       assert.ok(key in ai, `${locale}: ${key} in the AI's dictionary`);
       assert.ok(!(key in core), `${locale}: ${key} not shipped without the AI`);
     }
@@ -176,7 +176,7 @@ test('dictionaries: the AI’s texts are in its own, not in the core’s; the co
     assert.deepEqual(Object.keys(core).sort(), Object.keys(LOCALES.fr).sort(), `${locale}: the core's entries`);
     assert.deepEqual(Object.keys(ai).sort(), Object.keys(AI_MESSAGES.fr).sort(), `${locale}: the AI's entries`);
   }
-  assert.ok(Object.keys(AI_MESSAGES.fr).length > 100);
+  assert.ok(Object.keys(AI_MESSAGES.fr).length > 90);
 });
 
 test('dictionaries: every translation keeps the placeholders of its English text', () => {

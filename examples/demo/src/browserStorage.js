@@ -8,7 +8,7 @@
  * A first visit finds five templates of the gallery in the library, three of
  * them tagged, so the bank does not open empty. Tags are kept like templates.
  *
- * "Proofread", "Write with AI", "Rewrite with AI" and "Suggest subjects" run in the
+ * "Proofread", "Write with AI" and "Suggest subjects" run in the
  * browser too, with the VISITOR's own key (asked once, kept in this browser's
  * localStorage, sent only to the provider they choose). An application can do the same, or call the model on its
  * server, where its own key stays (`best-email-builder/ai/server`, see the README).

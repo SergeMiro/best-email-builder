@@ -678,12 +678,13 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       commit(next, { merge: `attributes:${id}:${keys}` });
     },
 
-    setContent(id, content) {
+    setContent(id, content, { reveal = false } = {}) {
       const current = requireRoot();
       const node = findNode(current, id);
       if (!node || node.content === null) return;
       const value = LABEL_TAGS.has(node.tag) ? escapeText(content) : String(content || '');
       if (view?.editingId() === id) view.finishEditing();
+      if (reveal && value !== node.content) view?.revealOnRender(id);
       commit(setContent(requireRoot(), id, value), { merge: `content:${id}` });
     },
 
@@ -715,6 +716,10 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
 
     clearPreview() {
       view?.hidePreview();
+    },
+
+    showWorking(id) {
+      view?.setWorking(id);
     },
 
     insertLink(href, label) {

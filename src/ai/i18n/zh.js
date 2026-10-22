@@ -4,7 +4,6 @@
 /** @type {Record<string, string>} */
 export const zh = {
   "The AI answer could not be read. Try again.": "无法读取 AI 的回复，请重试。",
-  "Rewrite with AI": "AI 改写",
   "Shorter": "更简短",
   "Longer": "更详细",
   "Fix mistakes": "修正错误",
@@ -12,9 +11,6 @@ export const zh = {
   "More formal": "更正式",
   "Translate": "翻译",
   "Translate into": "翻译为",
-  "Or say what to change…": "或者说明要修改的内容……",
-  "What to change": "修改要求",
-  "Rewrite": "改写",
   "Rewriting…": "正在改写……",
   "Suggest subjects": "推荐主题",
   "Subject ideas": "主题建议",
@@ -100,8 +96,8 @@ export const zh = {
   "The email could not be checked.": "无法检查这封邮件。",
   "The email has no text to check yet.": "邮件中还没有可检查的文本。",
   "The text could not be written.": "无法写出文本。",
-  "What should it say? e.g. the sale ends Sunday": "要写什么？例如：促销周日结束",
-  "What the text is about": "文本的主题",
+  "What should it say, or what should change? e.g. the sale ends Sunday": "要写什么，或要改什么？例如：促销周日结束",
+  "Ask the AI": "询问 AI",
   "Write": "撰写",
   "Write with AI": "AI 撰写",
   "Writing…": "正在撰写……",

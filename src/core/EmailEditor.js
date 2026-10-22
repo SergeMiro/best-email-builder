@@ -162,12 +162,13 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   describe: (id: string) => EngineSelection|null,
  *   getRootId: () => string|null,
  *   updateProperties: (id: string, attributes: Record<string, string|null>) => void,
- *   setContent: (id: string, content: string) => void,
+ *   setContent: (id: string, content: string, options?: {reveal?: boolean}) => void,
  *   setContents?: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
  *   insertLink: (href: string, label: string) => boolean,
  *   previewText?: (text: string) => boolean,
  *   clearPreview?: () => void,
+ *   showWorking?: (id: string|null) => void,
  *   undo: () => void,
  *   redo: () => void,
  *   canUndo: () => boolean,
@@ -231,12 +232,13 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   getElement: (id: string) => EmailSelection|null,
  *   getRootId: () => string|null,
  *   updateProperties: (values: Record<string, string|null>, id?: string|null) => void,
- *   setContent: (content: string, id?: string|null) => void,
+ *   setContent: (content: string, id?: string|null, options?: {reveal?: boolean}) => void,
  *   setContents: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
  *   insertLink: (href: string, label: string) => boolean,
  *   previewText: (text: string) => boolean,
  *   clearPreview: () => void,
+ *   showWorking: (id: string|null) => void,
  *   undo: () => void,
  *   redo: () => void,
  *   canUndo: () => boolean,
@@ -504,9 +506,10 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
       adapter.updateProperties(targetOf(id, 'updateProperties'), toAttributes(values));
     },
 
-    setContent(content, id = null) {
+    /** `reveal`: its words come in one after the other on the canvas (a text the AI wrote). */
+    setContent(content, id = null, options = {}) {
       requireReady('setContent');
-      adapter.setContent(targetOf(id, 'setContent'), content);
+      adapter.setContent(targetOf(id, 'setContent'), content, options);
     },
 
     /** Several texts at once (a proofread email), as ONE step of the history when the engine can. */
@@ -547,6 +550,15 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
     /** Takes the previewed text away. */
     clearPreview() {
       if (status === 'ready') adapter.clearPreview?.();
+    },
+
+    /**
+     * Shows that an element is being worked on (the AI writing its text): a
+     * shimmer over it on the canvas, until `null`. Not ready, or an engine
+     * that cannot show it: nothing.
+     */
+    showWorking(id) {
+      if (status === 'ready') adapter.showWorking?.(id ?? null);
     },
 
     undo() {

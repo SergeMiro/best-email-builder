@@ -141,7 +141,7 @@ What the AI does for the texts of an email, each part with its own checks:
 | `diff.js` | `diffWords`, `changedWords`: the word-by-word difference of a correction |
 | `ProofreadButton.jsx` | the toolbar button and the dialog: the corrections, applied one by one or all at once (`editor.setContents`, one step of the history) |
 | `rewrite.js` | writing on a topic or rewriting one text: the actions and languages, its prompt, `reviewRewrite` (same links, same variables, valid markup) and the loop with one repair turn |
-| `RewriteText.jsx` | the *Write with AI* and *Rewrite with AI* sections of the properties of a text or a button |
+| `RewriteText.jsx` | the *Write with AI* section of the properties of a text or a button: one field, one-click rewrites |
 | `subjects.js` | subject ideas: the words of the email (`emailWords`), the prompt, `reviewSubjects` (distinct, known merge tags) and the loop with one repair turn |
 | `SubjectIdeas.jsx` | *Suggest subjects* under the subject field: the list to pick from, the user's subject first |
 | `chip.js` | the badge button they use |
@@ -152,9 +152,11 @@ the server (the handler's `POST /proofread`, `POST /rewrite` and
 interface only calls `ai.proofread`, `ai.rewrite` and `ai.suggestSubjects`;
 each control is shown when the module has the function.
 
-A rewrite replaces the text through `editor.setContent`, and the corrections
-of a proofread through `editor.setContents` — one step of the history either
-way, so Ctrl+Z is the undo. The rewrite section is keyed by the selected
+A rewrite replaces the text through `editor.setContent(…, { reveal: true })`
+(its words come in one after the other on the canvas; `editor.showWorking(id)`
+makes the text shimmer while the AI works), and the corrections of a
+proofread through `editor.setContents` — one step of the history either way,
+so Ctrl+Z is the undo. The rewrite section is keyed by the selected
 element: selecting another one aborts the request. The text sent is the
 stored one (`describe(id).html` for a text block, `content` for a button
 label), so links and variables are compared on the source, not on what the

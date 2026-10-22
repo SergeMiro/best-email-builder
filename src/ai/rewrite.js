@@ -23,9 +23,9 @@ import { validateMjml } from '../validation/mjmlValidator.js';
 import { EmailGenerationError, languageName, unescapedTwice } from './errors.js';
 
 /**
- * The actions offered as buttons, in order. `translate` takes a language,
- * a custom change (`custom`) takes the user's words, a text written anew
- * (`write`) its topic.
+ * The actions offered as buttons, in order. `translate` takes a language;
+ * `custom` takes the user's words — a change to make, or what to write about,
+ * the model tells which; `write` a topic, for a text written anew.
  */
 export const REWRITE_ACTIONS = [
   { id: 'shorter', label: 'Shorter', change: 'Make it noticeably shorter, about half as long. Keep the meaning, the key facts and every link.' },
@@ -96,8 +96,9 @@ const wordsOf = (html) =>
  *   language?: string,
  * }} RewriteInput
  *   `action`: an id of REWRITE_ACTIONS, `translate` (with `targetLanguage`),
- *   `custom` (with `instruction`: the change) or `write` (with `instruction`:
- *   the topic; the current text may be empty). `context`: the words of the
+ *   `custom` (with `instruction`: the user's words, a change or a topic; on an
+ *   empty text, a topic) or `write` (with `instruction`: the topic; the
+ *   current text may be empty). `context`: the words of the
  *   rest of the email (`emailWords`). `role`: a text block set as a title is
  *   written as one line. `language`: the interface's, for an email with no
  *   words yet.
@@ -114,7 +115,8 @@ export function cleanRewriteInput(input) {
   const context = bounded(source.context, MAX_REWRITE_CONTEXT);
   const heading = source.role === 'heading';
   const instruction = bounded(source.instruction, MAX_REWRITE_INSTRUCTION);
-  if (source.action === 'write') {
+  // The user's words on a text with none yet: a topic to write about.
+  if (source.action === 'write' || (source.action === 'custom' && instruction && !wordsOf(text))) {
     if (!instruction) throw new EmailGenerationError('NOTHING_TO_REWRITE', 'No topic.');
     const language = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(String(source.language || '')) ? String(source.language) : '';
     return { format, text, context, heading, change: writeChange(instruction, { heading, format, language, context }) };
@@ -127,9 +129,20 @@ export function cleanRewriteInput(input) {
     if (!/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(language)) throw new EmailGenerationError('NOTHING_TO_REWRITE', 'No target language.');
     return { format, text, context, heading, change: `Translate it into ${languageName(language)}. Keep the tone and the length.` };
   }
-  if (source.action === 'custom' && instruction) return { format, text, context, heading, change: instruction };
+  if (source.action === 'custom' && instruction) return { format, text, context, heading, change: askedChange(instruction, { heading, format }) };
   throw new EmailGenerationError('NOTHING_TO_REWRITE', 'Unknown action.');
 }
+
+/** What the text is, for a text written anew. @param {'html'|'plain'} format @param {boolean} heading */
+const shapeOf = (format, heading) =>
+  format === 'plain'
+    ? 'a button label: a short call to action of a few words'
+    : heading
+      ? 'a title: one short line, plain words without <p>, no full stop'
+      : 'the text of a block: a few short sentences, in one or two paragraphs';
+
+const NEW_TEXT = 'It replaces the current words entirely; only the current links and merge tags stay, placed where they fit.';
+const NO_INVENTED_FACT = 'Where a fact is missing (a date, a price, a name, a place), write a [placeholder in square brackets] instead of inventing it.';
 
 /**
  * What the model is asked to write on a topic.
@@ -137,18 +150,22 @@ export function cleanRewriteInput(input) {
  * @param {{heading: boolean, format: 'html'|'plain', language: string, context: string}} options
  */
 function writeChange(topic, { heading, format, language, context }) {
-  const shape =
-    format === 'plain'
-      ? 'a button label: a short call to action of a few words'
-      : heading
-        ? 'a title: one short line, plain words without <p>, no full stop'
-        : 'the text of a block: a few short sentences, in one or two paragraphs';
   const where = context ? 'the language of the email' : `${languageName(language || 'en')}, unless the topic is written in another language`;
+  return [`Write a new text about: ${topic}`, `It is ${shapeOf(format, heading)}. ${NEW_TEXT}`, NO_INVENTED_FACT, `Write in ${where}.`].join(' ');
+}
+
+/**
+ * What the model is asked in the user's own words: a change to make to the
+ * text, or something new to write in its place — the words tell which.
+ * @param {string} request
+ * @param {{heading: boolean, format: 'html'|'plain'}} options
+ */
+function askedChange(request, { heading, format }) {
   return [
-    `Write a new text about: ${topic}`,
-    `It is ${shape}. It replaces the current words entirely; only the current links and merge tags stay, placed where they fit.`,
-    'Where a fact is missing (a date, a price, a name, a place), write a [placeholder in square brackets] instead of inventing it.',
-    `Write in ${where}.`,
+    `The user asks: ${request}`,
+    'If this says how to change the text, change it so and keep the rest as it is.',
+    `If it asks for a new text, or only names what to write about, write a new one instead: ${shapeOf(format, heading)}. ${NEW_TEXT}`,
+    NO_INVENTED_FACT,
   ].join(' ');
 }
 
