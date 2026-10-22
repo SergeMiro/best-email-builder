@@ -297,6 +297,10 @@ function expectedFragments(property, value) {
     const [t, r, b, l] = value.split(' ');
     return [`padding-top="${t}"`, `padding-right="${r}"`, `padding-bottom="${b}"`, `padding-left="${l}"`];
   }
+  // Not an MJML attribute: written as a wrapper around the sections (engine/mjml.js).
+  if (property.key === 'content-background-color') {
+    return [`<mj-wrapper css-class="eb-content-layer" background-color="${value}" padding="0px">`];
+  }
   return [`${property.key}="${value}"`];
 }
 
