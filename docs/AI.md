@@ -382,15 +382,15 @@ new ones, and *Done* closes the list.
 
 ## The live demo
 
-The live demo has no server. *Write with AI* and *Suggest subjects* run in
-the page, with the visitor's own key, for the provider they choose: OpenAI,
-Claude, Mistral, Gemini, OpenRouter or an OpenAI-compatible API of their own.
-*Proofread* needs no key: LanguageTool's public API reads the email.
+The live demo has no server. *Proofread*, *Write with AI* and *Suggest subjects* use the same AI provider and key.
+The visitor chooses OpenAI, Claude, Mistral, Gemini, OpenRouter or an OpenAI-compatible API.
+*Proofread* checks spelling, grammar and punctuation throughout the email.
+The key stays in the browser and goes only to the chosen provider.
 
 ```js
 createAi({
   provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'],
   askKey: true,
-  proofread: createLanguageToolProofreader({ url: LANGUAGETOOL_PUBLIC_API }),
+  proofread: true,
 });
 ```

@@ -28,7 +28,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
  *   the words of a text: bold, italic, underline, strikethrough, link,
  *     remove the link, clear formatting — on the selection of the text being
  *     edited, or on the whole text when it is only selected;
- *   the element: size, line height, weight and alignment — on the selected
+ *   the element: size, line height and alignment — on the selected
  *     text or button, wherever its block has them;
  *   at its end, the buttons of the feature panels (emojis, variables): each
  *     opens its panel beside the canvas.
@@ -118,7 +118,6 @@ export default function TextRibbon({ editor, ready, selection, format, drawers, 
 
   const size = propertyOf('font-size');
   const lineHeight = propertyOf('line-height');
-  const weight = propertyOf('font-weight');
   const align = propertyOf('align');
   const currentSize = pixels(valueOf('font-size'), null);
   const currentLine = pixels(valueOf('line-height'), currentSize);
@@ -192,26 +191,6 @@ export default function TextRibbon({ editor, ready, selection, format, drawers, 
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <DropdownMenu modal={false}>
-          <Tip label={t('Weight')}>
-            <DropdownMenuTrigger asChild disabled={!weight}>
-              <button type="button" className={cn(ICON_BUTTON, 'eb:min-w-20 eb:justify-between eb:text-[12px]')} aria-label={t('Weight')} data-control="font-weight">
-                <span className="eb:truncate">
-                  {weight ? t(weight.options?.find((option) => option.value === valueOf('font-weight'))?.label || 'Normal') : t('Weight')}
-                </span>
-                <ChevronDown className="eb:size-3! eb:text-foreground-muted" aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-          </Tip>
-          <DropdownMenuContent align="start" aria-label={t('Weight')} onCloseAutoFocus={(event) => event.preventDefault()}>
-            {(weight?.options || []).map((option) => (
-              <DropdownMenuItem key={option.value} onSelect={() => set('font-weight', option.value)}>
-                <Check className={cn('eb:size-3.5', option.value !== valueOf('font-weight') && 'eb:invisible')} aria-hidden="true" />
-                <span className={option.value === 'bold' ? 'eb:font-bold' : undefined}>{t(option.label)}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
         <Separator />
 
         <div role="radiogroup" aria-label={t('Alignment')} className="eb:flex eb:items-center eb:gap-0.5">

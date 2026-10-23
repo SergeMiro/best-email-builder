@@ -53,7 +53,7 @@ once and given away.
   full-width images on phones.
 - Drag with a drop line, type in place, a toolbar and shortcuts on every element.
 - A ribbon above the canvas, as in a word processor: bold, italic, underline,
-  strikethrough, link, size, line height, weight and alignment, each tool
+  strikethrough, link, size, line height and alignment, each tool
   named in a tooltip. At its end, panels beside the canvas for the emojis
   (searchable, named in seven languages) and the variables.
 - Desktop and mobile canvas, showing the real compiled email.

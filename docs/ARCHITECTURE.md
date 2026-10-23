@@ -110,7 +110,7 @@ clear) go through `editor.formatText(command, value)`: on the selection of
 the text being edited, or on the whole of a selected text, which it starts
 editing. The engine reports the format at the caret with the editor's
 `format` event (`TextFormat`), so the buttons show what is pressed. Size,
-line height, weight and alignment set the selected element's properties,
+line height and alignment set the selected element's properties,
 within its block's bounds; a block without one leaves its tool disabled.
 
 A feature may declare `drawer: {icon, label, title, panel}`: a button at the

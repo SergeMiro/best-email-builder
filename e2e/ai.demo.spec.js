@@ -4,11 +4,9 @@ import { test, expect } from '@playwright/test';
  * THE AI in the static demo: the visitor's own key, with the provider they
  * choose in the builder's Connect dialog
  * (`createAi({ provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'], askKey: true })`).
- * Suggest subjects makes the calls: three ideas for the subject, one picked.
- * Proofread needs no key: LanguageTool reads the email
- * (`proofread: createLanguageToolProofreader({ url: LANGUAGETOOL_PUBLIC_API })`).
- * The providers and LanguageTool are answered by `page.route` — nothing
- * leaves the machine; the tests check what the browser would have sent.
+ * Proofread, Write with AI and Suggest subjects share the selected provider and key.
+ * Providers are answered by `page.route`: tests check the requests without
+ * sending email text or keys to an external service.
  */
 
 const HOME = '/best-email-builder/';
@@ -16,7 +14,6 @@ const API = 'https://openrouter.ai/api/v1/chat/completions';
 const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
 const MISTRAL = 'https://api.mistral.ai/v1/chat/completions';
 const ANTHROPIC = 'https://api.anthropic.com/v1/messages*';
-const LANGUAGETOOL = 'https://api.languagetool.org/v2/check';
 const KEY = 'sk-or-test-0000';
 const STORED = 'best-email-builder:ai-key:openrouter';
 const CHOICE = 'best-email-builder:ai-provider';
@@ -47,32 +44,6 @@ async function fakeApi(page, url, reply) {
   return seen;
 }
 const fakeOpenRouter = (page, reply) => fakeApi(page, API, reply);
-
-/**
- * LanguageTool's public API: each wrong word of `mistakes` found in the text it
- * was sent, with its correction. Returns the requests seen.
- */
-async function fakeLanguageTool(page, mistakes) {
-  const seen = [];
-  await page.route(LANGUAGETOOL, async (route) => {
-    const request = route.request();
-    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: CORS });
-    const form = new URLSearchParams(request.postData() || '');
-    const sent = JSON.parse(form.get('data')).annotation.map((part) => part.text ?? part.markup).join('');
-    seen.push({ headers: request.headers(), form, sent });
-    const matches = Object.entries(mistakes)
-      .filter(([wrong]) => sent.includes(wrong))
-      .map(([wrong, right]) => ({
-        message: 'Possible spelling mistake found.',
-        offset: sent.indexOf(wrong),
-        length: wrong.length,
-        replacements: [{ value: right }],
-        rule: { id: 'MORFOLOGIK_RULE_EN_US', issueType: 'misspelling', category: { id: 'TYPOS' } },
-      }));
-    return route.fulfill({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify({ matches }) });
-  });
-  return seen;
-}
 
 /** Claude's answer, as the event stream the Anthropic SDK reads. */
 const claudeStream = (text) => {
@@ -199,7 +170,7 @@ test('without a key: the Connect dialog offers six providers and asks for a key;
   await openEditor(page);
   const note = page.getByTestId('demo-ai-note');
   await expect(note).toContainText('your own key: OpenAI, Claude, Mistral, Gemini, OpenRouter or any OpenAI-compatible API.');
-  await expect(note).toContainText('“Proofread” finds the mistakes of the whole email without AI or key');
+  await expect(note).toContainText('“Proofread” uses AI to check spelling, grammar and punctuation throughout the email');
   await expect(note).not.toContainText('Connected to');
   await expect(note.getByRole('button', { name: 'Forget my key' })).toBeHidden();
   // The key of the demo's Anthropic days is no longer kept.
@@ -270,29 +241,59 @@ test('without a key: the Connect dialog offers six providers and asks for a key;
   expect(await stored(page, CHOICE)).toBeNull();
 });
 
-test('Proofread without a key: LanguageTool reads the email, the correction is applied; no AI provider is asked', async ({ page }) => {
-  const checks = await fakeLanguageTool(page, { sumer: 'summer' });
-  const asked = await fakeOpenRouter(page, () => completion(JSON.stringify(IDEAS)));
+test('Proofread connects the chosen AI, checks grammar and spelling, and applies only confirmed corrections', async ({ page }) => {
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify({ fixes: [{ id: 'subject', text: 'Our summer sale' }] })));
+  let checkerCalls = 0;
+  await page.route('https://api.languagetool.org/**', async (route) => {
+    checkerCalls += 1;
+    return route.abort();
+  });
   await openEditor(page);
   await subjectField(page).fill('Our sumer sale');
   await page.getByRole('button', { name: 'Proofread', exact: true }).click();
-  const box = page.getByTestId('eb-proofread');
-  await expect(box).toContainText('Every text is checked for spelling, grammar and punctuation mistakes.');
-  await expect(box.getByTestId('eb-proofread-fix')).toHaveCount(1, { timeout: 30_000 });
+  await expect(connect(page)).toBeVisible();
+  await choose(page, 'OpenRouter');
+  await connect(page).getByLabel('API key').fill(KEY);
+  await page.keyboard.press('Enter');
   await expect(connect(page)).toBeHidden();
+  const box = page.getByTestId('eb-proofread');
+  await expect(box.getByTestId('eb-proofread-fix')).toHaveCount(1, { timeout: 30_000 });
+  await expect(subjectField(page)).toHaveValue('Our sumer sale');
+  expect(seen).toHaveLength(1);
+  expect(seen[0].headers.authorization).toBe(`Bearer ${KEY}`);
+  const messages = seen[0].body.messages;
+  expect(messages[0].content).toContain('grammar');
+  expect(messages[0].content).toContain('punctuation');
+  expect(messages[1].content).toContain('Our sumer sale');
+  expect(messages[1].content).toContain('text block, HTML');
+  expect(checkerCalls).toBe(0);
   await box.getByTestId('eb-proofread-apply-all').click();
   await expect(box).toBeHidden();
   await expect(subjectField(page)).toHaveValue('Our summer sale');
+  // The same connection checks the next text without asking for another key.
+  await subjectField(page).fill('Our sumer sale');
+  await page.getByRole('button', { name: 'Proofread', exact: true }).click();
+  await expect(box.getByTestId('eb-proofread-fix')).toHaveCount(1, { timeout: 30_000 });
+  await expect(connect(page)).toBeHidden();
+  expect(seen).toHaveLength(2);
+});
 
-  // One request, to LanguageTool's public API: the texts, no key, the interface's language preferred.
-  expect(checks).toHaveLength(1);
-  const [{ form, sent }] = checks;
-  expect(sent).toContain('Our sumer sale');
-  expect(form.get('language')).toBe('auto');
-  expect(form.get('preferredLanguages')).toBe('en');
-  expect(form.get('apiKey')).toBeNull();
-  expect(asked).toHaveLength(0);
-  expect(await stored(page, CHOICE)).toBeNull();
+test('French proofreading corrects agreement in the language of the email with the saved AI connection', async ({ page }) => {
+  const seen = await fakeOpenRouter(page, () => completion(JSON.stringify({ fixes: [{ id: 'subject', text: 'On vous invite !' }] })));
+  await page.addInitScript(({ choice, slot, key }) => {
+    localStorage.setItem(choice, 'openrouter');
+    localStorage.setItem(slot, key);
+  }, { choice: CHOICE, slot: STORED, key: KEY });
+  await openEditor(page, 'fr');
+  await subjectField(page, 'fr').fill('On vous invit !');
+  await page.getByRole('button', { name: 'Relire', exact: true }).click();
+  const box = page.getByTestId('eb-proofread');
+  await expect(box.getByTestId('eb-proofread-fix')).toHaveCount(1, { timeout: 30_000 });
+  await expect(connect(page)).toBeHidden();
+  await expect(subjectField(page, 'fr')).toHaveValue('On vous invit !');
+  expect(seen[0].body.messages[1].content).toContain('The interface is in French');
+  await box.getByTestId('eb-proofread-apply-all').click();
+  await expect(subjectField(page, 'fr')).toHaveValue('On vous invite !');
 });
 
 test('with a key: OpenRouter is asked from the browser, an idea is picked; the key can be forgotten', async ({ page }) => {

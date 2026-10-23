@@ -12,8 +12,8 @@
  * VISITOR's own key (asked once, kept in this browser's localStorage, sent only
  * to the provider they choose). An application can do the same, or call the
  * model on its server, where its own key stays (`best-email-builder/ai/server`,
- * see the README). "Proofread" needs no key: LanguageTool's public API reads
- * the texts — an application points it at its own LanguageTool server.
+ * see the README). "Proofread" uses the same chosen provider and key to check
+ * spelling, grammar and punctuation throughout the email.
  */
 
 import { buildGallery, createMemoryStorage, translatorFor } from 'best-email-builder/builder';
@@ -32,7 +32,7 @@ import {
 } from '../../../src/features/variables/service.js';
 import { qualityReport } from '../../../src/validation/quality.js';
 import { validateMjml } from '../../../src/validation/mjmlValidator.js';
-import { claudeProvider, createAi, createLanguageToolProofreader, LANGUAGETOOL_PUBLIC_API } from 'best-email-builder/ai';
+import { claudeProvider, createAi } from 'best-email-builder/ai';
 
 /**
  * Uploaded images: a server would store them and serve `/email-assets/<key>`.
@@ -124,8 +124,8 @@ const claude = claudeProvider({
  * The demo's AI module: the visitor's own key, with the provider they choose
  * in the builder's Connect dialog (`askKey: true`). The key stays in this
  * browser and goes only to that provider. Gemini and Mistral have free plans
- * that answer in seconds; OpenRouter's free models take minutes. Proofreading
- * goes to LanguageTool's public API, without a key (20 checks a minute).
+ * that answer in seconds; OpenRouter's free models take minutes. The same
+ * chosen provider proofreads, writes and suggests subjects.
  */
 export function createBrowserAi() {
   try {
@@ -137,7 +137,7 @@ export function createBrowserAi() {
   return createAi({
     provider: ['openai', claude, 'mistral', 'gemini', 'openrouter', 'openai-compatible'],
     askKey: true,
-    proofread: createLanguageToolProofreader({ url: LANGUAGETOOL_PUBLIC_API }),
+    proofread: true,
     compile: compileWarnings,
   });
 }

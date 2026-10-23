@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * The TEXT RIBBON above the canvas and the EMOJI PANEL it opens, driven like
  * a user on the `Builder / Interface` story: the words of a text (bold,
  * italic, underline, strikethrough, link), the element (size, line height,
- * weight, alignment), a tooltip on every tool, the emojis inserted as the
+ * alignment), a tooltip on every tool, the emojis inserted as the
  * variables are.
  *
  * `window.__emailEditor` is only used to READ the produced MJML, never to act.
@@ -56,7 +56,6 @@ test.describe('Text ribbon', () => {
       [tool(page, 'clear'), 'Clear formatting'],
       [control(page, 'font-size'), 'Font size'],
       [control(page, 'line-height'), 'Line height'],
-      [control(page, 'font-weight'), 'Weight'],
       [ribbon(page).getByRole('radio', { name: 'Justify' }), 'Justify'],
       [ribbon(page).locator('[data-drawer="emoji"]'), 'Insert an emoji'],
       [ribbon(page).locator('[data-drawer="variables"]'), 'Email provider variables'],
@@ -150,7 +149,7 @@ test.describe('Text ribbon', () => {
     await expect(tool(page, 'unlink')).toBeDisabled();
   });
 
-  test('size, line height, weight and alignment of the selected text, as its properties', async ({ page }) => {
+  test('size, line height and alignment of the selected text, as its properties', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Your text.').click();
     await expect(control(page, 'font-size')).toHaveValue('15');
@@ -176,10 +175,8 @@ test.describe('Text ribbon', () => {
     await ratios.filter({ hasText: '1.5' }).click();
     await expect.poll(() => textOf(page, 'Hello,')).toContain('line-height="30px"');
 
-    await control(page, 'font-weight').click();
-    await page.getByRole('menuitem', { name: 'Bold' }).click();
-    await expect.poll(() => textOf(page, 'Hello,')).toContain('font-weight="bold"');
-    await expect(control(page, 'font-weight')).toHaveText('Bold');
+    await expect(control(page, 'font-weight')).toHaveCount(0);
+    await expect(tool(page, 'bold')).toBeEnabled();
 
     const center = ribbon(page).getByRole('radio', { name: 'Align center' });
     await center.click();
