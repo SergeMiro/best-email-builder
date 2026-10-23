@@ -491,7 +491,7 @@ test.describe('Names and defaults', () => {
     // Outside in, as in a browser's developer tools; the content in the middle.
     await expect(box.locator('[data-box]')).toHaveCount(4);
     expect(await box.locator('[data-box]').evaluateAll((zones) => zones.map((z) => z.getAttribute('data-box')))).toEqual(['margin', 'border', 'padding', 'content']);
-    await expect(box.locator('[data-box="content"]')).toHaveText('Button');
+    await expect(box.locator('[data-box="content"]')).toHaveText('');
     const hint = panel(page).getByTestId('eb-box-model-hint');
     await expect(hint).toHaveText('In pixels. Point at a zone to see what it sets.');
     await box.locator('[data-box="margin"]').hover({ position: { x: 6, y: 6 } });

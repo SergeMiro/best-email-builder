@@ -295,6 +295,14 @@ function sampleFor(property, current) {
 
 /** Expected MJML for a value (longhand paddings). */
 function expectedFragments(property, value) {
+  // Editor-only spacing values travel in a reversible css-class payload so
+  // exported documents remain valid MJML.
+  if (['margin', 'box-padding', 'box-border', 'box-border-top', 'box-border-right', 'box-border-bottom', 'box-border-left'].includes(property.key)) {
+    const encoded = [...JSON.stringify({ [property.key]: value })]
+      .map((character) => character.charCodeAt(0).toString(16).padStart(4, '0'))
+      .join('');
+    return [`css-class="eb-box-${encoded}"`];
+  }
   if (property.key === 'padding') {
     const [t, r, b, l] = value.split(' ');
     return [`padding-top="${t}"`, `padding-right="${r}"`, `padding-bottom="${b}"`, `padding-left="${l}"`];
