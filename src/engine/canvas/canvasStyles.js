@@ -7,7 +7,7 @@
 
 import { FRAME_SCROLLBAR_CSS } from '../../core/scrollbars.js';
 
-const PRIMARY = '#5b4ff0';
+const PRIMARY = 'var(--eb-canvas-primary, var(--eb-primary, #5b4ff0))';
 
 export const CANVAS_CSS = `
 html, body { min-height: 100%; }
@@ -26,13 +26,13 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
 #eb-ui * { box-sizing: border-box; }
 #eb-ui [hidden] { display: none !important; }
 .eb-ui-box { position: absolute; pointer-events: none; }
-.eb-ui-hover { box-shadow: inset 0 0 0 1px rgba(91, 79, 240, 0.55); }
+.eb-ui-hover { box-shadow: inset 0 0 0 1px color-mix(in oklab, ${PRIMARY} 55%, transparent); }
 .eb-ui-select { box-shadow: inset 0 0 0 2px ${PRIMARY}; }
 .eb-ui-chip { position: absolute; pointer-events: none; white-space: nowrap; color: #fff; background: ${PRIMARY};
   padding: 4px 7px; border-radius: 5px; font-weight: 600; letter-spacing: 0.01em; }
-.eb-ui-hover-chip { background: rgba(91, 79, 240, 0.85); }
+.eb-ui-hover-chip { background: color-mix(in oklab, ${PRIMARY} 85%, transparent); }
 .eb-ui-tools { position: absolute; display: flex; gap: 1px; padding: 2px; border-radius: 6px; background: ${PRIMARY};
-  box-shadow: 0 4px 12px -4px rgba(40, 30, 120, 0.5); pointer-events: auto; }
+  box-shadow: 0 4px 12px -4px color-mix(in oklab, ${PRIMARY} 50%, transparent); pointer-events: auto; }
 .eb-ui-tools button { all: unset; box-sizing: border-box; width: 26px; height: 24px; display: grid; place-items: center;
   color: #fff; border-radius: 4px; cursor: pointer; }
 .eb-ui-tools button:hover, .eb-ui-tools button:focus-visible { background: rgba(255, 255, 255, 0.2); }
@@ -52,7 +52,7 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
 .eb-ui-text button { all: unset; box-sizing: border-box; width: 28px; height: 26px; display: grid; place-items: center;
   color: #2b3038; border-radius: 5px; cursor: pointer; }
 .eb-ui-text button:hover, .eb-ui-text button:focus-visible { background: #eef0f6; }
-.eb-ui-text button[aria-pressed="true"] { background: #e8e6fd; color: ${PRIMARY}; }
+.eb-ui-text button[aria-pressed="true"] { background: color-mix(in oklab, ${PRIMARY} 15%, white); color: ${PRIMARY}; }
 .eb-ui-text .eb-ui-sep { width: 1px; height: 18px; margin: 0 3px; background: #e3e6ec; }
 .eb-ui-text input { all: unset; box-sizing: border-box; width: 220px; height: 26px; padding: 0 8px; border-radius: 5px;
   border: 1px solid #dfe3ea; font: 400 12px/1 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #2b3038; }

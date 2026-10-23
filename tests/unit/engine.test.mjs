@@ -79,6 +79,31 @@ test('reading tolerates what is not MJML: comments, a ">" in a value, self-closi
   assert.equal(findFirst(parseMjml(''), 'mj-body').children.length, 0);
 });
 
+test('section margin stays outside its border and padding in canvas and exported MJML', async () => {
+  for (const fullWidth of [false, true]) {
+    const root = parseMjml('<mjml><mj-body background-color="#eeeeee" content-background-color="#ffffff">' +
+      `<mj-section margin="12px 20px 24px 30px" ${fullWidth ? 'full-width="full-width"' : ''} ` +
+      'background-color="#f0f0ff" border="3px solid #555555" padding="30px 0px 5px">' +
+      '<mj-column><mj-text>Three independent levels</mj-text></mj-column></mj-section></mj-body></mjml>');
+    const out = serializeMjml(root, { pretty: false });
+    assert.ok(!out.includes('margin='), 'only supported MJML attributes are exported');
+    assert.match(out, /<mj-wrapper css-class="eb-section-margin" padding="12px 20px 24px 30px"/);
+    assert.match(out, /<mj-section[^>]*border="3px solid #555555"[^>]*padding="30px 0px 5px"/);
+    const restored = parseMjml(out);
+    assert.equal(findFirst(restored, 'mj-section').attributes.margin, '12px 20px 24px 30px');
+    assert.equal(findFirst(restored, 'mj-section').attributes['full-width'], fullWidth ? 'full-width' : undefined);
+    if (!fullWidth) assert.equal(findFirst(restored, 'mj-body').attributes['content-background-color'], '#ffffff');
+    assert.equal(serializeMjml(restored, { pretty: false }), out);
+    for (const source of [out, canvasMjml(root)]) {
+      const { html, errors } = await mjml2html(source, { validationLevel: 'strict' });
+      assert.deepEqual(errors, []);
+      assert.match(html, /padding:12px 20px 24px 30px/);
+      assert.match(html, /border:3px solid #555555/);
+      assert.match(html, /padding:30px 0px 5px/);
+    }
+  }
+});
+
 test('the color under the content: an mj-wrapper around the sections in the MJML, an attribute of the body in the model', async () => {
   const section = (attrs, text) => `<mj-section ${attrs}><mj-column><mj-text>${text}</mj-text></mj-column></mj-section>`;
   const source =

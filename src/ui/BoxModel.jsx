@@ -29,10 +29,10 @@ export const boxRole = (property) => property.box || (property.type === 'border'
 
 /** Each zone's tint, mixed into the panel's background: opaque, so nested zones do not darken one another. */
 const TONES = {
-  margin: { tint: 'oklch(0.76 0.15 55)', zone: 'eb:border-dashed eb:border-orange-400/70', text: 'eb:text-orange-700 eb:dark:text-orange-300' },
-  border: { tint: 'oklch(0.82 0.15 85)', zone: 'eb:border-amber-500/80', text: 'eb:text-amber-800 eb:dark:text-amber-200' },
-  padding: { tint: 'oklch(0.74 0.14 160)', zone: 'eb:border-dashed eb:border-emerald-500/60', text: 'eb:text-emerald-700 eb:dark:text-emerald-300' },
-  content: { tint: 'oklch(0.72 0.12 235)' },
+  margin: { tint: 'var(--eb-foreground-muted)', zone: 'eb:border-dashed eb:border-border-strong', text: 'eb:text-foreground-lighter' },
+  border: { tint: 'var(--eb-primary)', zone: 'eb:border-primary/40', text: 'eb:text-primary eb:dark:text-foreground' },
+  padding: { tint: 'var(--eb-accent-foreground)', zone: 'eb:border-dashed eb:border-primary/25', text: 'eb:text-foreground-lighter' },
+  content: { tint: 'var(--eb-primary)' },
 };
 /** @param {keyof typeof TONES} role @param {boolean} active */
 const tinted = (role, active) => `color-mix(in oklab, ${TONES[role].tint} ${active ? 34 : 16}%, var(--eb-background))`;
@@ -289,7 +289,7 @@ export default function BoxModel({ idPrefix, element, properties, onCommit }) {
     },
     <div
       data-box="content"
-      className="eb:flex eb:min-h-8 eb:items-center eb:justify-center eb:rounded-md eb:border eb:border-sky-500/50 eb:px-2 eb:text-[11.5px] eb:font-medium eb:text-sky-900 eb:dark:text-sky-100"
+      className="eb:flex eb:min-h-8 eb:items-center eb:justify-center eb:rounded-md eb:border eb:border-primary/40 eb:px-2 eb:text-[11.5px] eb:font-medium eb:text-foreground"
       style={{ background: tinted('content', active === 'content') }}
       onPointerOver={(e) => {
         e.stopPropagation();

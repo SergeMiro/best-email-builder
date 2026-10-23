@@ -375,8 +375,8 @@ function BrandMark() {
     <svg viewBox="0 0 40 30" aria-hidden="true">
       <defs>
         <linearGradient id={`${id}body`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#7d6ff7" />
-          <stop offset="1" stopColor="#3b2fa8" />
+          <stop offset="0" stopColor="color-mix(in oklab, var(--eb-accent-color) 80%, white)" />
+          <stop offset="1" stopColor="color-mix(in oklab, var(--eb-accent-color) 70%, black)" />
         </linearGradient>
         <linearGradient id={`${id}flap`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#fff" stopOpacity="0.28" />

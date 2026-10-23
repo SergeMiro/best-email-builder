@@ -10,6 +10,64 @@ import { test, expect } from '@playwright/test';
 const HOME = '/best-email-builder/';
 const builder = (page) => page.getByTestId('email-builder');
 
+test('sections have independent margin, border and padding, kept after save and reload', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en#/editor/new`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByTestId('eb-properties').getByLabel(/^Name/).fill('Three spacing levels');
+  await page.locator('[data-block-id="hero"]').click();
+  const box = page.getByTestId('eb-box-model');
+  expect(await box.locator('[data-box]').evaluateAll((zones) => zones.map((z) => z.dataset.box)))
+    .toEqual(['margin', 'border', 'padding', 'content']);
+  await box.getByLabel('Margin — Top', { exact: true }).fill('24');
+  await box.getByLabel('Margin — Top', { exact: true }).press('Enter');
+  await box.getByRole('radio', { name: 'Solid', exact: true }).click();
+  await box.getByLabel('Border — Top', { exact: true }).fill('3');
+  await box.getByLabel('Border — Top', { exact: true }).press('Enter');
+  await box.getByLabel('Padding — Top', { exact: true }).fill('30');
+  await box.getByLabel('Padding — Top', { exact: true }).press('Enter');
+  const canvas = page.frameLocator('.eb-canvas-frame');
+  await expect(canvas.locator('.eb-section-margin > table > tbody > tr > td').first()).toHaveCSS('padding-top', '24px');
+  await expect(canvas.locator('.eb-tag-mj-section > table > tbody > tr > td[style*="border-top"]').first()).toHaveCSS('border-top-width', '3px');
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  await expect(page.getByRole('dialog').frameLocator('iframe[title="Email preview"]').locator('.eb-section-margin > table > tbody > tr > td').first())
+    .toHaveCSS('padding-top', '24px', { timeout: 30_000 });
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText(/^Saved at/)).toBeVisible();
+  await page.reload();
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await expect(canvas.locator('.eb-section-margin > table > tbody > tr > td').first()).toHaveCSS('padding-top', '24px');
+  await canvas.getByText('Your big announcement').click();
+  await canvas.getByRole('button', { name: /^Select the parent:/ }).click();
+  await canvas.getByRole('button', { name: /^Select the parent:/ }).click();
+  await expect(box.getByLabel('Margin — Top', { exact: true })).toHaveValue('24');
+  await expect(box.getByLabel('Border — Top', { exact: true })).toHaveValue('3');
+  await expect(box.getByLabel('Padding — Top', { exact: true })).toHaveValue('30');
+});
+
+test('one accent variable themes the landing, editor, dialogs and canvas without recoloring the email', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en`);
+  await page.evaluate(() => document.documentElement.style.setProperty('--eb-accent-color', '#00804a'));
+  await expect(page.locator('.chip svg').first()).toHaveCSS('color', 'rgb(0, 128, 74)');
+  await page.getByRole('link', { name: 'Open the live demo' }).click();
+  await page.getByRole('button', { name: 'New template' }).click();
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toHaveCSS('background-color', 'rgb(0, 128, 74)');
+  await page.locator('[data-block-id="hero"]').click();
+  const zone = page.getByTestId('eb-box-model').locator('[data-box="border"]');
+  const before = await zone.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const canvas = page.frameLocator('.eb-canvas-frame');
+  const emailColor = await canvas.getByText('Your big announcement').evaluate((el) => getComputedStyle(el).color);
+  await expect(canvas.locator('.eb-ui-tools')).toHaveCSS('background-color', 'rgb(0, 128, 74)');
+  // Runtime changes must cross the iframe boundary too.
+  await page.evaluate(() => document.documentElement.style.setProperty('--eb-accent-color', '#b83260'));
+  await expect(canvas.locator('.eb-ui-tools')).toHaveCSS('background-color', 'rgb(184, 50, 96)');
+  await expect.poll(() => zone.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(before);
+  await expect(canvas.getByText('Your big announcement')).toHaveCSS('color', emailColor);
+  await page.getByTestId('eb-brand-button').click();
+  await expect(page.getByTestId('eb-brand-save')).toHaveCSS('background-color', 'rgb(184, 50, 96)');
+});
+
 /** The variables panel, opened by its button at the end of the ribbon. */
 async function openVariables(page) {
   await page.getByTestId('eb-ribbon').locator('[data-drawer="variables"]').click();

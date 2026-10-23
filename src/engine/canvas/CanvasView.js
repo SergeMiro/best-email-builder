@@ -102,6 +102,17 @@ export function createCanvasView(options) {
   ui.appendChild(style);
   doc.documentElement.appendChild(ui);
 
+  // CSS variables do not inherit into an iframe. Theme the editing layer only.
+  const syncAccent = () => {
+    const accent = parentDocument.defaultView?.getComputedStyle(container).getPropertyValue('--eb-primary').trim();
+    if (accent) doc.documentElement.style.setProperty('--eb-canvas-primary', accent);
+  };
+  syncAccent();
+  const themeObserver = new MutationObserver(syncAccent);
+  for (let ancestor = /** @type {HTMLElement|null} */ (container); ancestor; ancestor = ancestor.parentElement) {
+    themeObserver.observe(ancestor, { attributes: true, attributeFilter: ['class', 'style'] });
+  }
+
   const make = (className) => {
     const el = doc.createElement('div');
     el.className = className;
@@ -1383,6 +1394,7 @@ export function createCanvasView(options) {
       settleReveal();
       cancelDrag();
       resizeObserver.disconnect();
+      themeObserver.disconnect();
       if (overlayFrame) win.cancelAnimationFrame(overlayFrame);
       host.remove();
     },

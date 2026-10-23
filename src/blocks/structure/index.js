@@ -85,6 +85,7 @@ export const sectionBlock = {
         { value: 'full-width', label: 'Whole screen' },
       ],
     },
+    prop.padding('margin', 'Margin', 'margin'),
     prop.border(),
     prop.padding('padding', 'Padding', 'padding'),
     prop.radius(24),

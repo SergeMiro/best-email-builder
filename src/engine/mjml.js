@@ -14,7 +14,10 @@
  * on write: the model holds what the attribute means, the MJML how to write
  * it.
  *
- * One attribute of the model is not MJML: `content-background-color` on
+ * Two model attributes are written as wrappers in MJML:
+ * `margin` on a section becomes the padding of an `eb-section-margin`
+ * wrapper, outside the section's border and its own padding.
+ * `content-background-color` on
  * `mj-body`, the color painted under the content, at the email's width. A
  * section with rounded corners shows it in its corners instead of the page
  * background. MJML has no such attribute: it is written as an `mj-wrapper`
@@ -31,6 +34,8 @@ import { ENDING_TAGS, createNode, findFirst } from './model.js';
 export const CONTENT_BACKGROUND = 'content-background-color';
 /** The class of the `mj-wrapper` it is written as. */
 export const CONTENT_LAYER_CLASS = 'eb-content-layer';
+/** A section's outside spacing, written as valid MJML rather than a margin attribute. */
+export const SECTION_MARGIN_CLASS = 'eb-section-margin';
 
 /**
  * Sections the layer goes under. A band across the whole screen cannot be in
@@ -39,7 +44,7 @@ export const CONTENT_LAYER_CLASS = 'eb-content-layer';
  * @param {EmailNode} node
  */
 const underLayer = (node) =>
-  (node.tag === 'mj-section' && node.attributes['full-width'] !== 'full-width') || node.tag === 'mj-hero';
+  (node.tag === 'mj-section' && !node.attributes.margin && node.attributes['full-width'] !== 'full-width') || node.tag === 'mj-hero';
 
 /** @param {EmailNode} node */
 const isContentLayer = (node) =>
@@ -209,12 +214,27 @@ export function parseMjml(source) {
   }
   const body = findFirst(root, 'mj-body');
   if (!body) root.children.push(createNode('mj-body'));
-  else if (body.children.some(isContentLayer)) {
-    const layer = /** @type {EmailNode} */ (body.children.find(isContentLayer));
-    const color = layer.attributes['background-color'];
+  else {
+    const layer = body.children.find((child) => isContentLayer(child) ||
+      (child.tag === 'mj-wrapper' && child.attributes['css-class'] === SECTION_MARGIN_CLASS && child.attributes['background-color']));
+    const color = layer?.attributes['background-color'];
     if (color) body.attributes[CONTENT_BACKGROUND] = color;
     body.children = body.children.flatMap((child) => (isContentLayer(child) ? child.children : [child]));
   }
+  const restoreMargins = (/** @type {EmailNode} */ parent) => {
+    parent.children = parent.children.flatMap((child) => {
+      if (child.tag === 'mj-wrapper' && String(child.attributes['css-class'] || '').split(/\s+/).includes(SECTION_MARGIN_CLASS) &&
+          child.children.length === 1 && child.children[0].tag === 'mj-section') {
+        const section = child.children[0];
+        section.attributes.margin = child.attributes.padding || '0px';
+        if (child.attributes['full-width']) section.attributes['full-width'] = child.attributes['full-width'];
+        return [section];
+      }
+      restoreMargins(child);
+      return [child];
+    });
+  };
+  restoreMargins(root);
   return root;
 }
 
@@ -264,6 +284,18 @@ export function serializeMjml(node, options = {}) {
   /** @param {EmailNode} current @param {number} depth @returns {string} */
   const write = (current, depth) => {
     let attributes = options.attributes ? options.attributes(current) : current.attributes;
+    const margin = current.tag === 'mj-section' ? attributes.margin : null;
+    if (margin) {
+      const { margin: _margin, 'full-width': _fullWidth, ...sectionAttributes } = attributes;
+      /** @type {Record<string, string>} */
+      const wrapperAttributes = { 'css-class': SECTION_MARGIN_CLASS, padding: margin };
+      if (attributes['full-width']) wrapperAttributes['full-width'] = attributes['full-width'];
+      const background = findFirst(node, 'mj-body')?.attributes[CONTENT_BACKGROUND];
+      if (background && !attributes['full-width']) wrapperAttributes['background-color'] = background;
+      return element('mj-wrapper', wrapperAttributes, [
+        element(current.tag, sectionAttributes, current.children.map((child) => write(child, depth + 2)), depth + 1),
+      ], depth);
+    }
     if (current.tag === 'mj-body' && CONTENT_BACKGROUND in attributes) {
       const { [CONTENT_BACKGROUND]: _layer, ...mjml } = attributes;
       attributes = mjml;

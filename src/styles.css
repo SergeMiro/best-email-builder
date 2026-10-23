@@ -23,6 +23,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  /* Override this on :root to set the product's accent across every screen. */
+  --eb-accent-color: oklch(0.59 0.2 277);
   --eb-font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --eb-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --eb-background: oklch(0.98 0 0);
@@ -31,13 +33,13 @@
   --eb-foreground-muted: oklch(0.52 0.01 264);
   --eb-popover: oklch(1 0 0);
   --eb-popover-foreground: oklch(0.28 0.04 260.33);
-  --eb-primary: oklch(0.59 0.2 277);
+  --eb-primary: var(--eb-accent-color);
   --eb-primary-foreground: oklch(0.96 0 0);
   --eb-secondary: oklch(0.93 0.01 261.82);
   --eb-secondary-foreground: oklch(0.37 0.03 259.73);
   --eb-muted: oklch(0.97 0 0);
   --eb-muted-foreground: oklch(0.5 0.02 264.41);
-  --eb-accent: oklch(0.93 0.03 273.66);
+  --eb-accent: color-mix(in oklab, var(--eb-accent-color) 15%, var(--eb-background));
   --eb-accent-foreground: oklch(0.37 0.03 259.73);
   --eb-destructive: oklch(0.64 0.21 25.39);
   --eb-warning: oklch(0.75 0.18 70);
@@ -45,7 +47,7 @@
   --eb-border: oklch(0.87 0.01 261.81);
   --eb-border-strong: oklch(0.82 0.01 261);
   --eb-input: oklch(0.87 0.01 261.81);
-  --eb-ring: oklch(0.59 0.2 277);
+  --eb-ring: var(--eb-accent-color);
   --eb-surface-75: oklch(0.97 0 0);
   --eb-surface-100: oklch(0.96 0 0);
   --eb-surface-200: oklch(0.94 0 0);
@@ -64,7 +66,7 @@
   --eb-secondary-foreground: oklch(0.87 0.01 261.81);
   --eb-muted: oklch(0.28 0.009 260);
   --eb-muted-foreground: oklch(0.7 0.01 260);
-  --eb-accent: oklch(0.33 0.03 273);
+  --eb-accent: color-mix(in oklab, var(--eb-accent-color) 25%, var(--eb-background));
   --eb-accent-foreground: oklch(0.93 0.01 256.71);
   --eb-border: oklch(0.34 0.01 260);
   --eb-border-strong: oklch(0.4 0.01 260);
