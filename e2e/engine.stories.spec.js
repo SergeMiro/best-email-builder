@@ -294,7 +294,10 @@ function sampleFor(property, current) {
 }
 
 /** Expected MJML for a value (longhand paddings). */
-function expectedFragments(property, value) {
+function expectedFragments(property, value, tag = '') {
+  if (tag === 'mj-section' && property.key === 'margin') {
+    return [`<mj-wrapper css-class="eb-section-margin" padding="${value}">`];
+  }
   // Editor-only spacing values travel in a reversible css-class payload so
   // exported documents remain valid MJML.
   if (['margin', 'box-padding', 'box-border', 'box-border-top', 'box-border-right', 'box-border-bottom', 'box-border-left'].includes(property.key)) {
@@ -630,7 +633,7 @@ test.describe('Columns and structure', () => {
         );
         expect(out.blockId).toBe(structure.id);
         expect(out.value, `${structure.id}.${property.key} relu`).toBe(value);
-        for (const fragment of expectedFragments(property, value)) {
+        for (const fragment of expectedFragments(property, value, structure.type)) {
           expect(out.mjml, `${structure.id}.${property.key} exported`).toContain(fragment);
         }
         expect(out.errors, `${structure.id}.${property.key} compilable`).toEqual([]);

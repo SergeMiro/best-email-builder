@@ -531,10 +531,11 @@ test.describe('Names and defaults', () => {
     await box.getByRole('radio', { name: 'No border' }).click();
     await expect.poll(() => mjml(page)).not.toMatch(/<mj-button[^>]*border-(top|right|bottom|left)=/);
 
-    // A text has its padding only: MJML gives it no margin and no border.
+    // Text blocks now expose all three spacing zones and border controls too.
     await canvas(page).getByText('Your headline').click();
-    await expect(box.locator('[data-box]')).toHaveCount(2);
-    await expect(box.getByRole('radiogroup')).toHaveCount(0);
+    await expect(box.locator('[data-box]')).toHaveCount(4);
+    await expect(box.getByRole('radiogroup')).toBeVisible();
+    await expect(box.getByRole('radio', { name: 'No border' })).toHaveAttribute('aria-checked', 'true');
   });
 
   test('image: added without a dialog, its frame in the canvas, its fields in the panel', async ({ page }) => {

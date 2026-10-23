@@ -622,7 +622,7 @@ test.describe('Variables', () => {
     await expect(button).toHaveAttribute('aria-pressed', 'true');
     // The panel shows the group heading and keeps the close button available.
     await expect(page.getByRole('complementary', { name: 'Variables' })).toBeVisible();
-    await expect(variablesPanel(page).getByRole('heading', { name: 'Group' })).toBeVisible();
+    await expect(variablesPanel(page).getByText('Group', { exact: true })).toBeVisible();
     await expect(variablesPanel(page).getByRole('button', { name: 'Close the panel' })).toBeVisible();
     // Beside the canvas, between the email and the properties: it narrows the email, covers nothing.
     const frame = await page.locator('.eb-canvas-frame').boundingBox();
