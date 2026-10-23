@@ -21,7 +21,7 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
 @keyframes eb-preview-caret { 50% { opacity: 0; } }
 .eb-placeholder { user-select: none; }
 
-#eb-ui { position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2147483000;
+#eb-ui { position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2147483647;
   font: 500 11px/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; }
 #eb-ui * { box-sizing: border-box; }
 #eb-ui [hidden] { display: none !important; }

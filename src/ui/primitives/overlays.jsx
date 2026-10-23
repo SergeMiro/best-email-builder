@@ -28,9 +28,10 @@ export function DialogContent({ className, children, showCloseButton = true, ...
   const t = useT();
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="eb-scope eb:fixed eb:inset-0 eb:z-50 eb:bg-black/50 eb:data-[state=open]:animate-in eb:data-[state=open]:fade-in-0 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0" />
+      <DialogPrimitive.Overlay data-eb-overlay="" className="eb-scope eb:fixed eb:inset-0 eb:z-50 eb:bg-black/50 eb:data-[state=open]:animate-in eb:data-[state=open]:fade-in-0 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0" />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        data-eb-overlay=""
         className={cn(
           'eb-scope eb:fixed eb:top-[50%] eb:left-[50%] eb:z-50 eb:grid eb:w-full eb:max-w-[calc(100%-2rem)] eb:translate-x-[-50%] eb:translate-y-[-50%] eb:gap-4 eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:p-6 eb:text-foreground eb:shadow-lg eb:duration-200 eb:outline-none eb:sm:max-w-lg',
           FADE_ZOOM,
@@ -75,8 +76,9 @@ export function AlertDialog(props) {
 export function AlertDialogContent({ className, ...props }) {
   return (
     <AlertDialogPrimitive.Portal>
-      <AlertDialogPrimitive.Overlay className="eb-scope eb:fixed eb:inset-0 eb:z-50 eb:bg-black/50 eb:data-[state=open]:animate-in eb:data-[state=open]:fade-in-0 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0" />
+      <AlertDialogPrimitive.Overlay data-eb-overlay="" className="eb-scope eb:fixed eb:inset-0 eb:z-50 eb:bg-black/50 eb:data-[state=open]:animate-in eb:data-[state=open]:fade-in-0 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0" />
       <AlertDialogPrimitive.Content
+        data-eb-overlay=""
         className={cn(
           'eb-scope eb:fixed eb:top-[50%] eb:left-[50%] eb:z-50 eb:grid eb:w-full eb:max-w-[calc(100%-2rem)] eb:translate-x-[-50%] eb:translate-y-[-50%] eb:gap-4 eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:p-6 eb:text-foreground eb:shadow-lg eb:duration-200 eb:sm:max-w-lg',
           FADE_ZOOM,
@@ -112,6 +114,7 @@ export function PopoverContent({ className, align = 'center', sideOffset = 4, ..
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
         data-slot="popover-content"
+        data-eb-overlay=""
         align={align}
         sideOffset={sideOffset}
         className={cn(
@@ -140,6 +143,7 @@ export function DropdownMenuContent({ className, sideOffset = 4, ...props }) {
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
+        data-eb-overlay=""
         sideOffset={sideOffset}
         className={cn(
           'eb-scope eb:z-50 eb:max-h-(--radix-dropdown-menu-content-available-height) eb:min-w-[8rem] eb:origin-(--radix-dropdown-menu-content-transform-origin) eb:overflow-x-hidden eb:overflow-y-auto eb:rounded-lg2 eb:border eb:border-border eb:bg-popover eb:p-1 eb:text-popover-foreground eb:shadow-md',
@@ -212,6 +216,7 @@ export function SelectContent({ className, children, position = 'popper', ...pro
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         data-slot="select-content"
+        data-eb-overlay=""
         position={position}
         className={cn(
           'eb-scope eb:relative eb:z-50 eb:max-h-(--radix-select-content-available-height) eb:min-w-[8rem] eb:origin-(--radix-select-content-transform-origin) eb:overflow-x-hidden eb:overflow-y-auto eb:rounded-md eb:border eb:border-border eb:bg-popover eb:text-popover-foreground eb:shadow-md',

@@ -20,6 +20,11 @@
 
 @source './';
 
+/* Radix portals escape clipped panels and stay above host and canvas layers. */
+.eb-scope[data-eb-overlay] {
+  z-index: 2147483647 !important;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {

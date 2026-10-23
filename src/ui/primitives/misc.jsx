@@ -142,6 +142,7 @@ export function TooltipContent({ className, sideOffset = 4, children, ...props }
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
+        data-eb-overlay=""
         sideOffset={sideOffset}
         className={cn(
           'eb-scope eb:z-50 eb:w-fit eb:origin-(--radix-tooltip-content-transform-origin) eb:animate-in eb:rounded-lg2 eb:border eb:border-border eb:bg-popover eb:px-3 eb:py-1.5 eb:text-xs eb:text-balance eb:text-popover-foreground eb:shadow-md eb:fade-in-0 eb:zoom-in-95 eb:data-[state=closed]:animate-out eb:data-[state=closed]:fade-out-0 eb:data-[state=closed]:zoom-out-95',
