@@ -397,7 +397,24 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
     const node = findNode(current, id);
     if (!node || LOCKED_TAGS.has(node.tag)) return false;
     view?.finishEditing();
-    commit(removeNode(current, id), { select: null });
+    let next = removeNode(current, id);
+    // A section exists to hold its columns. Removing its last column must
+    // remove that now-empty structure too, or it appears as a phantom block.
+    if (node.tag === 'mj-column') {
+      let removedId = id;
+      let parent = parentOf(current, removedId);
+      while (
+        parent &&
+        ['mj-group', 'mj-section', 'mj-wrapper'].includes(parent.tag) &&
+        parent.children.length === 1 &&
+        parent.children[0].id === removedId
+      ) {
+        removedId = parent.id;
+        next = removeNode(next, removedId);
+        parent = parentOf(current, removedId);
+      }
+    }
+    commit(next, { select: null });
     return true;
   }
 
