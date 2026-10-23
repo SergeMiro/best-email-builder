@@ -27,13 +27,15 @@ import { CUSTOM_GROUP, VARIABLE_LIMITS, keyFromLabel, labelOf, tokenOf, validate
  *   onOpenChange: (open: boolean) => void,
  *   variable?: import('./catalog.js').EmailVariable|null,   // null: creation
  *   initialLabel?: string,
+ *   initialGroup?: string,
+ *   variableGroups?: string[],
  *   variables: import('./catalog.js').EmailVariable[],
  *   storage: import('../../storage/client.js').TemplateStorage,
  *   onSaved: (variable: import('./catalog.js').EmailVariable, created: boolean) => void,
  *   onDeleted?: (key: string, info?: {restored?: boolean}) => void,
  * }} props
  */
-export default function VariableDialog({ open, onOpenChange, variable = null, initialLabel = '', variables, storage, onSaved, onDeleted }) {
+export default function VariableDialog({ open, onOpenChange, variable = null, initialLabel = '', initialGroup = '', variableGroups = [], variables, storage, onSaved, onDeleted }) {
   const { t, notify, confirm } = useUi();
   const editing = Boolean(variable);
   const system = editing && !variable.custom;
@@ -54,15 +56,15 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
             sample: variable.sample || '',
             fallback: variable.fallback || '',
           }
-        : { label: initialLabel, key: initialLabel ? keyFromLabel(initialLabel) : '', group: '', sample: '', fallback: '' }
+        : { label: initialLabel, key: initialLabel ? keyFromLabel(initialLabel) : '', group: initialGroup, sample: '', fallback: '' }
     );
     setKeyTouched(false);
     setErrors({});
-  }, [open, variable, initialLabel]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, variable, initialLabel, initialGroup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const groups = useMemo(
-    () => [...new Set([CUSTOM_GROUP, ...variables.filter((v) => v.custom).map((v) => v.group)])].filter(Boolean),
-    [variables]
+    () => [...new Set([CUSTOM_GROUP, ...variableGroups, ...variables.map((v) => v.group)])].filter(Boolean),
+    [variables, variableGroups]
   );
 
   const set = (field) => (e) => {
@@ -197,6 +199,11 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
                 <option key={g} value={g} />
               ))}
             </datalist>
+            {groups.length > 0 && <div className="eb:flex eb:flex-wrap eb:gap-1">
+              {groups.map((group) => <button key={group} type="button" aria-pressed={form.group === group}
+                className="eb:rounded-md eb:border eb:border-border eb:px-2 eb:py-0.5 eb:text-[11px] eb:text-foreground-muted eb:hover:bg-accent eb:aria-pressed:border-primary eb:aria-pressed:text-primary"
+                onClick={() => setForm((previous) => ({ ...previous, group }))}>{t(group)}</button>)}
+            </div>}
           </div>
           <div className="eb:grid eb:grid-cols-2 eb:gap-3">
             {field('sample', t('Sample value'), { maxLength: VARIABLE_LIMITS.sample, placeholder: link ? 'https://…' : 'CMD-1042' }, t('Preview and tests'))}

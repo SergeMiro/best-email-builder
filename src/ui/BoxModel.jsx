@@ -13,9 +13,9 @@ import { useT } from './context.jsx';
  * (top, right, bottom, left), typed in place; pointed at, a zone says below
  * what it sets.
  *
- * A block shows the zones its properties take (`box` of a property: a button
- * has all three, a text only its padding — MJML gives it no margin and no
- * border). The border's width is typed in its zone; its style and its color
+ * Every built-in block has all three zones. The compiler supplies email
+ * tables for spacing that MJML does not support natively.
+ * The border's width is typed in its zone; its style and its color
  * are chosen under the diagram.
  *
  * Each zone commits its own property, on blur or Enter, as the Spacing field
@@ -296,7 +296,6 @@ export default function BoxModel({ idPrefix, element, properties, onCommit }) {
         setActive('content');
       }}
     >
-      <span className="eb:truncate">{t(element.label)}</span>
     </div>
   );
 

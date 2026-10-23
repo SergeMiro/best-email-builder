@@ -8,6 +8,8 @@
  */
 
 import { createRegistry } from '../core/registry.js';
+import { prop } from './shared.js';
+import { boxKeys } from '../core/blockBox.js';
 import { bodyBlock, columnBlock, sectionBlock } from './structure/index.js';
 import { textBlock } from './text/index.js';
 import { imageBlock } from './image/index.js';
@@ -51,4 +53,17 @@ const BLOCKS = [
   navbarLinkBlock,
 ];
 
-export const emailBlocks = createRegistry('emailBlocks', BLOCKS);
+export const emailBlocks = createRegistry('emailBlocks', BLOCKS.map((block) => {
+  if (block.tagName === 'mj-body') return block;
+  const properties = block.properties.map((property) => ({ ...property }));
+  if (!properties.some((property) => property.key === 'vertical-align')) properties.push(prop.verticalAlign());
+  const keys = boxKeys(block.tagName);
+  if (!properties.some((property) => property.box === 'margin')) properties.push(prop.padding(keys.margin, 'Margin', 'margin'));
+  if (!properties.some((property) => property.type === 'border')) properties.push({ ...prop.border(), key: keys.border });
+  if (!properties.some((property) => property.box === 'padding')) {
+    const existing = properties.find((property) => property.key === keys.padding);
+    if (existing) existing.box = 'padding';
+    else properties.push(prop.padding(keys.padding, 'Padding', 'padding'));
+  }
+  return { ...block, properties };
+}));

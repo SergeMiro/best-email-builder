@@ -193,7 +193,7 @@ export function SelectTrigger({ className, children, dense = false, ...props }) 
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "eb:flex eb:h-8 eb:w-full eb:items-center eb:justify-between eb:gap-2 eb:rounded-lg2 eb:border eb:border-border-strong eb:bg-surface-75 eb:px-3 eb:py-1 eb:text-[13px] eb:whitespace-nowrap eb:text-foreground eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:disabled:cursor-not-allowed eb:disabled:opacity-50 eb:data-[placeholder]:text-foreground-muted eb:*:data-[slot=select-value]:line-clamp-1 eb:*:data-[slot=select-value]:flex eb:*:data-[slot=select-value]:items-center eb:*:data-[slot=select-value]:gap-2 eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4",
+        "eb:flex eb:h-8 eb:w-full eb:items-center eb:justify-between eb:gap-2 eb:rounded-md eb:border eb:border-border-strong eb:bg-surface-75 eb:px-3 eb:py-1 eb:text-[13px] eb:whitespace-nowrap eb:text-foreground eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:disabled:cursor-not-allowed eb:disabled:opacity-50 eb:data-[placeholder]:text-foreground-muted eb:*:data-[slot=select-value]:line-clamp-1 eb:*:data-[slot=select-value]:flex eb:*:data-[slot=select-value]:items-center eb:*:data-[slot=select-value]:gap-2 eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4",
         dense && DENSE_FIELD,
         className
       )}
@@ -214,7 +214,7 @@ export function SelectContent({ className, children, position = 'popper', ...pro
         data-slot="select-content"
         position={position}
         className={cn(
-          'eb-scope eb:relative eb:z-50 eb:max-h-(--radix-select-content-available-height) eb:min-w-[8rem] eb:origin-(--radix-select-content-transform-origin) eb:overflow-x-hidden eb:overflow-y-auto eb:rounded-lg2 eb:border eb:border-border eb:bg-popover eb:text-popover-foreground eb:shadow-md',
+          'eb-scope eb:relative eb:z-50 eb:max-h-(--radix-select-content-available-height) eb:min-w-[8rem] eb:origin-(--radix-select-content-transform-origin) eb:overflow-x-hidden eb:overflow-y-auto eb:rounded-md eb:border eb:border-border eb:bg-popover eb:text-popover-foreground eb:shadow-md',
           FADE_ZOOM,
           position === 'popper' && 'eb:data-[side=bottom]:translate-y-1 eb:data-[side=top]:-translate-y-1',
           className

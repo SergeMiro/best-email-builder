@@ -48,7 +48,7 @@ export const socialBlock = {
   sectionMjml: inWhiteSection(MJML),
   properties: [
     { key: 'icon-size', label: 'Icon size', type: 'size', group: GROUPS.layout, min: 16, max: 48, unit: 'px' },
-    prop.radius(24),
+    prop.radius(),
     prop.align(),
     {
       key: 'mode',

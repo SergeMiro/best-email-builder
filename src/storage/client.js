@@ -111,6 +111,8 @@ import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/
  *   render?: (input: RenderInput) => Promise<RenderResult>,
  *   sendTest?: (input: RenderInput & {emails: string[]}) => Promise<SendTestResult>,
  *   listVariables?: () => Promise<EmailVariable[]>,
+ *   listVariableGroups?: () => Promise<string[]>,
+ *   saveVariableGroup?: (name: string) => Promise<string>,
  *   saveVariable?: (variable: Partial<EmailVariable>, options?: {create?: boolean}) => Promise<EmailVariable>,
  *   deleteVariable?: (key: string) => Promise<void>,
  *   loadBrand?: () => Promise<Brand>,
@@ -219,6 +221,8 @@ export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = 
     render: async (input) => call('/render', { method: 'POST', body: JSON.stringify(input) }),
     sendTest: async (input) => call('/test', { method: 'POST', body: JSON.stringify(input) }),
     listVariables: async () => call('/variables'),
+    listVariableGroups: async () => call('/variable-groups'),
+    saveVariableGroup: async (name) => call('/variable-groups', { method: 'POST', body: JSON.stringify({ name }) }),
     saveVariable: async (variable, { create = false } = {}) =>
       create
         ? call('/variables', { method: 'POST', body: JSON.stringify(variable) })
@@ -304,6 +308,7 @@ export function createMemoryStorage({
   const images = new Map();
   /** @type {Map<string, EmailVariable>} */
   const customVariables = new Map();
+  const variableGroups = new Set();
   /** @type {Map<string, TemplateTag>} */
   const tags = new Map();
   let savedBrand = cleanBrand(brand);
@@ -458,6 +463,19 @@ export function createMemoryStorage({
       const path = `${assetsPath}${hex.slice(0, 32)}.${IMAGE_TYPES[file.type]}`;
       images.set(path, file);
       return { path };
+    },
+    async listVariableGroups() {
+      return [...new Set([...variableGroups, ...[...customVariables.values()].map((v) => v.group)])];
+    },
+    async saveVariableGroup(input) {
+      const name = String(input || '').trim();
+      if (!name || name.length > 40) throw new StorageError('Invalid group name', 400, 'INVALID_GROUP');
+      const existing = [...variableGroups, ...[...customVariables.values()].map((variable) => variable.group)];
+      if (existing.some((group) => group.toLowerCase() === name.toLowerCase())) {
+        throw new StorageError('This group already exists.', 409, 'DUPLICATE_GROUP');
+      }
+      variableGroups.add(name);
+      return name;
     },
     async listVariables() {
       return [...customVariables.values()].map((v) => ({ ...v }));

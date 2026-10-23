@@ -87,6 +87,9 @@ export const prop = {
   background: (key = 'background-color', label = 'Background') => ({ key, label, type: 'color', group: GROUPS.colors }),
   /** @returns {BlockProperty} */
   align: (options = ALIGN_OPTIONS) => ({ key: 'align', label: 'Alignment', type: 'align', group: GROUPS.layout, options }),
+  /** Align the containing column, or every column of a layout. @returns {BlockProperty} */
+  verticalAlign: () => ({ key: 'vertical-align', label: 'Vertical alignment', type: 'select', group: GROUPS.layout,
+    options: [{ value: 'top', label: 'Top' }, { value: 'middle', label: 'Middle' }, { value: 'bottom', label: 'Bottom' }] }),
   /**
    * `box`: where the box diagram shows it — `margin` when the space is outside
    * what the reader sees as the block (a button, an image), `padding` inside.
@@ -99,7 +102,7 @@ export const prop = {
   /** @returns {BlockProperty} */
   href: (label = 'Link URL') => ({ key: 'href', label, type: 'url', group: GROUPS.link, placeholder: 'https://' }),
   /** @returns {BlockProperty} */
-  radius: (max = 40) => ({ key: 'border-radius', label: 'Corner radius', type: 'size', group: GROUPS.layout, min: 0, max, unit: 'px' }),
+  radius: () => ({ key: 'border-radius', label: 'Corner radius', type: 'size', group: GROUPS.layout, min: 0, unit: 'px', units: ['px', '%'] }),
 };
 
 /**

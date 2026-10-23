@@ -54,6 +54,64 @@ function rememberRecent(list) {
   }
 }
 
+/** Keep only nearby rows mounted. Empty rows keep the scroll position and group links stable. */
+function EmojiGrid({ entries, scrollRef, ready }) {
+  const ref = useRef(null);
+  const [columns, setColumns] = useState(6);
+  const [cell, setCell] = useState(32);
+  const [visible, setVisible] = useState(new Set());
+  const chunkSize = columns * 6;
+  const chunks = useMemo(() => Array.from({ length: Math.ceil(entries.length / chunkSize) }, (_, i) =>
+    entries.slice(i * chunkSize, (i + 1) * chunkSize)), [entries, chunkSize]);
+
+  useEffect(() => {
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      if (!width) return;
+      const count = Math.max(1, Math.floor(width / 32));
+      setColumns(count);
+      setCell(width / count);
+    });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((changes) => {
+      setVisible((previous) => {
+        const next = new Set(previous);
+        for (const entry of changes) {
+          const index = Number(entry.target.getAttribute('data-emoji-chunk'));
+          if (entry.isIntersecting) next.add(index);
+          else if (!entry.target.contains(document.activeElement)) next.delete(index);
+        }
+        return next;
+      });
+    }, { root: scrollRef.current, rootMargin: '192px 0px' });
+    for (const chunk of ref.current.children) observer.observe(chunk);
+    return () => observer.disconnect();
+  }, [chunks, scrollRef]);
+
+  return (
+    <div ref={ref} style={{ fontFamily: EMOJI_FONT }}>
+      {chunks.map((chunk, index) => (
+        <div key={index} data-emoji-chunk={index}
+          style={{ height: Math.ceil(chunk.length / columns) * cell, display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+          {visible.has(index) && chunk.map(([emoji, search]) => {
+            const name = search ? nameOf([emoji, search]) : emoji;
+            return (
+              <button key={emoji} type="button" disabled={!ready} data-emoji={emoji} title={name} aria-label={name}
+                className="eb:grid eb:aspect-square eb:place-items-center eb:rounded-md eb:text-[20px] eb:leading-none eb:outline-none eb:transition-colors eb:hover:bg-surface-200 eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:opacity-50">
+                {emoji}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function EmojiPanel({ context }) {
   const { editor, ready } = context;
   const { t, locale, notify } = useUi();
@@ -129,6 +187,7 @@ export default function EmojiPanel({ context }) {
 
   /** The group at the top of the list, lit in the row of groups. */
   const trackGroup = () => {
+    if (hovered.current) unpreview();
     const container = scrollRef.current;
     if (!container || results) return;
     let current = '';
@@ -138,26 +197,7 @@ export default function EmojiPanel({ context }) {
     setActive(current);
   };
 
-  const grid = (entries) => (
-    <div className="eb:grid eb:grid-cols-[repeat(auto-fill,minmax(2rem,1fr))]" style={{ fontFamily: EMOJI_FONT }}>
-      {entries.map(([emoji, search]) => {
-        const name = search ? nameOf([emoji, search]) : emoji;
-        return (
-          <button
-            key={emoji}
-            type="button"
-            disabled={!ready}
-            data-emoji={emoji}
-            title={name}
-            aria-label={name}
-            className="eb:grid eb:aspect-square eb:place-items-center eb:rounded-md eb:text-[20px] eb:leading-none eb:outline-none eb:transition-colors eb:hover:bg-surface-200 eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:opacity-50"
-          >
-            {emoji}
-          </button>
-        );
-      })}
-    </div>
-  );
+  const grid = (entries) => <EmojiGrid entries={entries} scrollRef={scrollRef} ready={ready} />;
 
   return (
     // No mousedown outside the search: the text being edited keeps its caret.

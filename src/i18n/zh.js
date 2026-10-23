@@ -594,4 +594,9 @@ export const zh = {
   "{max} characters at most": "最多 {max} 个字符",
   "{max} tags at most": "最多 {max} 个标签",
   "{max} tags at most per template": "每个模板最多 {max} 个标签",
+  "New group": "新建分组",
+  "Organize your variables into groups.": "将变量整理到分组中。",
+  "This group already exists.": "此分组已存在。",
+  "New variable in {group}": "在 {group} 中新建变量",
+  "Unit": "单位",
 };

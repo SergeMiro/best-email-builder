@@ -358,3 +358,15 @@ test('custom variables without a store: listing is empty, writes are 501', async
   assert.deepEqual((await (await call('GET', '/api/email-builder/variables')).json()).data, []);
   assert.equal((await call('POST', '/api/email-builder/variables', { label: 'X', key: 'x' })).status, 501);
 });
+
+test('variable groups: authenticated creation, duplicates and empty groups survive variable deletion', async () => {
+  const { call } = setup();
+  assert.equal((await call('POST', '/api/email-builder/variable-groups', { name: 'Brevo' }, { auth: false })).status, 401);
+  assert.equal((await call('POST', '/api/email-builder/variable-groups', { name: 'Brevo' })).status, 201);
+  assert.equal((await call('POST', '/api/email-builder/variable-groups', { name: ' brevo ' })).status, 409);
+  assert.equal((await call('POST', '/api/email-builder/variable-groups', { name: '' })).status, 400);
+  assert.equal((await call('POST', '/api/email-builder/variables', { key: 'group_test', label: 'Group test', group: 'Brevo' })).status, 201);
+  await call('DELETE', '/api/email-builder/variables/group_test');
+  const groups = (await (await call('GET', '/api/email-builder/variable-groups')).json()).data;
+  assert.ok(groups.includes('Brevo'));
+});

@@ -58,6 +58,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   min?: number,
  *   max?: number,
  *   unit?: string,
+ *   units?: string[],
  * }} BlockProperty
  */
 

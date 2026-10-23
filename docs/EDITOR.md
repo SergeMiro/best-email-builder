@@ -26,6 +26,25 @@ the parent's width:
   <img src="assets/library.png" width="860" alt="The template library: templates with their tags on the left, the selected template's details and its five actions in the middle, its preview on the right">
 </p>
 
+## Spacing and controls
+
+Built-in blocks have three spacing layers: margin, border and padding.
+The diagram has an empty center. Corner radius accepts pixels or percentages,
+with no upper limit. Vertical alignment is available on every block.
+On a content block, it aligns the containing column. On a layout, it aligns
+all its columns. A single column needs extra height from its row for a
+vertical position change to be visible.
+Columns in the same desktop row have equal heights. Their content keeps its
+chosen vertical alignment. On mobile, stacked columns use their natural height.
+
+The emoji panel mounts nearby rows as you scroll. Search, group shortcuts
+and recent emojis use the same grid.
+
+Compile saved MJML with the package's server compiler. It converts additional
+box settings into email tables and corrects mixed vertical alignment.
+These settings survive an MJML round trip through encoded CSS classes.
+An external MJML compiler alone does not apply those additional box settings.
+
 ## A + B, nothing to wire
 
 ```jsx

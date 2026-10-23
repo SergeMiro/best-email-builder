@@ -206,3 +206,9 @@ test('a color with transparency: rgba() for the clients, an opaque bgcolor for c
   assert.ok(html.includes('background-color:rgba(255, 0, 0, 0.25)') || html.includes('background:rgba(255, 0, 0, 0.25)'), 'CSS keeps the transparency');
   assert.ok(html.includes('color:rgba(0, 0, 255, 0.5)'));
 });
+
+test('every selectable block and layout exposes vertical alignment', () => {
+  for (const block of emailBlocks.list((block) => block.tagName !== 'mj-body')) {
+    assert.ok(block.properties.some((property) => property.key === 'vertical-align'), block.id);
+  }
+});

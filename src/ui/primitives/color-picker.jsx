@@ -69,7 +69,7 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '', 
             aria-label={t('Pick a colour')}
             title={t('Pick a colour')}
             className={cn(
-              'eb-checker eb:relative eb:h-8 eb:w-[44px] eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:shadow-sm eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-[1.04]',
+              'eb-checker eb:relative eb:h-8 eb:w-[44px] eb:shrink-0 eb:overflow-hidden eb:rounded-md eb:shadow-sm eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-[1.04]',
               dense && 'eb:h-6.5 eb:w-9'
             )}
           >

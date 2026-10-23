@@ -64,6 +64,18 @@ Custom variables are shared by every template. The server keeps them in the
 reference). Without it, the server answers 501 *Custom variables are not
 configured* when a user creates one.
 
+## Variable groups
+
+The panel shows variables under their group names. Use **+** beside **Group**
+to create an empty group, such as Platforme, Brevo or SFR. Use a group's **+**
+to create a variable in that group. To move a variable, edit its group.
+Empty groups remain available after their last variable is deleted.
+
+Custom storage can implement `listVariableGroups()` and
+`saveVariableGroup(name)`. The HTTP storage uses `GET /variable-groups` and
+`POST /variable-groups` with `{ name }`. A server repository can implement
+`listGroups()` and `insertGroup(name)` to store empty groups.
+
 ## Editing a system variable
 
 The pencil of a system variable's badge opens the same dialog as for a

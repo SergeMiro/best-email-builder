@@ -22,6 +22,7 @@ import { ENGINE_NAME, ENGINE_VERSION } from '../../../src/engine/NativeAdapter.j
 import { parseMjml } from '../../../src/engine/mjml.js';
 import { toProject } from '../../../src/engine/model.js';
 import { prepareMjml } from '../../../src/renderer/prepareMjml.js';
+import { compileEditorMjml } from '../../../src/renderer/compileEditorMjml.js';
 import { applyServiceLinks } from '../../../src/renderer/links.js';
 import { DEFAULT_VARIABLES, mergeVariables } from '../../../src/features/variables/catalog.js';
 import {
@@ -80,6 +81,7 @@ async function inlineUploads(html) {
 
 const TEMPLATES_KEY = 'best-email-builder-demo:templates';
 const VARIABLES_KEY = 'best-email-builder-demo:variables';
+const VARIABLE_GROUPS_KEY = 'best-email-builder-demo:variable-groups';
 const BRAND_KEY = 'best-email-builder-demo:brand';
 const TAGS_KEY = 'best-email-builder-demo:tags';
 /** Set once the first visit's templates are in: deleting them all must not bring them back. */
@@ -177,7 +179,7 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
     const catalog = mergeVariables(variables, await storage.listVariables());
     const { default: mjml2html } = await import('mjml-browser');
     // MJML 5 compiles asynchronously.
-    const result = await mjml2html(prepareMjml(mjml, { title: subject, preheader, emptyImages: 'keep' }), { validationLevel: 'soft' });
+    const result = await compileEditorMjml(prepareMjml(mjml, { title: subject, preheader, emptyImages: 'keep' }), mjml2html, { validationLevel: 'soft' });
     const values = sampleValues(catalog);
     const html = await inlineUploads(applyServiceLinks(applyVariables(result.html, values, catalog), { unsubscribeUrl: '#' }));
     const quality = qualityReport({ mjml, html: result.html, subject }, { t });
@@ -206,7 +208,7 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
     if (!compiled.has(key)) {
       const { default: mjml2html } = await import('mjml-browser');
       const prepared = prepareMjml(template.mjml, { title: template.subject, preheader: template.preheader, lang: locale.slice(0, 2) });
-      compiled.set(key, await inlineUploads((await mjml2html(prepared, { validationLevel: 'soft' })).html));
+      compiled.set(key, await inlineUploads((await compileEditorMjml(prepared, mjml2html, { validationLevel: 'soft' })).html));
     }
     return compiled.get(key);
   }
@@ -302,6 +304,10 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
   const persistVariables = async () => {
     write(VARIABLES_KEY, await storage.listVariables());
   };
+  const listVariableGroups = async () => {
+    await ready;
+    return [...new Set([...read(VARIABLE_GROUPS_KEY), ...await storage.listVariableGroups()])];
+  };
 
   return {
     ...storage,
@@ -320,6 +326,14 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
       return uploaded;
     },
     imageUrl: (path) => uploads.get(path)?.url ?? path,
+    listVariableGroups,
+    async saveVariableGroup(name) {
+      const existing = await listVariableGroups();
+      if (existing.some((group) => group.toLowerCase() === name.trim().toLowerCase())) throw new Error(t('This group already exists.'));
+      const saved = await storage.saveVariableGroup(name);
+      write(VARIABLE_GROUPS_KEY, [...existing, saved]);
+      return saved;
+    },
     async listVariables() {
       await ready;
       return storage.listVariables();

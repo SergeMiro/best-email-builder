@@ -594,4 +594,9 @@ export const es = {
   "{max} characters at most": "{max} caracteres como máximo",
   "{max} tags at most": "{max} etiquetas como máximo",
   "{max} tags at most per template": "{max} etiquetas como máximo por plantilla",
+  "New group": "Nuevo grupo",
+  "Organize your variables into groups.": "Organiza tus variables en grupos.",
+  "This group already exists.": "Este grupo ya existe.",
+  "New variable in {group}": "Nueva variable en {group}",
+  "Unit": "Unidad",
 };

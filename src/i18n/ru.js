@@ -594,4 +594,9 @@ export const ru = {
   "{max} characters at most": "Не больше {max} символов",
   "{max} tags at most": "Не больше {max} меток",
   "{max} tags at most per template": "Не больше {max} меток на шаблон",
+  "New group": "Новая группа",
+  "Organize your variables into groups.": "Объединяйте переменные в группы.",
+  "This group already exists.": "Такая группа уже существует.",
+  "New variable in {group}": "Новая переменная в группе {group}",
+  "Unit": "Единица",
 };

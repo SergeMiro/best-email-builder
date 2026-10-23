@@ -594,4 +594,9 @@ export const de = {
   "{max} characters at most": "Höchstens {max} Zeichen",
   "{max} tags at most": "Höchstens {max} Labels",
   "{max} tags at most per template": "Höchstens {max} Labels pro Vorlage",
+  "New group": "Neue Gruppe",
+  "Organize your variables into groups.": "Organisieren Sie Ihre Variablen in Gruppen.",
+  "This group already exists.": "Diese Gruppe existiert bereits.",
+  "New variable in {group}": "Neue Variable in {group}",
+  "Unit": "Einheit",
 };

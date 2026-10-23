@@ -1,3 +1,4 @@
+import { prepareColumnAlignment } from '../../src/renderer/columnAlignment.js';
 /**
  * EMAIL CLIENTS — what the server compiles is checked against the rules
  * Outlook, Gmail and Apple Mail impose. They cannot run here; the HTML they
@@ -89,7 +90,7 @@ test('mobile: a viewport, the columns media query, and columns stacking where <s
       assert.match(html, /@media only screen and \(min-width:480px\)/, `${id}: columns side by side only from 480 px`);
       // Without <style> (some webmails strip it), every column falls back to the full width.
       for (const column of html.match(/<div class="mj-column-per-[^"]*"[^>]*>/g) || []) {
-        assert.match(column, /width:100%/, `${id}: ${column.slice(0, 90)}`);
+        assert.match(column, /width:\s*100%/, `${id}: ${column.slice(0, 90)}`);
       }
     }
   }
@@ -127,7 +128,7 @@ test('what the canvas shows is what is sent: the canvas compiler and the server 
   const canvasCompile = functionExport(mjmlBrowser);
   for (const { id, prepared } of compiled) {
     const server = await compileMjml(prepared);
-    const canvas = await canvasCompile(prepared, { validationLevel: 'soft', keepComments: false, fonts: {} });
+    const canvas = await canvasCompile(prepareColumnAlignment(prepared), { validationLevel: 'soft', keepComments: false, fonts: {} });
     const body = (html) => /<body[^>]*>([\s\S]*)<\/body>/.exec(html)[1].replace(/\s+/g, ' ').trim();
     assert.equal(body(canvas.html), body(server.html), id);
   }

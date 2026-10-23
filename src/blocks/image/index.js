@@ -53,7 +53,7 @@ export const imageBlock = {
       ],
     },
     prop.align(),
-    prop.radius(40),
+    prop.radius(),
     prop.padding(undefined, undefined, 'margin'),
     prop.border(),
   ],

@@ -26,6 +26,8 @@ import { HttpError } from './errors.js';
  *   insert: (variable: EmailVariable & {createdBy: string|null}) => Promise<void>,
  *   update: (key: string, variable: EmailVariable & {updatedBy: string|null}) => Promise<boolean>,
  *   remove: (key: string) => Promise<boolean>,
+ *   listGroups?: () => Promise<string[]>,
+ *   insertGroup?: (name: string) => Promise<boolean>,
  * }} VariableRepository
  */
 
@@ -59,6 +61,21 @@ export function createVariableService({ repository = null, system = DEFAULT_VARI
   const editable = (/** @type {string} */ key) => system.find((v) => v.key === key) || null;
 
   const service = {
+    async listGroups() {
+      return [...new Set([...(await repository?.listGroups?.() || []), ...(await service.catalog()).map((variable) => variable.group)])];
+    },
+    /** @param {unknown} input */
+    async createGroup(input) {
+      const name = typeof input === 'string' ? input.trim() : '';
+      if (!name || name.length > 40) throw new HttpError(400, t('Name is required'), 'INVALID_GROUP');
+      const store = requireRepository();
+      if (!store.insertGroup) throw new HttpError(501, t('Custom variables are not configured'), 'NO_GROUP_STORE');
+      const existing = await service.listGroups();
+      if (existing.some((group) => group.toLowerCase() === name.toLowerCase()) || !await store.insertGroup(name)) {
+        throw new HttpError(409, t('This group already exists.'), 'DUPLICATE_GROUP');
+      }
+      return name;
+    },
     /** Custom variables, and the edits of system ones (no `custom` flag). */
     async listCustom() {
       return repository ? (await repository.list()).map((row) => toVariable(row, !systemKeys.has(row.key))) : [];
@@ -113,7 +130,14 @@ export function createVariableService({ repository = null, system = DEFAULT_VARI
 export function createMemoryVariableRepository() {
   /** @type {Map<string, any>} */
   const rows = new Map();
+  const groups = new Set();
   return {
+    async listGroups() { return [...groups]; },
+    async insertGroup(name) {
+      if ([...groups].some((group) => group.toLowerCase() === name.toLowerCase())) return false;
+      groups.add(name);
+      return true;
+    },
     async list() {
       return [...rows.values()].map((row) => ({ ...row })).sort((a, b) => a.label.localeCompare(b.label));
     },

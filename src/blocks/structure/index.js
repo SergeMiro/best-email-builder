@@ -88,7 +88,7 @@ export const sectionBlock = {
     prop.padding('margin', 'Margin', 'margin'),
     prop.border(),
     prop.padding('padding', 'Padding', 'padding'),
-    prop.radius(24),
+    prop.radius(),
   ],
 };
 

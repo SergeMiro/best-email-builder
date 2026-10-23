@@ -27,6 +27,7 @@
  */
 
 import { ENDING_TAGS, createNode, findFirst } from './model.js';
+import { decodeBox, encodeBox } from '../core/blockBox.js';
 
 /** @typedef {import('./model.js').EmailNode} EmailNode */
 
@@ -168,7 +169,8 @@ export function parseMjmlFragment(source) {
       continue;
     }
 
-    const { attributes, end, selfClosing } = readAttributes(text, afterName);
+    const { attributes: written, end, selfClosing } = readAttributes(text, afterName);
+    const attributes = decodeBox(written);
     i = end;
     if (!isMjml) continue;
 
@@ -283,7 +285,7 @@ export function serializeMjml(node, options = {}) {
   };
   /** @param {EmailNode} current @param {number} depth @returns {string} */
   const write = (current, depth) => {
-    let attributes = options.attributes ? options.attributes(current) : current.attributes;
+    let attributes = encodeBox(current.tag, options.attributes ? options.attributes(current) : current.attributes);
     const margin = current.tag === 'mj-section' ? attributes.margin : null;
     if (margin) {
       const { margin: _margin, 'full-width': _fullWidth, ...sectionAttributes } = attributes;

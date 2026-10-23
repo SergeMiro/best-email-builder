@@ -54,6 +54,7 @@ export function opaqueBgcolors(html) {
 }
 
 import mjml2html from 'mjml';
+import { compileEditorMjml } from '../renderer/compileEditorMjml.js';
 
 /** @typedef {{line?: number, message: string, tagName?: string}} CompileWarning */
 
@@ -64,7 +65,7 @@ import mjml2html from 'mjml';
 export async function compileMjml(mjml) {
   const compile = /** @type {any} */ (mjml2html);
   // MJML 5 compiles asynchronously; `await` also accepts a synchronous result.
-  const result = await compile(String(mjml || ''), {
+  const result = await compileEditorMjml(String(mjml || ''), compile, {
     validationLevel: 'soft',
     keepComments: false,
     beautify: false,

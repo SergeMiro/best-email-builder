@@ -212,8 +212,9 @@ const asNumber = (v) => {
 function SizeField({ id, property, value, fallback = '', onCommit }) {
   const t = useT();
   const [draft, setDraft, ref] = useDraft(value, asNumber);
+  const unit = property.units?.find((candidate) => String(value || fallback).endsWith(candidate)) || property.unit || 'px';
 
-  const commit = (raw = draft) => {
+  const commit = (raw = draft, nextUnit = unit) => {
     if (String(raw).trim() === '') {
       if (value) onCommit(null);
       return;
@@ -223,7 +224,7 @@ function SizeField({ id, property, value, fallback = '', onCommit }) {
     if (property.min !== undefined) n = Math.max(property.min, n);
     if (property.max !== undefined) n = Math.min(property.max, n);
     setDraft(String(n));
-    const next = `${n}${property.unit || 'px'}`;
+    const next = `${n}${nextUnit}`;
     if (next !== value) onCommit(next);
   };
 
@@ -249,7 +250,11 @@ function SizeField({ id, property, value, fallback = '', onCommit }) {
           className="eb:pr-8 eb:tabular-nums"
         />
         <span className="eb:pointer-events-none eb:absolute eb:right-2.5 eb:top-1/2 eb:-translate-y-1/2 eb:text-[12px] eb:text-foreground-muted">
-          {property.unit || 'px'}
+          {property.units ? <select aria-label={`${t(property.label)} — ${t('Unit')}`} value={unit}
+            className="eb:pointer-events-auto eb:bg-transparent eb:text-foreground eb:outline-none"
+            onChange={(event) => commit(draft || asNumber(fallback) || '0', event.target.value)}>
+            {property.units.map((option) => <option key={option} value={option}>{option}</option>)}
+          </select> : property.unit || 'px'}
         </span>
       </div>
     </div>

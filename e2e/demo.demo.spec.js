@@ -89,7 +89,7 @@ test('build a template, preview it, find it again after a reload', async ({ page
 
   // Custom variable, kept by the demo storage.
   await openVariables(page);
-  await page.getByTestId('eb-panel-variables').getByRole('button', { name: 'New variable' }).click();
+  await page.getByTestId('eb-panel-variables').getByRole('button', { name: 'New variable', exact: true }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
   for (const input of await dialog.locator('input').all()) {
     await expect(input).toHaveCSS('height', '26px');

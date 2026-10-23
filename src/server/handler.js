@@ -394,6 +394,17 @@ export function createEmailBuilderHandler(options) {
       return json({ data: result }, result.created ? 201 : 200);
     }
 
+    if (section === 'variable-groups' && !id) {
+      if (method === 'GET') {
+        await userFor(request, 'read');
+        return json({ data: await customVariables.listGroups() });
+      }
+      if (method === 'POST') {
+        await userFor(request, 'write');
+        return json({ data: await customVariables.createGroup((await readJson(request))?.name) }, 201);
+      }
+    }
+
     if (section === 'variables') {
       if (!id && method === 'GET') {
         await userFor(request, 'read');

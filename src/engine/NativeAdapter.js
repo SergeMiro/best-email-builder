@@ -42,6 +42,7 @@ import { escapeText, textOfHtml } from './richText.js';
 import { withoutTag, withoutTagInText } from './mergeTags.js';
 import { EDITABLE_TAGS, createCanvasView } from './canvas/CanvasView.js';
 import { functionExport } from './unwrapModule.js';
+import { compileEditorMjml } from '../renderer/compileEditorMjml.js';
 
 /**
  * @typedef {import('../core/EmailEditor.js').EmailEditorAdapter} EmailEditorAdapter
@@ -80,7 +81,7 @@ async function defaultLoadCompiler() {
   const mjml2html = /** @type {any} */ (functionExport(await import('mjml-browser')));
   if (!mjml2html) throw new Error('mjml-browser did not load');
   return async (/** @type {string} */ mjml) => {
-    const result = await mjml2html(mjml, { validationLevel: 'soft', keepComments: false });
+    const result = await compileEditorMjml(mjml, mjml2html, { validationLevel: 'soft', keepComments: false });
     return {
       html: String(result.html || ''),
       errors: (result.errors || []).map((/** @type {any} */ e) => ({
@@ -131,6 +132,16 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
 
   /* ── Describing ──────────────────────────────────────────────────────── */
 
+  /** Vertical alignment belongs to a column, including when a child block is selected. @param {EmailNode} tree @param {EmailNode} node @returns {EmailNode[]} */
+  function alignmentTargets(tree, node) {
+    if (node.tag === 'mj-column' || node.tag === 'mj-hero') return [node];
+    if (node.tag === 'mj-section' || node.tag === 'mj-group') {
+      return node.children.flatMap((child) => child.tag === 'mj-column' ? [child] : child.tag === 'mj-group' ? alignmentTargets(tree, child) : []);
+    }
+    const parent = parentOf(tree, node.id);
+    return parent && parent.tag !== 'mj-body' ? alignmentTargets(tree, parent) : [];
+  }
+
   /** @param {string|null} id @returns {EngineSelection|null} */
   function describe(id) {
     if (!root || !id) return null;
@@ -138,10 +149,14 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
     if (!node || node.tag === 'mjml' || node.tag === 'mj-head') return null;
     const { index, count } = positionOf(root, id);
     const locked = LOCKED_TAGS.has(node.tag);
+    const targets = alignmentTargets(root, node);
+    const alignment = targets[0]?.attributes['vertical-align'] || 'top';
     return {
       id: node.id,
       tagName: node.tag,
-      attributes: { ...node.attributes },
+      attributes: { ...node.attributes, ...(targets.length ? {
+        'vertical-align': targets.every((target) => (target.attributes['vertical-align'] || 'top') === alignment) ? alignment : '',
+      } : {}) },
       content: LABEL_TAGS.has(node.tag) ? textOfHtml(node.content || '') : null,
       html: node.tag === 'mj-text' ? node.content || '' : null,
       canRemove: !locked,
@@ -674,7 +689,11 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       if (!node) return;
       if (view?.editingId() === id) view.finishEditing();
       const keys = Object.keys(attributes).sort().join(',');
-      let next = setAttributes(current, id, attributes);
+      const { 'vertical-align': alignment, ...own } = attributes;
+      let next = setAttributes(current, id, own);
+      if ('vertical-align' in attributes) {
+        for (const target of alignmentTargets(current, node)) next = setAttributes(next, target.id, { 'vertical-align': alignment });
+      }
       if (node.tag === 'mj-column' && 'width' in attributes) next = balanceColumns(next, id, attributes.width);
       commit(next, { merge: `attributes:${id}:${keys}` });
     },

@@ -367,3 +367,44 @@ test('a block fragment parses into the elements it announces', () => {
     assert.equal(node.tag, block.tagName, block.id);
   }
 });
+
+test('every block has independent box layers; custom spacing survives valid MJML roundtrips and compilation', async () => {
+  const { compileMjml } = await import('../../src/server/compileMjml.js');
+  for (const block of emailBlocks.list((block) => block.kind === 'content' && !block.insertOnly)) {
+    const properties = block.properties;
+    for (const role of ['margin', 'border', 'padding']) {
+      assert.ok(properties.some((property) => (property.box || (property.type === 'border' ? 'border' : null)) === role), `${block.id}: ${role}`);
+    }
+    const fragment = typeof block.sectionMjml === 'function' ? block.sectionMjml() : block.sectionMjml;
+    const tree = parseMjml(fragment);
+    const selected = findFirst(tree, block.tagName);
+    const attrs = {};
+    for (const role of ['margin', 'border', 'padding']) {
+      const property = properties.find((property) => (property.box || (property.type === 'border' ? 'border' : null)) === role);
+      attrs[property.key] = role === 'margin' ? '11px 12px 13px 14px' : role === 'border' ? '3px solid #123456' : '21px 22px 23px 24px';
+    }
+    Object.assign(selected.attributes, attrs);
+    const source = serializeMjml(tree);
+    const restored = findFirst(parseMjml(source), block.tagName);
+    for (const [key, value] of Object.entries(attrs)) assert.equal(restored.attributes[key], value, block.id);
+    assert.deepEqual((await mjml2html(source, { validationLevel: 'strict' })).errors, [], block.id);
+    const result = await compileMjml(source);
+    assert.deepEqual(result.warnings, [], block.id);
+    if (block.id !== 'button') {
+      assert.match(result.html, /padding:11px 12px 13px 14px/, block.id);
+      assert.match(result.html, /padding:21px 22px 23px 24px/, block.id);
+      assert.match(result.html, /border-width:3px 3px 3px 3px/, block.id);
+    }
+  }
+});
+
+test('image pixel widths reserve every box layer, including the column, for Outlook', async () => {
+  const { compileMjml } = await import('../../src/server/compileMjml.js');
+  const { html, warnings } = await compileMjml('<mjml><mj-body><mj-section padding="0px">' +
+    '<mj-column margin="10px" padding="20px" border="2px solid #123456">' +
+    '<mj-image src="https://example.com/a.png" padding="11px 12px 13px 14px" box-padding="21px 22px 23px 24px" border="3px solid #123456" />' +
+    '</mj-column></mj-section></mj-body></mjml>');
+  assert.deepEqual(warnings, []);
+  // 600 - column (20 + 40 + 4) - image (26 + 46 + 6).
+  assert.match(html.match(/<img\b[^>]*>/)[0], /width="458"/);
+});

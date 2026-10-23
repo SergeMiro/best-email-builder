@@ -594,4 +594,9 @@ export const fr = {
   "{max} characters at most": "{max} caractères au plus",
   "{max} tags at most": "{max} étiquettes au plus",
   "{max} tags at most per template": "{max} étiquettes au plus par modèle",
+  "New group": "Nouveau groupe",
+  "Organize your variables into groups.": "Organisez vos variables en groupes.",
+  "This group already exists.": "Ce groupe existe déjà.",
+  "New variable in {group}": "Nouvelle variable dans {group}",
+  "Unit": "Unité",
 };

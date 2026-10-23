@@ -647,7 +647,7 @@ test.describe('Variables', () => {
     const badges = await openBar(page);
     await expect(badges.locator('[data-variable]')).toHaveText(['Unsubscribe link']);
     await expect(badges.getByRole('button', { name: 'Edit “Unsubscribe link”' })).toBeVisible();
-    const plus = badges.getByRole('button', { name: 'New variable' });
+    const plus = badges.getByRole('button', { name: 'New variable', exact: true });
     await plus.hover();
     await expect(page.getByRole('tooltip')).toHaveText('New variable');
     await plus.click();
@@ -701,7 +701,7 @@ test.describe('Variables', () => {
       'Campaign name',
       'Unsubscribe link',
     ]);
-    await expect(badges.getByRole('button', { name: 'New variable' })).toBeVisible();
+    await expect(badges.getByRole('button', { name: 'New variable', exact: true })).toBeVisible();
 
     // Nothing selected: the tooltip names the tag, nothing is typed; a click says what to do.
     await badges.getByRole('button', { name: 'Company', exact: true }).hover();
@@ -756,7 +756,7 @@ test.describe('Variables', () => {
     await canvas(page).getByText('Your headline').dblclick();
     await page.keyboard.press('Home');
     const badges = await openBar(page);
-    await badges.getByRole('button', { name: 'New variable' }).click();
+    await badges.getByRole('button', { name: 'New variable', exact: true }).click();
 
     const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
     await dialog.getByLabel('Name').fill('Order number');
@@ -781,7 +781,7 @@ test.describe('Variables', () => {
   test('a custom variable is validated, edited, then deleted', async ({ page }) => {
     await openBuilder(page);
     let badges = await openBar(page);
-    await badges.getByRole('button', { name: 'New variable' }).click();
+    await badges.getByRole('button', { name: 'New variable', exact: true }).click();
     const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
     await dialog.getByLabel('Name').fill('Email');
     await dialog.getByLabel('Tag').fill('contact.email');

@@ -159,3 +159,18 @@ test('memory storage keeps custom variables', async () => {
   await storage.deleteVariable('contact.firstname');
   assert.equal(mergeVariables(SYSTEM, await storage.listVariables()).find((v) => v.key === 'contact.firstname').label, 'First name');
 });
+
+test('variable groups persist while empty and reject duplicate names', async () => {
+  const { createMemoryStorage } = await import('../../src/storage/client.js');
+  const storage = createMemoryStorage();
+  await storage.saveVariableGroup('Platforme');
+  await storage.saveVariableGroup('Brevo');
+  await storage.saveVariableGroup('SFR');
+  assert.deepEqual(await storage.listVariableGroups(), ['Platforme', 'Brevo', 'SFR']);
+  await assert.rejects(() => storage.saveVariableGroup(' brevo '));
+  await assert.rejects(() => storage.saveVariableGroup('  '));
+  await storage.saveVariable({ key: 'coupon', label: 'Coupon', group: 'Brevo' }, { create: true });
+  assert.equal((await storage.listVariables())[0].group, 'Brevo');
+  await storage.deleteVariable('coupon');
+  assert.deepEqual(await storage.listVariableGroups(), ['Platforme', 'Brevo', 'SFR']);
+});

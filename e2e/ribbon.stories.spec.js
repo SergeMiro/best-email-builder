@@ -262,6 +262,23 @@ test.describe('Emoji panel', () => {
     await expect(emojis(page).getByRole('region', { name: 'Flags' }).getByRole('heading', { name: 'Flags' })).toBeInViewport();
   });
 
+  test('emoji rows load near the viewport and stay bounded while scrolling', async ({ page }) => {
+    await openBuilder(page);
+    await openEmojis(page);
+    const panel = emojis(page);
+    await expect(panel.locator('[data-emoji="😀"]')).toBeVisible();
+    expect(await panel.locator('[data-emoji]').count()).toBeLessThan(400);
+    await expect(panel.locator('[data-group="flags"] [data-emoji]')).toHaveCount(0);
+    const height = await panel.locator('[data-group="flags"]').evaluate((section) => section.parentElement.scrollHeight);
+    await panel.getByRole('group', { name: 'Emoji groups' }).getByRole('button', { name: 'Flags' }).click();
+    await expect(panel.locator('[data-group="flags"] [data-emoji]').first()).toBeVisible();
+    await expect.poll(() => panel.locator('[data-group="smileys"] [data-emoji]').count()).toBe(0);
+    expect(await panel.locator('[data-emoji]').count()).toBeLessThan(400);
+    expect(await panel.locator('[data-group="flags"]').evaluate((section) => section.parentElement.scrollHeight)).toBe(height);
+    await panel.getByRole('group', { name: 'Emoji groups' }).getByRole('button', { name: 'Smileys & emotion' }).click();
+    await expect(panel.locator('[data-emoji="😀"]')).toBeVisible();
+  });
+
   test('in French: French names, found without accents', async ({ page }) => {
     await openBuilder(page, { lang: 'fr' });
     await ribbon(page).locator('[data-drawer="emoji"]').click();
