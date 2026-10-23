@@ -206,7 +206,7 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
     if (!compiled.has(key)) {
       const { default: mjml2html } = await import('mjml-browser');
       const prepared = prepareMjml(template.mjml, { title: template.subject, preheader: template.preheader, lang: locale.slice(0, 2) });
-      compiled.set(key, (await mjml2html(prepared, { validationLevel: 'soft' })).html);
+      compiled.set(key, await inlineUploads((await mjml2html(prepared, { validationLevel: 'soft' })).html));
     }
     return compiled.get(key);
   }

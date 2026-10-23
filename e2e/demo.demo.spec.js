@@ -33,6 +33,9 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await openVariables(page);
   await page.getByTestId('eb-panel-variables').getByRole('button', { name: 'New variable' }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
+  for (const input of await dialog.locator('input').all()) {
+    await expect(input).toHaveCSS('height', '26px');
+  }
   await dialog.getByLabel('Name').fill('Coupon code');
   await dialog.getByLabel('Sample value').fill('WELCOME10');
   await dialog.getByRole('button', { name: 'Create' }).click();
@@ -84,6 +87,9 @@ test("Brevo's variables: the panel inserts Brevo's tags, the preview shows their
   // Edited like any variable: its sample changes, its tag stays Brevo's; kept after a reload.
   await badges.getByRole('button', { name: 'Edit “First name”' }).click();
   const edit = page.getByRole('dialog').filter({ hasText: 'Edit variable' });
+  for (const input of await edit.locator('input').all()) {
+    await expect(input).toHaveCSS('height', '26px');
+  }
   await expect(edit.getByText('{{ contact.FIRSTNAME }}')).toBeVisible();
   await edit.getByLabel('Sample value').fill('Marie');
   await edit.getByRole('button', { name: 'Save' }).click();
@@ -376,6 +382,75 @@ test('an uploaded image shows in the canvas and the preview, and after a reload'
   await page.reload();
   await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
   await expect.poll(() => loaded(page.frameLocator('.eb-canvas-frame').locator('img[src^="blob:"]'))).toBe(1);
+});
+
+test('an uploaded section background loads in the canvas and sandboxed preview', async ({ page }) => {
+  await page.goto(`${HOME}?lang=en#/editor/new`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.locator('[data-block-id="hero"]').click();
+  await page.getByTestId('eb-properties').getByTestId('eb-prop-background-url-file').setInputFiles({
+    name: 'background.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+  });
+  await expect(page.locator('#eb-prop-background-url')).toHaveValue(/^\/email-assets\/[a-f0-9]{32}\.png$/);
+  const background = page.frameLocator('.eb-canvas-frame').locator('[background^="blob:"]').first();
+  await expect(background).toBeVisible();
+  await expect(background).toHaveCSS('background-image', /blob:/);
+  const url = await background.getAttribute('background');
+  await expect.poll(() => page.evaluate((src) => new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image.naturalWidth);
+    image.onerror = () => resolve(0);
+    image.src = src;
+  }), url)).toBe(1);
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  const preview = page.getByRole('dialog').frameLocator('iframe[title="Email preview"]');
+  await expect(preview.locator('[background^="data:image/png"]').first()).toBeVisible({ timeout: 30_000 });
+});
+
+test('uploaded brand logo loads in both previews, the email and exported HTML after a reload', async ({ page }) => {
+  const loaded = (image) => image.evaluate((img) => img.complete && img.naturalWidth);
+  await page.goto(`${HOME}?lang=en#/editor/new`);
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByTestId('eb-properties').getByLabel(/^Name/).fill('Uploaded logo');
+  await page.getByTestId('eb-brand-button').click();
+  const box = page.getByTestId('eb-brand');
+  const chooser = page.waitForEvent('filechooser');
+  await box.getByRole('button', { name: 'Choose a logo image' }).click();
+  await (await chooser).setFiles({
+    name: 'logo.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64'),
+  });
+  await expect(box.getByLabel('Logo', { exact: true })).toHaveValue(/^\/email-assets\/[a-f0-9]{32}\.png$/);
+  const path = await box.getByLabel('Logo', { exact: true }).inputValue();
+  await expect.poll(() => loaded(box.getByRole('img', { name: 'Logo', exact: true }))).toBe(1);
+  await expect.poll(() => loaded(box.getByTestId('eb-brand-preview').locator('img'))).toBe(1);
+  await box.getByTestId('eb-brand-save').click();
+  await expect.poll(() => loaded(page.frameLocator('.eb-canvas-frame').locator('img[src^="blob:"]'))).toBe(1);
+  await page.getByRole('button', { name: 'Preview', exact: true }).click();
+  await expect.poll(() => loaded(page.getByRole('dialog').frameLocator('iframe[title="Email preview"]').locator('img[src^="data:image/png"]')), { timeout: 30_000 }).toBe(1);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByText(/^Saved at/)).toBeVisible();
+  await page.reload();
+  await expect(builder(page)).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await expect.poll(() => loaded(page.frameLocator('.eb-canvas-frame').locator('img[src^="blob:"]'))).toBe(1);
+  await page.getByTestId('eb-brand-button').click();
+  await expect(box.getByLabel('Logo', { exact: true })).toHaveValue(path);
+  await expect.poll(() => loaded(box.getByRole('img', { name: 'Logo', exact: true }))).toBe(1);
+  await expect.poll(() => loaded(box.getByTestId('eb-brand-preview').locator('img'))).toBe(1);
+  await page.keyboard.press('Escape');
+  // The library downloads HTML that works outside the demo's browser storage.
+  await page.goto(`${HOME}?lang=en#/templates`);
+  await page.getByTestId('eb-library-template').filter({ hasText: 'Uploaded logo' }).click();
+  const download = page.waitForEvent('download');
+  await page.getByTestId('eb-library-details').getByRole('button', { name: 'Download', exact: true }).click();
+  const stream = await (await download).createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const html = Buffer.concat(chunks).toString();
+  expect(html).toContain('data:image/png;base64,');
+  expect(html).not.toContain(path);
 });
 
 test('brand: set by hand in the demo, kept after a reload, new emails start in it', async ({ page }) => {

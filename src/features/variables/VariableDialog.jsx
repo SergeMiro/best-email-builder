@@ -137,6 +137,7 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
     <div className="eb:space-y-1.5">
       <Label htmlFor={`eb-var-${name}`}>{label}</Label>
       <Input
+        dense
         id={`eb-var-${name}`}
         value={form[name]}
         onChange={set(name)}
@@ -183,6 +184,7 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
           <div className="eb:space-y-1.5">
             <Label htmlFor="eb-var-group">{t('Group')}</Label>
             <Input
+              dense
               id="eb-var-group"
               list="eb-var-groups"
               value={form.group}

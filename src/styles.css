@@ -237,6 +237,11 @@
   }
 }
 
+/* The variable group is free text; keep suggestions without a dropdown arrow. */
+:is(.eb-root, .eb-scope) #eb-var-group::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
 /* Colour picker: checkerboard behind translucent swatches, picker sizing. */
 .eb-checker {
   background-image: conic-gradient(#d4d4d8 25%, #fff 0 50%, #d4d4d8 0 75%, #fff 0);

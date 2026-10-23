@@ -83,6 +83,8 @@ export default function BrandButton({ context }) {
 
   // The width a logo is shown at follows its own proportions.
   const logoUrl = form.logoUrl;
+  // Keep the stored asset path in the brand; only resolve it for display.
+  const logoSrc = logoUrl ? (storage.imageUrl?.(logoUrl) ?? logoUrl) : '';
   useEffect(() => {
     if (!logoUrl || !isLogoUrl(logoUrl)) return undefined;
     let live = true;
@@ -92,11 +94,11 @@ export default function BrandButton({ context }) {
         setForm((f) => (f.logoUrl === logoUrl ? { ...f, logoWidth: logoWidthFor({ width: image.naturalWidth, height: image.naturalHeight }) } : f));
       }
     };
-    image.src = logoUrl;
+    image.src = logoSrc;
     return () => {
       live = false;
     };
-  }, [logoUrl]);
+  }, [logoUrl, logoSrc]);
 
   const set = (/** @type {Partial<ReturnType<typeof toForm>>} */ patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -204,7 +206,7 @@ export default function BrandButton({ context }) {
   const logoShown = uploading ? (
     <Loader2 className="eb:size-4 eb:animate-spin eb:text-foreground-muted" aria-hidden="true" />
   ) : form.logoUrl && !logoInvalid ? (
-    <img src={form.logoUrl} alt={t('Logo')} className="eb:max-h-16 eb:max-w-16 eb:object-contain" />
+    <img src={logoSrc} alt={t('Logo')} className="eb:max-h-16 eb:max-w-16 eb:object-contain" />
   ) : (
     <ImageOff className="eb:size-4 eb:text-foreground-muted" aria-hidden="true" />
   );
@@ -404,7 +406,7 @@ export default function BrandButton({ context }) {
                 </div>
               </fieldset>
 
-              <BrandPreview brand={draft} fallbackName={hostSender?.name || t('Your company')} />
+              <BrandPreview brand={draft} logoSrc={logoInvalid ? '' : logoSrc} fallbackName={hostSender?.name || t('Your company')} />
             </div>
           </div>
 
@@ -446,9 +448,9 @@ export default function BrandButton({ context }) {
 /**
  * A small email in the brand's look: logo or name, a banner, a heading, a
  * line of text and a button. Plain markup: it follows every keystroke.
- * @param {{brand: Brand, fallbackName: string}} props
+ * @param {{brand: Brand, logoSrc: string, fallbackName: string}} props
  */
-function BrandPreview({ brand, fallbackName }) {
+function BrandPreview({ brand, logoSrc, fallbackName }) {
   const t = useUi().t;
   const primary = brand.primary || PALETTE.navy;
   const onPrimary = readableOn(primary);
@@ -470,8 +472,8 @@ function BrandPreview({ brand, fallbackName }) {
       >
         <div className="eb:flex eb:flex-1 eb:flex-col eb:overflow-hidden eb:rounded-[3px]" style={{ backgroundColor: PALETTE.white }}>
           <div className="eb:px-3 eb:pt-3 eb:pb-2">
-            {brand.logoUrl ? (
-              <img src={brand.logoUrl} alt="" style={{ width: Math.round((brand.logoWidth || 140) * 0.45), maxWidth: '100%' }} />
+            {logoSrc ? (
+              <img src={logoSrc} alt="" style={{ width: Math.round((brand.logoWidth || 140) * 0.45), maxWidth: '100%' }} />
             ) : (
               <span className="eb:text-[11px] eb:font-bold" style={{ color: PALETTE.ink }}>
                 {name}
