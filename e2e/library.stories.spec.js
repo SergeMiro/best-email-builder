@@ -321,6 +321,20 @@ test('wide: the list a fifth of the width, never under 260 px; the template and 
   expect(Math.abs(w.details - w.preview)).toBeLessThan(2);
 });
 
+test('corners: the button’s on every field and chip, a smaller one on a badge that would turn into a pill', async ({ page }) => {
+  await page.goto(STANDALONE);
+  const list = page.getByTestId('eb-library-list');
+  const corner = (locator) => locator.evaluate((el) => getComputedStyle(el).borderTopLeftRadius);
+  const button = await corner(list.getByRole('button', { name: 'New template', exact: true }));
+  expect(button).toBe('10px');
+  for (const control of [
+    list.getByRole('searchbox'),
+    page.getByTestId('eb-library-tag-filter').getByRole('button').first(),
+    page.getByTestId('eb-library-tag-reset'),
+  ]) expect(await corner(control)).toBe(button);
+  expect(await corner(list.getByTestId('eb-tag').first())).toBe('6px');
+});
+
 test('preview: the editor’s device switch, and the frame narrows and widens smoothly', async ({ page }) => {
   await page.goto(STANDALONE);
   const preview = page.getByTestId('eb-library-preview');

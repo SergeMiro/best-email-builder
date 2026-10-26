@@ -33,7 +33,7 @@ export function SearchKeyHint({ className, children = null }) {
   return (
     <kbd
       className={cn(
-        'eb:pointer-events-none eb:inline-flex eb:h-5 eb:items-center eb:rounded eb:border eb:border-border eb:bg-surface-100 eb:px-1.5 eb:font-mono eb:text-[10px] eb:text-foreground-muted',
+        'eb:pointer-events-none eb:inline-flex eb:h-5 eb:items-center eb:rounded-md eb:border eb:border-border eb:bg-surface-100 eb:px-1.5 eb:font-mono eb:text-[10px] eb:text-foreground-muted',
         className
       )}
       aria-hidden="true"

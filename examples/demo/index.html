@@ -123,13 +123,13 @@
       .brand-mark svg { width: 44px; height: 33px; display: block; }
       .brand:hover .brand-mark { transform: translateY(-1px) rotate(-3deg); }
       .topbar-actions { display: flex; align-items: center; gap: 8px; }
-      /* the language: a pill, and a list of the page's own under it (the
+      /* the language: a button, and a list of the page's own under it (the
          system's list cannot be styled). Above the hero, which comes later. */
       .lang { position: relative; z-index: 30; }
       .lang-button {
         display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none;
         font-size: 12.5px; font-weight: 600; line-height: 1; color: var(--ink);
-        padding: 8px 10px 8px 11px; border-radius: 999px; border: 1px solid var(--line);
+        padding: 8px 10px 8px 11px; border-radius: 10px; border: 1px solid var(--line);
         background: rgb(255 255 255 / 0.7); backdrop-filter: blur(8px);
         transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
       }
@@ -172,7 +172,7 @@
 
       .btn {
         font: inherit; font-size: 13px; font-weight: 500; line-height: 1; display: inline-flex; align-items: center; gap: 7px;
-        padding: 9px 14px; border-radius: 9px; cursor: pointer; text-decoration: none; white-space: nowrap;
+        padding: 9px 14px; border-radius: 10px; cursor: pointer; text-decoration: none; white-space: nowrap;
         border: 1px solid var(--line); background: rgb(255 255 255 / 0.75); backdrop-filter: blur(8px); color: var(--ink);
         transition: background 0.15s, border-color 0.15s, transform 0.15s;
       }
@@ -182,7 +182,7 @@
       /* hero */
       .hero { padding-top: 72px; padding-bottom: 44px; text-align: center; }
       .eyebrow {
-        display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px;
+        display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 10px;
         background: rgb(255 255 255 / 0.7); border: 1px solid var(--line); backdrop-filter: blur(8px);
         font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2);
       }
@@ -202,7 +202,7 @@
       .tagline { margin: 18px auto 0; max-width: 620px; text-wrap: balance; font-size: 17px; line-height: 1.55; color: var(--ink-2); }
       .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 22px; }
       .chip {
-        display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px;
+        display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 10px;
         background: rgb(255 255 255 / 0.75); backdrop-filter: blur(8px); border: 1px solid var(--line); font-size: 12.5px; color: var(--ink-2);
       }
       .chip svg { width: 14px; height: 14px; color: var(--primary); }
@@ -333,7 +333,7 @@
       .demo-frame-steps li[aria-current] span { background: var(--primary); color: #fff; box-shadow: 0 3px 8px -3px color-mix(in oklab, var(--primary) 70%, transparent); }
       .demo-frame-toggle {
         font: inherit; font-size: 12.5px; font-weight: 500; line-height: 1; display: inline-flex; align-items: center; gap: 7px;
-        padding: 7px 11px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+        padding: 7px 11px; border-radius: 10px; cursor: pointer; white-space: nowrap;
         border: 1px solid var(--line); background: #fff; color: var(--ink);
         transition: border-color 0.15s, color 0.15s, background 0.15s;
       }

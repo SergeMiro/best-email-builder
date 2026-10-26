@@ -108,6 +108,10 @@
   --color-surface-75: var(--eb-surface-75);
   --color-surface-100: var(--eb-surface-100);
   --color-surface-200: var(--eb-surface-200);
+  /* One corner for every control, as the button has it: buttons, fields,
+     selects and their lists, chips, cards: `rounded-lg2` (10px). Under
+     24px tall (a badge, a key hint) `rounded-md`, or it turns into a pill;
+     an item inside a padded list too, so its corners follow the list's. */
   --radius-sm: calc(var(--eb-radius) - 4px);
   --radius-md: calc(var(--eb-radius) - 2px);
   --radius-lg: var(--eb-radius);

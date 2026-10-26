@@ -159,7 +159,7 @@ export default function SubjectIdeas({ editor, meta, onSubject, suggest, variabl
         </button>
       )}
       {ideas && (
-        <div className="eb:space-y-2 eb:rounded-md eb:border eb:border-border eb:p-1.5">
+        <div className="eb:space-y-2 eb:rounded-lg2 eb:border eb:border-border eb:p-1.5">
           <div role="radiogroup" aria-label={t('Subject ideas')} className="eb:space-y-0.5" onKeyDown={onKeyDown}>
             {options.map((option, index) => {
               const chosen = index === checked;
@@ -171,7 +171,7 @@ export default function SubjectIdeas({ editor, meta, onSubject, suggest, variabl
                   aria-checked={chosen}
                   tabIndex={index === tabStop ? 0 : -1}
                   className={cn(
-                    'eb:flex eb:w-full eb:items-start eb:gap-2 eb:rounded eb:px-2 eb:py-1.5 eb:text-left eb:text-[12.5px] eb:leading-snug eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+                    'eb:flex eb:w-full eb:items-start eb:gap-2 eb:rounded-md eb:px-2 eb:py-1.5 eb:text-left eb:text-[12.5px] eb:leading-snug eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
                     chosen ? 'eb:bg-primary/10 eb:text-foreground' : 'eb:text-foreground-lighter eb:hover:bg-muted'
                   )}
                   onClick={() => onSubject(option.text)}

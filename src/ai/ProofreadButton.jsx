@@ -215,7 +215,7 @@ export default function ProofreadButton({ context, proofread }) {
                 {fixes.map((fix) => (
                   <li
                     key={fix.id}
-                    className={cn('eb:rounded-md eb:border eb:border-border eb:p-3', fix.state !== 'open' && 'eb:bg-muted/40')}
+                    className={cn('eb:rounded-lg2 eb:border eb:border-border eb:p-3', fix.state !== 'open' && 'eb:bg-muted/40')}
                     data-testid="eb-proofread-fix"
                     data-state={fix.state}
                   >

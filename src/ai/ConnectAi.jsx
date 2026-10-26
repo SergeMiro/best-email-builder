@@ -155,7 +155,7 @@ export default function ConnectAi({ aiKey }) {
                       tabIndex={checked ? 0 : -1}
                       onClick={() => choose(provider.id)}
                       className={cn(
-                        'eb:flex eb:min-w-0 eb:flex-col eb:gap-0.5 eb:rounded-md eb:border eb:px-2.5 eb:py-2 eb:text-left eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+                        'eb:flex eb:min-w-0 eb:flex-col eb:gap-0.5 eb:rounded-lg2 eb:border eb:px-2.5 eb:py-2 eb:text-left eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
                         checked ? 'eb:border-primary eb:bg-primary/10' : 'eb:border-border eb:hover:bg-muted'
                       )}
                     >
@@ -177,7 +177,7 @@ export default function ConnectAi({ aiKey }) {
             )}
 
             {refused && (
-              <p role="alert" className="eb:flex eb:items-start eb:gap-2 eb:rounded-md eb:border eb:border-destructive/30 eb:bg-destructive/10 eb:px-3 eb:py-2 eb:text-[12.5px] eb:text-destructive">
+              <p role="alert" className="eb:flex eb:items-start eb:gap-2 eb:rounded-lg2 eb:border eb:border-destructive/30 eb:bg-destructive/10 eb:px-3 eb:py-2 eb:text-[12.5px] eb:text-destructive">
                 <TriangleAlert className="eb:mt-px eb:size-3.5 eb:shrink-0" aria-hidden="true" />
                 {t('{provider} refused the last key. Paste another one.', { provider: name })}
               </p>
@@ -204,7 +204,7 @@ export default function ConnectAi({ aiKey }) {
                   </Button>
                 )}
                 {free && (
-                  <span className="eb:rounded-full eb:bg-success/10 eb:px-2.5 eb:py-1 eb:text-[11.5px] eb:font-medium eb:text-success">
+                  <span className="eb:rounded-md eb:bg-success/10 eb:px-2.5 eb:py-1 eb:text-[11.5px] eb:font-medium eb:text-success">
                     {t(free)}
                   </span>
                 )}
@@ -261,7 +261,7 @@ export default function ConnectAi({ aiKey }) {
                 />
                 <button
                   type="button"
-                  className="eb:absolute eb:top-1/2 eb:right-1 eb:flex eb:size-7 eb:-translate-y-1/2 eb:items-center eb:justify-center eb:rounded eb:text-foreground-muted eb:transition-colors eb:outline-none eb:hover:bg-muted eb:hover:text-foreground eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50"
+                  className="eb:absolute eb:top-1/2 eb:right-1 eb:flex eb:size-7 eb:-translate-y-1/2 eb:items-center eb:justify-center eb:rounded-md eb:text-foreground-muted eb:transition-colors eb:outline-none eb:hover:bg-muted eb:hover:text-foreground eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50"
                   onClick={() => setShown((current) => !current)}
                   aria-label={shown ? t('Hide the key') : t('Show the key')}
                   aria-pressed={shown}

@@ -31,7 +31,7 @@ export function FilterChip({ pressed, className, ...props }) {
       type="button"
       aria-pressed={pressed}
       className={cn(
-        'eb:inline-flex eb:h-7 eb:shrink-0 eb:cursor-pointer eb:items-center eb:gap-1.5 eb:rounded-full eb:border eb:px-3 eb:text-[12px] eb:font-medium eb:whitespace-nowrap eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+        'eb:inline-flex eb:h-7 eb:shrink-0 eb:cursor-pointer eb:items-center eb:gap-1.5 eb:rounded-lg2 eb:border eb:px-3 eb:text-[12px] eb:font-medium eb:whitespace-nowrap eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
         pressed
           ? 'eb:border-primary eb:bg-primary eb:text-primary-foreground eb:hover:bg-primary/90'
           : 'eb:border-border eb:bg-background eb:text-foreground eb:hover:border-primary/50 eb:hover:bg-primary/5',
@@ -56,7 +56,7 @@ export function FilterReset({ label, active, onClick, className, ...props }) {
       aria-disabled={!active}
       onClick={(event) => active && onClick?.(event)}
       className={cn(
-        'eb:inline-flex eb:size-7 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-full eb:border eb:border-border eb:bg-background eb:text-foreground-lighter eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+        'eb:inline-flex eb:size-7 eb:shrink-0 eb:items-center eb:justify-center eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:text-foreground-lighter eb:transition-colors eb:outline-none eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
         active ? 'eb:cursor-pointer eb:hover:border-primary/50 eb:hover:bg-primary/5 eb:hover:text-primary' : 'eb:cursor-default eb:opacity-40',
         className
       )}

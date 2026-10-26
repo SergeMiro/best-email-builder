@@ -60,7 +60,7 @@ const fold = (text) =>
 function Thumbnail({ html, title }) {
   return (
     <div
-      className="eb:relative eb:h-[220px] eb:shrink-0 eb:overflow-hidden eb:rounded-md eb:border eb:border-border eb:bg-surface-75"
+      className="eb:relative eb:h-[220px] eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:border eb:border-border eb:bg-surface-75"
       aria-hidden="true"
     >
       <iframe

@@ -29,12 +29,12 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
 .eb-ui-hover { box-shadow: inset 0 0 0 1px color-mix(in oklab, ${PRIMARY} 55%, transparent); }
 .eb-ui-select { box-shadow: inset 0 0 0 2px ${PRIMARY}; }
 .eb-ui-chip { position: absolute; pointer-events: none; white-space: nowrap; color: #fff; background: ${PRIMARY};
-  padding: 4px 7px; border-radius: 5px; font-weight: 600; letter-spacing: 0.01em; }
+  padding: 4px 7px; border-radius: 6px; font-weight: 600; letter-spacing: 0.01em; }
 .eb-ui-hover-chip { background: color-mix(in oklab, ${PRIMARY} 85%, transparent); }
-.eb-ui-tools { position: absolute; display: flex; gap: 1px; padding: 2px; border-radius: 6px; background: ${PRIMARY};
+.eb-ui-tools { position: absolute; display: flex; gap: 1px; padding: 2px; border-radius: 10px; background: ${PRIMARY};
   box-shadow: 0 4px 12px -4px color-mix(in oklab, ${PRIMARY} 50%, transparent); pointer-events: auto; }
 .eb-ui-tools button { all: unset; box-sizing: border-box; width: 26px; height: 24px; display: grid; place-items: center;
-  color: #fff; border-radius: 4px; cursor: pointer; }
+  color: #fff; border-radius: 8px; cursor: pointer; }
 .eb-ui-tools button:hover, .eb-ui-tools button:focus-visible { background: rgba(255, 255, 255, 0.2); }
 .eb-ui-tools button[data-action="move"] { cursor: grab; touch-action: none; }
 .eb-ui-tools button:disabled { opacity: 0.4; cursor: default; background: none; }
@@ -75,7 +75,7 @@ export const GHOST_STYLE = [
   'z-index:2147483646',
   'pointer-events:none',
   'padding:6px 10px',
-  'border-radius:7px',
+  'border-radius:10px',
   `background:${PRIMARY}`,
   'color:#fff',
   "font:600 12px/1.2 system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif",

@@ -25,6 +25,11 @@ All notable changes are documented here. The format follows
 - The template library, wide: the list takes a fifth of the width (never
   under 260 px), and the template's details and its preview share the rest
   equally.
+- One corner for every control, the button's (10 px): fields, selects and
+  their lists, filter chips, the ribbon's buttons, cards. Badges under
+  24 px tall (tags, variables, the AI's quick actions) take 6 px instead of
+  a pill, and items inside a list 6 px, following its corners. The rule is
+  written next to the radius tokens in `styles.css`.
 
 ### Removed
 - The formatting bar over a text being edited in the canvas: the ribbon

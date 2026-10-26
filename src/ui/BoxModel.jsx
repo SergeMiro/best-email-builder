@@ -110,7 +110,7 @@ function Zone({ id, role, rootRef, active, onActive, draft, setDraft, placeholde
       data-box={role}
       data-active={active === role}
       className={cn(
-        'eb:grid eb:grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] eb:grid-rows-[auto_minmax(0,1fr)_auto] eb:items-center eb:gap-y-0.5 eb:rounded-lg eb:border eb:px-0.5 eb:py-1 eb:transition-colors',
+        'eb:grid eb:grid-cols-[2.25rem_minmax(0,1fr)_2.25rem] eb:grid-rows-[auto_minmax(0,1fr)_auto] eb:items-center eb:gap-y-0.5 eb:rounded-lg2 eb:border eb:px-0.5 eb:py-1 eb:transition-colors',
         tone.zone
       )}
       style={{ background: tinted(role, active === role), ...(line && { borderStyle: line, borderWidth: THICK_STYLES.has(line) ? 3 : 2 }) }}
@@ -289,7 +289,7 @@ export default function BoxModel({ idPrefix, element, properties, onCommit }) {
     },
     <div
       data-box="content"
-      className="eb:flex eb:min-h-8 eb:items-center eb:justify-center eb:rounded-md eb:border eb:border-primary/40 eb:px-2 eb:text-[11.5px] eb:font-medium eb:text-foreground"
+      className="eb:flex eb:min-h-8 eb:items-center eb:justify-center eb:rounded-lg2 eb:border eb:border-primary/40 eb:px-2 eb:text-[11.5px] eb:font-medium eb:text-foreground"
       style={{ background: tinted('content', active === 'content') }}
       onPointerOver={(e) => {
         e.stopPropagation();

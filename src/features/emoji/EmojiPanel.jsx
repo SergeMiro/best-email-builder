@@ -101,7 +101,7 @@ function EmojiGrid({ entries, scrollRef, ready }) {
             const name = search ? nameOf([emoji, search]) : emoji;
             return (
               <button key={emoji} type="button" disabled={!ready} data-emoji={emoji} title={name} aria-label={name}
-                className="eb:grid eb:aspect-square eb:place-items-center eb:rounded-md eb:text-[20px] eb:leading-none eb:outline-none eb:transition-colors eb:hover:bg-surface-200 eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:opacity-50">
+                className="eb:grid eb:aspect-square eb:place-items-center eb:rounded-lg2 eb:text-[20px] eb:leading-none eb:outline-none eb:transition-colors eb:hover:bg-surface-200 eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:opacity-50">
                 {emoji}
               </button>
             );

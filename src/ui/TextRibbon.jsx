@@ -76,7 +76,7 @@ function pixels(value, fontSize) {
 const clamp = (n, property) => Math.min(property.max ?? n, Math.max(property.min ?? n, n));
 
 const ICON_BUTTON =
-  'eb:inline-flex eb:h-7 eb:min-w-7 eb:items-center eb:justify-center eb:gap-1 eb:rounded-md eb:px-1.5 eb:text-foreground-lighter eb:outline-none eb:transition-colors eb:hover:bg-surface-200 eb:hover:text-foreground eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:pointer-events-none eb:disabled:opacity-40 eb:aria-pressed:bg-primary/10 eb:aria-pressed:text-primary eb:aria-checked:bg-primary/10 eb:aria-checked:text-primary eb:data-[state=open]:bg-surface-200 eb:[&_svg]:size-4 eb:[&_svg]:shrink-0';
+  'eb:inline-flex eb:h-7 eb:min-w-7 eb:items-center eb:justify-center eb:gap-1 eb:rounded-lg2 eb:px-1.5 eb:text-foreground-lighter eb:outline-none eb:transition-colors eb:hover:bg-surface-200 eb:hover:text-foreground eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:pointer-events-none eb:disabled:opacity-40 eb:aria-pressed:bg-primary/10 eb:aria-pressed:text-primary eb:aria-checked:bg-primary/10 eb:aria-checked:text-primary eb:data-[state=open]:bg-surface-200 eb:[&_svg]:size-4 eb:[&_svg]:shrink-0';
 
 /**
  * A tooltip that also names a disabled button: a disabled button takes no
@@ -258,7 +258,7 @@ function SizeField({ property, value, onCommit }) {
       <Tip label={t('Font size')}>
         <div
           className={cn(
-            'eb:flex eb:h-7 eb:items-center eb:rounded-md eb:border eb:border-border eb:bg-background eb:transition-colors eb:focus-within:border-ring',
+            'eb:flex eb:h-7 eb:items-center eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:transition-colors eb:focus-within:border-ring',
             disabled && 'eb:opacity-40'
           )}
         >
@@ -281,7 +281,7 @@ function SizeField({ property, value, onCommit }) {
             <button
               type="button"
               aria-label={t('Font sizes')}
-              className="eb:grid eb:h-full eb:w-5 eb:place-items-center eb:rounded-r-md eb:text-foreground-muted eb:outline-none eb:hover:bg-surface-200 eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:pointer-events-none"
+              className="eb:grid eb:h-full eb:w-5 eb:place-items-center eb:rounded-r-lg2 eb:text-foreground-muted eb:outline-none eb:hover:bg-surface-200 eb:focus-visible:ring-2 eb:focus-visible:ring-ring/50 eb:disabled:pointer-events-none"
             >
               <ChevronDown className="eb:size-3" aria-hidden="true" />
             </button>

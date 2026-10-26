@@ -16,7 +16,7 @@ export const Input = forwardRef(function Input({ className, type, dense = false,
       type={type}
       data-slot="input"
       className={cn(
-        'eb:h-8 eb:w-full eb:min-w-0 eb:rounded-md eb:border eb:border-border-strong eb:bg-surface-75 eb:px-3 eb:py-1 eb:text-[13px] eb:text-foreground eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:placeholder:text-foreground-muted eb:selection:bg-primary eb:selection:text-primary-foreground eb:disabled:pointer-events-none eb:disabled:cursor-not-allowed eb:disabled:opacity-50',
+        'eb:h-8 eb:w-full eb:min-w-0 eb:rounded-lg2 eb:border eb:border-border-strong eb:bg-surface-75 eb:px-3 eb:py-1 eb:text-[13px] eb:text-foreground eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:placeholder:text-foreground-muted eb:selection:bg-primary eb:selection:text-primary-foreground eb:disabled:pointer-events-none eb:disabled:cursor-not-allowed eb:disabled:opacity-50',
         'eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
         'eb:aria-invalid:border-destructive eb:aria-invalid:ring-destructive/20',
         dense && DENSE_FIELD,
@@ -34,7 +34,7 @@ export const Textarea = forwardRef(function Textarea({ className, dense = false,
       ref={ref}
       data-slot="textarea"
       className={cn(
-        'eb:flex eb:field-sizing-content eb:min-h-16 eb:w-full eb:resize-y eb:rounded-md eb:border eb:border-border-strong eb:bg-surface-75 eb:px-3 eb:py-2 eb:text-[13px] eb:text-foreground eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:aria-invalid:border-destructive eb:aria-invalid:ring-destructive/20 eb:disabled:cursor-not-allowed eb:disabled:opacity-50',
+        'eb:flex eb:field-sizing-content eb:min-h-16 eb:w-full eb:resize-y eb:rounded-lg2 eb:border eb:border-border-strong eb:bg-surface-75 eb:px-3 eb:py-2 eb:text-[13px] eb:text-foreground eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:aria-invalid:border-destructive eb:aria-invalid:ring-destructive/20 eb:disabled:cursor-not-allowed eb:disabled:opacity-50',
         dense && 'eb:min-h-12 eb:px-2.5 eb:py-1 eb:text-[12.5px] eb:leading-[18px]',
         className
       )}

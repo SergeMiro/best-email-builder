@@ -77,7 +77,7 @@ export default function VariablePicker({ variables, onPick, onCreate = null, onE
           placeholder={t('Search variables…')}
           aria-label={t('Search variables…')}
           aria-keyshortcuts={SEARCH_KEYS}
-          className="eb:h-8 eb:w-full eb:rounded-md eb:bg-surface-75 eb:pr-14 eb:pl-7 eb:text-[13px] eb:text-foreground eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:ring-2 eb:focus-visible:ring-ring/40"
+          className="eb:h-8 eb:w-full eb:rounded-lg2 eb:bg-surface-75 eb:pr-14 eb:pl-7 eb:text-[13px] eb:text-foreground eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:ring-2 eb:focus-visible:ring-ring/40"
         />
         <SearchKeyHint className="eb:absolute eb:top-1/2 eb:right-4 eb:-translate-y-1/2" />
       </div>
