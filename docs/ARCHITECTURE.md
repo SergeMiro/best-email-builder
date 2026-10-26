@@ -86,8 +86,8 @@ the HTML **compiled by the server**.
   for an image without file, "Drop a block here" in an empty column, the
   selection, labels, toolbars and the drop line.
 - **Gestures**: click selects; double-click (or a click on a selected text)
-  edits a text in place, with its own formatting bar (bold, italic,
-  underline, strike, link, clear) — pasted content arrives as plain text,
+  edits a text in place, formatted from the ribbon above the canvas (no bar
+  of its own over the text) — pasted content arrives as plain text,
   Enter is a line break, and the HTML is reduced to what an email accepts
   (`engine/richText.js`). Blocks are dragged with pointer events (the pointer
   stays captured over the frame): a line shows where the block lands, the

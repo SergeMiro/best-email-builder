@@ -21,6 +21,12 @@ All notable changes are documented here. The format follows
   it. The other groups are outlined, the one under the pointer lit; Esc
   cancels, and a click still inserts.
 
+### Removed
+- The formatting bar over a text being edited in the canvas: the ribbon
+  above the canvas has the same tools (bold, italic, underline, strike,
+  link, unlink, clear) and stays the one place for them. Its link field
+  now takes an address without `https://` too, as the bar did.
+
 ## [0.16.0] — 2026-10-26
 
 ### Added

@@ -323,6 +323,8 @@ function LinkButton({ disabled, href, onApply }) {
       <PopoverContent align="start" className="eb:w-80 eb:p-2" onCloseAutoFocus={(event) => event.preventDefault()}>
         <form
           className="eb:flex eb:items-center eb:gap-1.5"
+          // "example.com" is taken too: the canvas adds its https://.
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             setOpen(false);

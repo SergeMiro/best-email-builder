@@ -52,16 +52,6 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
   border-radius: 50%; background: ${PRIMARY}; box-shadow: 0 0 0 2px #fff; }
 .eb-ui-drop::before { left: -5px; }
 .eb-ui-drop::after { right: -5px; }
-.eb-ui-text { position: absolute; display: flex; align-items: center; gap: 1px; padding: 3px; border-radius: 8px;
-  background: #fff; border: 1px solid #dfe3ea; box-shadow: 0 8px 22px -10px rgba(16, 24, 40, 0.35); pointer-events: auto; }
-.eb-ui-text button { all: unset; box-sizing: border-box; width: 28px; height: 26px; display: grid; place-items: center;
-  color: #2b3038; border-radius: 5px; cursor: pointer; }
-.eb-ui-text button:hover, .eb-ui-text button:focus-visible { background: #eef0f6; }
-.eb-ui-text button[aria-pressed="true"] { background: color-mix(in oklab, ${PRIMARY} 15%, white); color: ${PRIMARY}; }
-.eb-ui-text .eb-ui-sep { width: 1px; height: 18px; margin: 0 3px; background: #e3e6ec; }
-.eb-ui-text input { all: unset; box-sizing: border-box; width: 220px; height: 26px; padding: 0 8px; border-radius: 5px;
-  border: 1px solid #dfe3ea; font: 400 12px/1 system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #2b3038; }
-.eb-ui-text input:focus { border-color: ${PRIMARY}; }
 .eb-ui-tag { position: absolute; pointer-events: none; padding: 0 2px; border-radius: 3px; white-space: pre; overflow: visible; }
 .eb-ui-tag-clear { all: unset; position: absolute; box-sizing: border-box; width: 16px; height: 16px; display: grid;
   place-items: center; border-radius: 50%; background: #1f2433; color: #fff; cursor: pointer; pointer-events: auto;

@@ -22,7 +22,10 @@
  *   drag and drop    from the sidebar, or the ✥ handle of the selection:
  *                    a line shows where the element will land, the frame
  *                    scrolls near its edges, Esc cancels
- *   text toolbar     bold, italic, underline, strike, link, unlink, clear
+ *
+ * Bold, italic, link… have no bar of their own here: the builder's ribbon,
+ * above the canvas, sends them (`formatText`) and shows what the caret is in
+ * (`onFormat`).
  *
  * Owns no email data: it reads the tree through `getRoot()` and asks the
  * adapter for every change.
@@ -151,9 +154,6 @@ export function createCanvasView(options) {
   const addBlock = makeAdd('eb-canvas-add-block');
   const addItem = makeAdd('eb-canvas-add-item');
   const dropLine = make('eb-ui-drop');
-  const textTools = make('eb-ui-text');
-  textTools.setAttribute('role', 'toolbar');
-  textTools.setAttribute('aria-label', t('Text formatting'));
   // A merge tag under the pointer: drawn again in swapped colours, a piece
   // per line it runs over, with a × that takes it out (rather than erasing it
   // letter by letter).
@@ -328,21 +328,6 @@ export function createCanvasView(options) {
     addItem.setAttribute('aria-label', row.label);
   }
 
-  function drawTextTools() {
-    if (!editingId || !editingEl) {
-      textTools.hidden = true;
-      return;
-    }
-    const box = docBoxOf(editingId);
-    if (!box) return;
-    textTools.hidden = false;
-    const height = 34;
-    const above = box.top - win.scrollY > height + 8;
-    textTools.style.top = `${above ? box.top - height - 6 : box.top + box.height + 6}px`;
-    textTools.style.left = `${box.left}px`;
-    refreshTextState();
-  }
-
   function drawWorking() {
     const box = workingId ? docBoxOf(workingId) : null;
     workBox.hidden = !box;
@@ -367,11 +352,11 @@ export function createCanvasView(options) {
     drawMulti();
     drawSelection();
     drawHover();
-    drawTextTools();
     drawTag();
     drawWorking();
     // A text only selected: the ribbon shows the format of all its words.
-    if (!editingEl) reportFormat(selectedTextFormat());
+    if (editingEl) refreshTextState();
+    else reportFormat(selectedTextFormat());
   }
 
   function scheduleOverlays() {
@@ -841,8 +826,6 @@ export function createCanvasView(options) {
     editingId = null;
     editingEl = null;
     savedRange = null;
-    hideLinkInput();
-    textTools.hidden = true;
     options.onEditEnd(id, html);
     refreshOverlays();
   }
@@ -1010,72 +993,8 @@ export function createCanvasView(options) {
     preview = null;
   }
 
-  /* Text toolbar: built once. */
-  const TEXT_BUTTONS = [
-    ['bold', t('Bold (Ctrl+B)')],
-    ['italic', t('Italic (Ctrl+I)')],
-    ['underline', t('Underline (Ctrl+U)')],
-    ['strike', t('Strikethrough')],
-    ['sep'],
-    ['link', t('Link')],
-    ['unlink', t('Remove the link')],
-    ['sep'],
-    ['clear', t('Clear formatting')],
-  ];
-  const linkInput = doc.createElement('input');
-  linkInput.type = 'url';
-  linkInput.placeholder = 'https://';
-  linkInput.setAttribute('aria-label', t('Link URL'));
-  linkInput.hidden = true;
-  const linkConfirm = doc.createElement('button');
-  linkConfirm.type = 'button';
-  linkConfirm.dataset.command = 'link-confirm';
-  linkConfirm.title = t('Apply the link');
-  linkConfirm.setAttribute('aria-label', t('Apply the link'));
-  linkConfirm.innerHTML = ICONS.check;
-  linkConfirm.hidden = true;
-
-  for (const [command, label] of TEXT_BUTTONS) {
-    if (command === 'sep') {
-      const sep = doc.createElement('span');
-      sep.className = 'eb-ui-sep';
-      textTools.appendChild(sep);
-      continue;
-    }
-    const button = doc.createElement('button');
-    button.type = 'button';
-    button.dataset.command = command;
-    button.title = /** @type {string} */ (label);
-    button.setAttribute('aria-label', /** @type {string} */ (label));
-    button.innerHTML = ICONS[/** @type {keyof typeof ICONS} */ (command)];
-    textTools.appendChild(button);
-  }
-  textTools.appendChild(linkInput);
-  textTools.appendChild(linkConfirm);
-
-  // Keep the text's selection: a toolbar press must not take the focus.
-  textTools.addEventListener('mousedown', (event) => {
-    if (event.target !== linkInput) event.preventDefault();
-  });
-
+  /* Text commands, sent by the builder's ribbon (`formatText`). */
   const NATIVE = { bold: 'bold', italic: 'italic', underline: 'underline', strike: 'strikeThrough', unlink: 'unlink', clear: 'removeFormat' };
-
-  textTools.addEventListener('click', (event) => {
-    const button = /** @type {Element} */ (event.target).closest('button');
-    if (!button || !editingEl) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const command = button.getAttribute('data-command') || '';
-    if (command === 'link') {
-      showLinkInput();
-      return;
-    }
-    if (command === 'link-confirm') {
-      applyLink(linkInput.value.trim());
-      return;
-    }
-    runTextCommand(command);
-  });
 
   /**
    * Bold, italic, underline, strike, unlink or clear on the text being
@@ -1093,18 +1012,6 @@ export function createCanvasView(options) {
     refreshTextState();
     return true;
   }
-
-  linkInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      applyLink(linkInput.value.trim());
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      hideLinkInput();
-      restoreCaret();
-    }
-    event.stopPropagation();
-  });
 
   function linkUnderCaret() {
     if (!savedRange || !editingEl) return null;
@@ -1126,23 +1033,8 @@ export function createCanvasView(options) {
     selection.addRange(range);
   }
 
-  function showLinkInput() {
-    const link = linkUnderCaret();
-    linkInput.value = link ? link.getAttribute('href') || '' : '';
-    linkInput.hidden = false;
-    linkConfirm.hidden = false;
-    linkInput.focus();
-    linkInput.select();
-  }
-
-  function hideLinkInput() {
-    linkInput.hidden = true;
-    linkConfirm.hidden = true;
-  }
-
   /** @param {string} href */
   function applyLink(href) {
-    hideLinkInput();
     restoreCaret();
     if (!href || !editingEl) return;
     const safe = /^(https?:\/\/|mailto:|tel:|#|\{\{)/i.test(href) ? href : `https://${href}`;
@@ -1202,14 +1094,12 @@ export function createCanvasView(options) {
     /** @type {TextFormat} */
     const format = { ...NO_FORMAT, editing: true, link: linkUnderCaret()?.getAttribute('href') || null };
     for (const [command, native] of Object.entries({ bold: 'bold', italic: 'italic', underline: 'underline', strike: 'strikeThrough' })) {
-      const button = textTools.querySelector(`[data-command="${command}"]`);
       let on;
       try {
         on = doc.queryCommandState(native);
       } catch {
         on = false;
       }
-      button?.setAttribute('aria-pressed', on ? 'true' : 'false');
       format[command] = on;
     }
     reportFormat(format);
@@ -1402,8 +1292,8 @@ export function createCanvasView(options) {
     finishEditing,
     editingId: () => editingId,
     /**
-     * A command of the text toolbar, from outside the frame (the builder's
-     * ribbon): bold, italic, underline, strike, link (`value`: its address),
+     * A text command from outside the frame (the builder's ribbon): bold,
+     * italic, underline, strike, link (`value`: its address),
      * unlink or clear. On the selection of the text being edited; on a text
      * only selected, on all of it, which stays selected and not edited (what
      * comes next goes at its end, it does not replace it).

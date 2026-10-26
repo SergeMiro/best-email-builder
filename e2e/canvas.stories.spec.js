@@ -436,25 +436,27 @@ test.describe('Text, edited in place', () => {
   test('double-click, type, bold, link: what is typed is what is exported', async ({ page }) => {
     await openBuilder(page);
     await loadSample(page);
+    const tool = (command) => page.getByTestId('eb-ribbon').locator(`[data-command="${command}"]`);
     await canvas(page).getByText('Top').dblclick();
-    await expect(canvas(page).getByRole('toolbar', { name: 'Text formatting' })).toBeVisible();
+    // No bar of its own over the text: the ribbon above the canvas formats it.
+    await expect(canvas(page).getByRole('toolbar', { name: 'Text formatting' })).toHaveCount(0);
     await page.keyboard.press('End');
     await page.keyboard.type(' line');
     // Bold the word just typed.
     for (let i = 0; i < 4; i += 1) await page.keyboard.press('Shift+ArrowLeft');
-    await canvas(page).getByRole('button', { name: 'Bold (Ctrl+B)' }).click();
+    await tool('bold').click();
     await expect.poll(() => mjml(page)).toMatch(/Top <b>line<\/b><\/mj-text>/);
-    // Link on the selection, through the toolbar's field.
-    await canvas(page).getByRole('button', { name: 'Link', exact: true }).click();
-    await canvas(page).getByRole('textbox', { name: 'Link URL' }).fill('example.com/offer');
-    await canvas(page).getByRole('textbox', { name: 'Link URL' }).press('Enter');
+    // Link on the selection, through the ribbon's field.
+    await tool('link').click();
+    await page.getByRole('textbox', { name: 'Link URL' }).fill('example.com/offer');
+    await page.getByRole('textbox', { name: 'Link URL' }).press('Enter');
     await expect.poll(() => mjml(page)).toMatch(/<a href="https:\/\/example\.com\/offer">/);
     // Enter = a line break, Escape leaves the text.
-    await page.keyboard.press('End');
+    await canvas(page).locator('[contenteditable="true"]').press('End');
     await page.keyboard.press('Enter');
     await page.keyboard.type('Next');
     await page.keyboard.press('Escape');
-    await expect(canvas(page).getByRole('toolbar', { name: 'Text formatting' })).toBeHidden();
+    await expect(canvas(page).locator('[contenteditable="true"]')).toHaveCount(0);
     // (The caret was inside the bold word: what follows stays bold, as in any editor.)
     await expect.poll(() => mjml(page)).toMatch(/<br \/>Next(<\/b>)?<\/mj-text>/);
     // One undo removes the whole typing session at once.
