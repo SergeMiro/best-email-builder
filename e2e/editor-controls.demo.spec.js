@@ -132,8 +132,8 @@ test('all blocks have the three spacing layers and an empty center; radius has p
   await expect(section).toHaveCSS('border-top-left-radius', '120%');
   await radius.fill('65'); await radius.press('Enter');
   await expect(section).toHaveCSS('border-top-left-radius', '65%');
-  await expect(radius).toHaveCSS('border-top-left-radius', '6px');
-  await expect(panel.getByLabel('Vertical alignment', { exact: true })).toHaveCSS('border-top-left-radius', '6px');
+  await expect(radius).toHaveCSS('border-top-left-radius', '10px');
+  await expect(panel.getByLabel('Vertical alignment', { exact: true })).toHaveCSS('border-top-left-radius', '10px');
 });
 
 test('text margin, border and padding render independently in canvas and preview, and text stays editable', async ({ page }) => {
