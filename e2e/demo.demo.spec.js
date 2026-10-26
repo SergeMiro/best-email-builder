@@ -21,6 +21,8 @@ test('sections have independent margin, border and padding, kept after save and 
   await box.getByLabel('Margin — Top', { exact: true }).fill('24');
   await box.getByLabel('Margin — Top', { exact: true }).press('Enter');
   await box.getByRole('radio', { name: 'Solid', exact: true }).click();
+  // The style draws 1 px all round: typed before that 1 shows, the 3 would follow it ("13").
+  await expect(box.getByLabel('Border — Top', { exact: true })).toHaveValue('1');
   await box.getByLabel('Border — Top', { exact: true }).fill('3');
   await box.getByLabel('Border — Top', { exact: true }).press('Enter');
   await box.getByLabel('Padding — Top', { exact: true }).fill('30');
