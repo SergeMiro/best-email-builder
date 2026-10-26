@@ -6,10 +6,12 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-10-26
+
 ### Added
 - A ribbon above the canvas, always open, as in a word processor: bold,
   italic, underline, strikethrough, link, remove the link, clear formatting,
-  font size (typed or picked), line height, weight and alignment, each tool
+  font size (typed or picked), line height and alignment, each tool
   named in a tooltip. The word tools act on the selection of the text being
   edited, or on the whole of a selected text, and show what is pressed at the
   caret. `editor.formatText(command, value)` drives them; the editor's
@@ -19,23 +21,42 @@ All notable changes are documented here. The format follows
   language (accents optional), the recently used first. Like a variable, an
   emoji under the pointer shows in the text, a click inserts it. The names
   are loaded on first use, one language at a time (emojibase-data, MIT — see
-  THIRD-PARTY-NOTICES.md).
+  THIRD-PARTY-NOTICES.md), and only the rows near the scroll are drawn.
 - A feature may declare `drawer: {icon, label, title, panel}`: its button at
   the end of the ribbon opens its panel beside the canvas, one at a time.
 - The Spacing section of the properties is a box diagram, as in a browser's
   developer tools: the margin outside, the border, the padding inside, the
-  block's content in the middle, each zone with its four sides typed in
-  place and a line saying what it sets. A block shows the zones MJML gives
-  it (a button all three, a text its padding only).
-- Borders on sections, columns, images and buttons: a width per side, a
-  style (solid, dashed, dotted, double, groove, ridge) and a color. Equal
-  widths write one `border` attribute; different ones write `border-top`,
+  content in the middle, each zone with its four sides typed in place and a
+  line saying what it sets. Every built-in block has the three zones.
+- Borders: a width per side, a style (solid, dashed, dotted, double, groove,
+  ridge) and a color. On sections, columns, images and buttons, equal widths
+  write one `border` attribute; different ones write `border-top`,
   `border-right`… A double, groove or ridge line starts at 3 px, the least
   that draws it. A block property may take `type: 'border'`, and `box:
   'margin' | 'border' | 'padding'` to place it in the diagram.
-- The storage may give `imageUrl(path)`: where the canvas shows an uploaded
-  image when the page cannot load its path itself (images on another origin,
-  no server). The template keeps the path.
+- Spacing MJML has no attribute for (a section's margin, a text's border or
+  margin…) is kept in valid MJML: a section's margin as an `mj-wrapper`
+  (`css-class="eb-section-margin"`) around it, the others in an encoded
+  `eb-box-…` CSS class. The package's compiler (`compileMjml`, the server
+  handler) turns them into email tables; another MJML compiler ignores them.
+- Vertical alignment on every block: on a content block it aligns its
+  column, on a layout all its columns. Columns of one desktop row now have
+  equal heights in the compiled email, their content where it is aligned;
+  stacked on mobile, they keep their own height. Outlook keeps MJML's table.
+- The corner radius takes pixels or percentages, with no upper limit (a size
+  property may give `units: ['px', '%']`).
+- Variable groups: the *Variables* panel lists the variables under their
+  group; the **+** beside *Group* creates an empty group, a group's **+** a
+  variable in it. A storage may give `listVariableGroups()` and
+  `saveVariableGroup(name)` (HTTP: `GET` and `POST /variable-groups`); a
+  server repository `listGroups()` and `insertGroup(name)`. New error codes:
+  `INVALID_GROUP`, `DUPLICATE_GROUP`, `NO_GROUP_STORE`.
+- `--eb-accent-color`, set on `:root`, gives the accent of every screen (the
+  primary color, the focus ring and the light accent come from it).
+- The storage may give `imageUrl(path)`: where the canvas, and the *Brand*
+  dialog for a logo, show an uploaded image when the page cannot load its
+  path itself (images on another origin, no server). The template and the
+  brand keep the path.
 
 - The unsubscribe link is edited like the other variables, since each email
   provider has its own: its *value if empty* is used when the sending gives
@@ -76,7 +97,12 @@ All notable changes are documented here. The format follows
   under the pointer as *Recently used* appeared.
 - The live demo showed no uploaded image: it had no server to serve
   `/email-assets/`. It now keeps uploads in the browser (Cache Storage, so
-  they outlive a reload) and shows them in the canvas and the preview.
+  they outlive a reload) and shows them in the canvas, the preview and the
+  exported HTML.
+- Removing the last column of a section left an empty section behind, shown
+  as a phantom block: the section goes with it.
+- Dialogs, menus and tooltips could open under the host page's layers or the
+  canvas: they stay above.
 
 ### Changed
 - The space around a button, an image, a divider or the social icons is
@@ -107,8 +133,6 @@ All notable changes are documented here. The format follows
   `previewUnsubscribeUrl` defaults to `null` (the sample, otherwise `#`).
 - The *Proofread* dialog no longer says the AI reads the email: "Every text
   is checked for spelling, grammar and punctuation mistakes", whoever checks.
-- The live demo proofreads with LanguageTool's public API, without a key;
-  the visitor's key is for *Write with AI* and *Suggest subjects*.
 
 ## [0.15.0] — 2026-10-22
 
