@@ -41,6 +41,11 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
 .eb-ui-tools button.eb-ui-parent { width: auto; gap: 4px; padding: 0 7px 0 5px; display: inline-flex; align-items: center;
   font-weight: 600; white-space: nowrap; }
 .eb-ui-tools button.eb-ui-parent + button { margin-left: 2px; box-shadow: -1px 0 0 rgba(255, 255, 255, 0.25); }
+.eb-ui-add { all: unset; position: absolute; box-sizing: border-box; width: 22px; height: 22px; display: grid;
+  place-items: center; border-radius: 50%; background: ${PRIMARY}; color: #fff; cursor: pointer; pointer-events: auto;
+  box-shadow: 0 0 0 2px #fff, 0 3px 10px -3px color-mix(in oklab, ${PRIMARY} 70%, transparent); transition: transform 0.12s ease; }
+.eb-ui-add:hover, .eb-ui-add:focus-visible { transform: scale(1.15); }
+.eb-ui-add svg { width: 14px; height: 14px; stroke-width: 2.75; }
 .eb-ui-drop { position: absolute; height: 4px; margin-top: -2px; border-radius: 2px; background: ${PRIMARY};
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); pointer-events: none; }
 .eb-ui-drop::before, .eb-ui-drop::after { content: ''; position: absolute; top: -3px; width: 10px; height: 10px;

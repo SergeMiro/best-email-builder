@@ -116,6 +116,8 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
   /** @type {Map<string, {keys: string[], handler: () => void}>} */
   const shortcuts = new Map();
   /** @type {EmailNode|null} */ let clipboard = null;
+  /** Rows of items (a social block's icons, a menu's links) by tag: what their "+" adds. */
+  /** @type {Map<string, import('../core/EmailEditor.js').BlockItems>} */ let rows = new Map();
   /**
    * Ctrl+A: every section of the email selected at once (their ids), or null.
    * Any other selection, change or load ends it.
@@ -169,11 +171,26 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
     };
   }
 
+  /**
+   * The row of items an element belongs to: itself (a social block, a menu),
+   * or its parent for one of its items.
+   * @param {EmailNode} tree @param {string} id
+   */
+  function rowOf(tree, id) {
+    const node = findNode(tree, id);
+    if (!node) return null;
+    if (rows.has(node.tag)) return node;
+    const parent = parentOf(tree, id);
+    return parent && rows.get(parent.tag)?.tagName === node.tag ? parent : null;
+  }
+
   /** What the canvas shows about an element. @param {string} id */
   function canvasInfo(id) {
     const selection = describe(id);
     if (!selection) return null;
     const parent = root ? parentOf(root, id) : null;
+    const row = root ? rowOf(root, id) : null;
+    const items = row ? rows.get(row.tag) : null;
     return {
       label: labelOf(selection),
       tag: selection.tagName,
@@ -191,6 +208,13 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       // the page settings, which a click beside the email does already.
       hasParent: Boolean(parent && parent.tag !== 'mjml' && parent.tag !== 'mj-body'),
       parentLabel: parent && parent.tag !== 'mjml' && parent.tag !== 'mj-body' ? labelOf(/** @type {EngineSelection} */ (describe(parent.id))) : '',
+      // The "+" under it adds a block after it; an item of a row has the
+      // row's "+" (after its last item) instead.
+      canAdd: selection.canRemove && !(row && row.id !== id),
+      row:
+        row && items
+          ? { id: row.id, last: row.children.filter((child) => child.tag === items.tagName).at(-1)?.id || null, label: t(items.label) }
+          : null,
     };
   }
 
@@ -391,6 +415,28 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
     return copy.id;
   }
 
+  /**
+   * One more item at the end of a row: a copy of its last item (a menu
+   * link keeps its font and colours), with the choice's attributes and
+   * content.
+   * @param {string} id  the row or one of its items
+   * @param {import('../core/EmailEditor.js').BlockItemChoice|null} [choice]  the row's first by default
+   */
+  function addItem(id, choice = null) {
+    const current = requireRoot();
+    const row = rowOf(current, id);
+    const items = row ? rows.get(row.tag) : null;
+    if (!row || !items) return null;
+    const { attributes = {}, content } = choice || items.choices[0] || {};
+    view?.finishEditing();
+    const last = row.children.filter((child) => child.tag === items.tagName).at(-1);
+    const item = last ? cloneWithNewIds(last) : createNode(items.tagName);
+    let next = setAttributes(insertNodes(current, row.id, row.children.length, [item]), item.id, attributes);
+    if (content !== undefined) next = setContent(next, item.id, LABEL_TAGS.has(item.tag) ? escapeText(t(content)) : t(content));
+    commit(next, { select: item.id });
+    return item.id;
+  }
+
   /** @param {string} id */
   function removeById(id) {
     const current = requireRoot();
@@ -561,7 +607,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       return root;
     },
 
-    async initialize({ container: host, document, onEvent, t: translate, labelOf: label }) {
+    async initialize({ container: host, blocks = [], document, onEvent, t: translate, labelOf: label }) {
       if (view) throw new Error('NativeAdapter: already initialized');
       const ticket = ++generation;
       const loaded = await loadCompiler();
@@ -572,6 +618,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       if (label) labelOf = label;
       compile = loaded;
       container = host;
+      rows = new Map(blocks.filter((block) => block.items && !block.insertOnly).map((block) => [block.tagName, /** @type {any} */ (block.items)]));
       root = document ? fromProject(document.project) : parseMjml(EMPTY_MJML);
       selectedId = null;
       history = { past: [], future: [], key: null, at: 0 };
@@ -592,6 +639,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
           else if (action === 'remove') removeById(id);
           else if (action === 'back' || action === 'forward') adapter.move(id, action === 'back' ? -1 : 1);
         },
+        onAdd: (kind, id, anchor) => emit('add-menu', { kind, id, anchor }),
         onRemoveTag: (id, index) => {
           const current = requireRoot();
           const node = findNode(current, id);
@@ -652,6 +700,8 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       const placement = placementFor(current, block.kind === 'layout' ? 'layout' : 'content', target);
       return insertBlock(block, placement);
     },
+
+    addItem: (id, choice) => addItem(id, choice),
 
     remove(id) {
       // With everything selected, removing the body means removing its content.

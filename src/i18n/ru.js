@@ -16,6 +16,8 @@ export const ru = {
   "A tip": "Полезный совет",
   "Activities": "Занятия",
   "Add a block": "Добавить блок",
+  "Add a link": "Добавить ссылку",
+  "Add a network": "Добавить соцсеть",
   "Add to favorites": "Добавить в избранное",
   "Align center": "По центру",
   "Align left": "По левому краю",

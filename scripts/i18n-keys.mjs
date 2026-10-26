@@ -8,9 +8,10 @@
  *
  * A key is the first argument of a `t('…')` call, or a user-visible field of
  * the block, variable and feature registries (label, description, group,
- * placeholder, option labels, a feature panel's label and title), the emoji
- * groups, the gallery's names, descriptions and tags, the
- * rewrite actions, the error messages and the brand messages.
+ * placeholder, option labels, the "+" of a row and its choices, a feature
+ * panel's label and title), the emoji groups, the gallery's names,
+ * descriptions and tags, the rewrite actions, the error messages and the
+ * brand messages.
  *
  * Two dictionaries per locale: the core's (`src/i18n/`) and the AI module's
  * (`src/ai/i18n/`), which an application without the AI never loads. A key
@@ -67,6 +68,10 @@ export async function collectKeys() {
     for (const property of block.properties || []) {
       [property.label, property.group, property.placeholder].filter((k) => k && /[a-z]/i.test(k) && k !== 'https://').forEach((k) => core.add(k));
       for (const option of property.options || []) if (/[a-z]/i.test(option.label) && !option.value.includes(',')) core.add(option.label);
+    }
+    if (block.items) {
+      core.add(block.items.label);
+      for (const choice of block.items.choices) [choice.label, choice.content].filter(Boolean).forEach((k) => core.add(k));
     }
   }
   const { TEMPLATE_GALLERY } = await import(pathToUrl('src/features/templates/gallery.js'));

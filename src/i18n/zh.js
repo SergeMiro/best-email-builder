@@ -16,6 +16,8 @@ export const zh = {
   "A tip": "实用技巧",
   "Activities": "活动",
   "Add a block": "添加区块",
+  "Add a link": "添加链接",
+  "Add a network": "添加社交网络",
   "Add to favorites": "添加到收藏",
   "Align center": "居中",
   "Align left": "左对齐",

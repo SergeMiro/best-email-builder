@@ -109,6 +109,10 @@ export function PopoverTrigger(props) {
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
+export function PopoverAnchor(props) {
+  return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
+}
+
 export function PopoverContent({ className, align = 'center', sideOffset = 4, ...props }) {
   return (
     <PopoverPrimitive.Portal>

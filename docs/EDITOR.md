@@ -37,6 +37,12 @@ vertical position change to be visible.
 Columns in the same desktop row have equal heights. Their content keeps its
 chosen vertical alignment. On mobile, stacked columns use their natural height.
 
+The "+" under the selected element opens the blocks: the one picked goes
+after it, or at the end of a selected column. The "+" after the last icon
+of a social block opens its networks, and the one after a menu's last link
+adds a link styled like it. `editor.addItem(choice, id)` does the same from
+code; a block declares what its "+" adds in `items`.
+
 The emoji panel mounts nearby rows as you scroll. Search, group shortcuts
 and recent emojis use the same grid.
 

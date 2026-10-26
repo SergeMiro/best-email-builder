@@ -16,6 +16,8 @@ export const es = {
   "A tip": "Un consejo",
   "Activities": "Actividades",
   "Add a block": "Añadir un bloque",
+  "Add a link": "Añadir un enlace",
+  "Add a network": "Añadir una red",
   "Add to favorites": "Añadir a favoritos",
   "Align center": "Centrar",
   "Align left": "Alinear a la izquierda",

@@ -17,6 +17,7 @@ import { Button } from './primitives/button.jsx';
 import { cn } from './primitives/cn.js';
 import EmailCanvas from './EmailCanvas.jsx';
 import BlockSidebar from './BlockSidebar.jsx';
+import CanvasAddMenu from './CanvasAddMenu.jsx';
 import PropertiesPanel from './PropertiesPanel.jsx';
 import Toolbar from './Toolbar.jsx';
 import TextRibbon from './TextRibbon.jsx';
@@ -640,6 +641,7 @@ function Builder({
                       onError={(error) => setEngineError(error.message)}
                     />
                   )}
+                  <CanvasAddMenu editor={editor} onAdded={compact ? () => setDrawer('properties') : undefined} />
                 </div>
                 <CanvasPanel feature={openPanel} context={featureContext} compact={compact} onClose={() => setCanvasPanel(null)} />
               </div>

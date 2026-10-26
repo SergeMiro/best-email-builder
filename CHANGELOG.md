@@ -6,6 +6,17 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- A "+" on the canvas, as in Unlayer. Under the selected element, it opens
+  the blocks, and the one picked goes after the element (at the end of a
+  selected column). After the last icon of a social block, it opens the
+  networks with their icons; after a menu's last link, it adds a link at
+  once. The new icon or link copies the last one's look and is selected.
+- `editor.addItem(choice, id)`: one more item in a row (a social block's
+  icons, a menu's links). A block declares its row's choices in `items`;
+  the canvas's "+" emits the editor's `add-menu` event with where it is on
+  screen.
+
 ## [0.16.0] — 2026-10-26
 
 ### Added

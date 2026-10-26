@@ -37,10 +37,11 @@ const DRAG_THRESHOLD = 5;
  *
  * Blocks come from the registry (`editor.listBlocks()`): a block removed from
  * the registry disappears from here without touching this file. Only the icon
- * table is local (names come from the registry, components from here).
+ * table is local (names come from the registry, components from here); the
+ * canvas's "+" menu shares it.
  */
 
-const ICONS = {
+export const BLOCK_ICONS = {
   Heading,
   Type,
   Share2,
@@ -57,14 +58,14 @@ const ICONS = {
   Columns3,
 };
 
-const GROUPS = [
+export const BLOCK_GROUPS = [
   { kind: 'content', title: 'Content' },
   { kind: 'layout', title: 'Layout' },
 ];
 
 function BlockTile({ block, disabled, onAdd, onDragStart }) {
   const t = useT();
-  const Icon = ICONS[block.icon] || Square;
+  const Icon = BLOCK_ICONS[block.icon] || Square;
   /** Press in progress: where it started; `dragged` once it became a drag. */
   const press = useRef(null);
   return (
@@ -122,7 +123,7 @@ export default function BlockSidebar({ editor, disabled = false, onAdded }) {
 
   return (
     <aside aria-label={t('Blocks')} className="eb:min-h-0 eb:space-y-5 eb:overflow-y-auto eb:p-3">
-      {GROUPS.map((group) => {
+      {BLOCK_GROUPS.map((group) => {
         const items = blocks.filter((b) => b.kind === group.kind && b.mjml);
         if (!items.length) return null;
         return (

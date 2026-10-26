@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 /**
  * THE CANVAS, driven with the real mouse and keyboard on the
  * `Builder / Interface` story: drag and drop of every block, moving,
- * selecting, editing text in place, the toolbars, the names shown, the
- * defaults shown in the panel.
+ * selecting, editing text in place, the toolbars and the "+", the names
+ * shown, the defaults shown in the panel.
  *
  * `window.__emailEditor` and `window.__emailAdapter.root` are only READ.
  *
@@ -284,6 +284,68 @@ test.describe('Moving, selecting, the toolbar', () => {
     await page.mouse.click(frame.x + 20, frame.y + frame.height - 20);
     await expect(panel(page).getByRole('heading', { name: 'Email' })).toBeVisible();
     await expect(panel(page).getByLabel(/^Name/)).toBeVisible();
+  });
+
+  test('the "+" under the selection adds a block after it; the "+" after the last icon adds a network', async ({ page }) => {
+    await openBuilder(page);
+    await loadSample(page);
+    const menu = page.getByTestId('eb-add-menu');
+    await canvas(page).getByText('Top').click();
+    await canvas(page).getByTestId('eb-canvas-add-block').click();
+    await expect(menu).toBeVisible();
+    // The same "+" again closes it.
+    await canvas(page).getByTestId('eb-canvas-add-block').click();
+    await expect(menu).toHaveCount(0);
+    await canvas(page).getByTestId('eb-canvas-add-block').click();
+    await menu.locator('[data-block-id="social"]').click();
+    await expect(menu).toHaveCount(0);
+    // After the text, in its column, and selected.
+    await expect.poll(async () => (await nodes(page, 'mj-column'))[0].children).toEqual(['mj-text', 'mj-social']);
+    await expect(panel(page).getByRole('heading', { name: 'Social links' })).toBeVisible();
+
+    const networks = async () => (await nodes(page, 'mj-social-element')).map((n) => n.attributes.name);
+    const defaults = ['facebook-noshare', 'instagram-noshare', 'linkedin-noshare', 'x-noshare'];
+    await expect.poll(networks).toEqual(defaults);
+    const plus = canvas(page).getByTestId('eb-canvas-add-item');
+    await expect(plus).toHaveAttribute('aria-label', 'Add a network');
+    // Just after the last icon, on its line.
+    const lastId = (await nodes(page, 'mj-social-element')).at(-1).id;
+    const last = await canvas(page).locator(`.eb-id-${lastId}`).boundingBox();
+    const at = await plus.boundingBox();
+    expect(at.x).toBeGreaterThanOrEqual(last.x + last.width);
+    expect(Math.abs(at.y + at.height / 2 - (last.y + last.height / 2))).toBeLessThan(6);
+    await plus.click();
+    await menu.locator('[data-choice="YouTube"]').click();
+    await expect.poll(networks).toEqual([...defaults, 'youtube-noshare']);
+    const added = (await nodes(page, 'mj-social-element')).at(-1);
+    expect(added.attributes.href).toBe('https://www.youtube.com/');
+    await expect(panel(page).getByRole('heading', { name: 'Social link' })).toBeVisible();
+    // An icon selected: its row's "+", none under the icon itself.
+    await expect(plus).toBeVisible();
+    await expect(canvas(page).getByTestId('eb-canvas-add-block')).toBeHidden();
+    // One step of history.
+    await page.evaluate(() => window.__emailEditor.undo());
+    await expect.poll(networks).toEqual(defaults);
+  });
+
+  test('a menu’s "+" adds a link like its last one, at once, named in the interface’s language', async ({ page }) => {
+    await openBuilder(page, { lang: 'fr' });
+    await page.evaluate(() =>
+      window.__emailEditor.loadMjml(
+        '<mjml><mj-body><mj-section background-color="#ffffff"><mj-column><mj-navbar>' +
+          '<mj-navbar-link href="https://shop.example/" color="#123456" text-transform="none">Shop</mj-navbar-link>' +
+          '</mj-navbar></mj-column></mj-section></mj-body></mjml>'
+      )
+    );
+    await canvas(page).getByText('Shop').click();
+    const plus = canvas(page).getByTestId('eb-canvas-add-item');
+    await expect(plus).toHaveAttribute('aria-label', 'Ajouter un lien');
+    await plus.click();
+    await expect(page.getByTestId('eb-add-menu')).toHaveCount(0);
+    await expect.poll(async () => (await nodes(page, 'mj-navbar-link')).map((n) => n.content)).toEqual(['Shop', 'Lien']);
+    const added = (await nodes(page, 'mj-navbar-link'))[1];
+    expect(added.attributes).toMatchObject({ color: '#123456', 'text-transform': 'none', href: 'https://example.com/' });
+    await expect(canvas(page).getByRole('link', { name: 'Lien' })).toBeVisible();
   });
 
   test('keyboard in the canvas: Ctrl+C / Ctrl+V, Ctrl+D, Escape climbs to the parent, Delete', async ({ page }) => {

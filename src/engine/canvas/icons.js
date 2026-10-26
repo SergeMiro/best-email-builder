@@ -33,4 +33,5 @@ export const ICONS = {
   clear: svg('<path d="M4 7V4h16v3"/><path d="M5 20h6"/><path d="M13 4 8 20"/><path d="m15 15 5 5"/><path d="m20 15-5 5"/>'),
   check: svg('<path d="M20 6 9 17l-5-5"/>'),
   x: svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
+  plus: svg('<path d="M5 12h14"/><path d="M12 5v14"/>'),
 };

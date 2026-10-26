@@ -8,7 +8,7 @@
  * wraps on a phone by itself.
  *
  * Each link is edited like a button: its label in the panel, its URL, its
- * color. Duplicate a link to add one.
+ * color. The "+" after the last link adds one.
  */
 
 import { identity } from '../../i18n/index.js';
@@ -43,10 +43,16 @@ export const navbarBlock = {
   order: 70,
   mjml,
   sectionMjml: (t) => inWhiteSection(mjml(t)),
+  // The "+" after the last link: one more like it, to name in the panel.
+  items: {
+    tagName: 'mj-navbar-link',
+    label: 'Add a link',
+    choices: [{ label: 'Link', content: 'Link', attributes: { href: 'https://example.com/' } }],
+  },
   properties: [prop.align()],
 };
 
-/** One link of the menu: selectable, not addable (duplicate it instead). */
+/** One link of the menu: selectable, added with the menu's "+". */
 /** @type {EmailBlock} */
 export const navbarLinkBlock = {
   id: 'navbar-link',

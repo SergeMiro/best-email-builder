@@ -52,6 +52,8 @@ once and given away.
 - Columns from 1/4 to 3/4 of the row, background images on sections,
   full-width images on phones.
 - Drag with a drop line, type in place, a toolbar and shortcuts on every element.
+- A "+" under the selected element adds a block after it; a "+" after the
+  last social icon or menu link adds one more.
 - A ribbon above the canvas, as in a word processor: bold, italic, underline,
   strikethrough, link, size, line height and alignment, each tool
   named in a tooltip. At its end, panels beside the canvas for the emojis

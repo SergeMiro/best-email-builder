@@ -17,6 +17,8 @@
  *   click            select the element under the pointer
  *   double-click     edit a text in place (or a click on a selected text)
  *   toolbar          select the parent, move (drag), duplicate, delete
+ *   "+"              under the selection: add a block after it; after the
+ *                    last icon of a social block or link of a menu: add one
  *   drag and drop    from the sidebar, or the ✥ handle of the selection:
  *                    a line shows where the element will land, the frame
  *                    scrolls near its edges, Esc cancels
@@ -57,9 +59,10 @@ const EDGE = 56;
  *   getRoot: () => EmailNode,
  *   t: (key: string, values?: Record<string, any>) => string,
  *   imageUrl?: ((path: string) => string)|null,
- *   info: (id: string) => {label: string, tag: string, canRemove: boolean, canDuplicate: boolean, canMove: boolean, canStep: boolean, canStepBack: boolean, canStepForward: boolean, vertical: boolean, hasParent: boolean, parentLabel: string}|null,
+ *   info: (id: string) => {label: string, tag: string, canRemove: boolean, canDuplicate: boolean, canMove: boolean, canStep: boolean, canStepBack: boolean, canStepForward: boolean, vertical: boolean, hasParent: boolean, parentLabel: string, canAdd?: boolean, row?: {id: string, last: string|null, label: string}|null}|null,
  *   onSelect: (id: string|null) => void,
  *   onAction: (action: 'parent'|'duplicate'|'remove'|'back'|'forward', id: string) => void,
+ *   onAdd?: (kind: 'block'|'item', id: string, anchor: {top: number, left: number, width: number, height: number}) => void,
  *   onRemoveTag: (id: string, index: number) => void,
  *   onDrop: (payload: DragPayload, target: DropTarget) => void,
  *   onEditStart: (id: string) => void,
@@ -70,6 +73,10 @@ const EDGE = 56;
  * }} options
  *   `onFormat`: the formatting at the caret of the text being edited changed
  *   (and `editing: false` when no text is edited any more).
+ *   `info(id).row`: the row of items the element belongs to (itself, or its
+ *   parent), its last item and the name of its "+".
+ *   `onAdd`: a "+" was pressed — after the element `id` (`block`) or in the
+ *   row `id` (`item`); `anchor`: the "+" in the page's viewport.
  */
 export function createCanvasView(options) {
   const { container, compile, getRoot, t, info, imageUrl = null } = options;
@@ -128,6 +135,21 @@ export function createCanvasView(options) {
   const tools = make('eb-ui-tools');
   tools.setAttribute('role', 'toolbar');
   tools.setAttribute('aria-label', t('Element actions'));
+  // The "+": under the selection (a block after it), and after the last
+  // item of a row (one more icon, one more link).
+  /** @param {string} testId */
+  const makeAdd = (testId) => {
+    const el = doc.createElement('button');
+    el.type = 'button';
+    el.className = 'eb-ui-add';
+    el.hidden = true;
+    el.innerHTML = ICONS.plus;
+    el.setAttribute('data-testid', testId);
+    ui.appendChild(el);
+    return el;
+  };
+  const addBlock = makeAdd('eb-canvas-add-block');
+  const addItem = makeAdd('eb-canvas-add-item');
   const dropLine = make('eb-ui-drop');
   const textTools = make('eb-ui-text');
   textTools.setAttribute('role', 'toolbar');
@@ -220,7 +242,7 @@ export function createCanvasView(options) {
   function drawSelection() {
     const box = selectedId ? docBoxOf(selectedId) : null;
     const details = selectedId ? info(selectedId) : null;
-    selectBox.hidden = selectChip.hidden = tools.hidden = !box;
+    selectBox.hidden = selectChip.hidden = tools.hidden = addBlock.hidden = addItem.hidden = !box;
     if (!box || !details || !selectedId) return;
     place(selectBox, box);
     placeChip(selectChip, box, details.label);
@@ -273,6 +295,37 @@ export function createCanvasView(options) {
     // Right-aligned on the element, but never over its name.
     const afterChip = selectChip.hidden ? box.left : box.left + selectChip.offsetWidth + 4;
     tools.style.left = `${Math.max(afterChip, box.left + box.width - toolsWidth)}px`;
+    drawAdd(box, details);
+  }
+
+  /**
+   * The "+" of the selection: centred on its bottom edge; and the row's,
+   * just after its last item (beside the row's start when it has none),
+   * kept inside the frame.
+   * @param {{top: number, left: number, width: number, height: number}} box
+   * @param {{canAdd?: boolean, row?: {id: string, last: string|null, label: string}|null}} details
+   */
+  function drawAdd(box, details) {
+    const SIZE = 22;
+    // Not while a text is typed, nor while something is dragged.
+    const busy = Boolean(editingId || drag);
+    addBlock.hidden = busy || !details.canAdd;
+    if (!addBlock.hidden) {
+      addBlock.style.top = `${box.top + box.height - SIZE / 2}px`;
+      addBlock.style.left = `${box.left + box.width / 2 - SIZE / 2}px`;
+      addBlock.title = t('Add a block');
+      addBlock.setAttribute('aria-label', t('Add a block'));
+    }
+    const row = details.row || null;
+    const anchor = row ? (row.last && docBoxOf(row.last)) || docBoxOf(row.id) : null;
+    addItem.hidden = busy || !row || !anchor;
+    if (!row || !anchor || addItem.hidden) return;
+    const right = doc.documentElement.clientWidth + win.scrollX - SIZE - 2;
+    addItem.style.top = `${anchor.top + anchor.height / 2 - SIZE / 2}px`;
+    addItem.style.left = `${Math.min(right, row.last ? anchor.left + anchor.width + 4 : anchor.left + 4)}px`;
+    addItem.dataset.row = row.id;
+    addItem.title = row.label;
+    addItem.setAttribute('aria-label', row.label);
   }
 
   function drawTextTools() {
@@ -670,6 +723,23 @@ export function createCanvasView(options) {
       options.onAction(action, selectedId);
     }
   });
+  for (const button of [addBlock, addItem]) {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const id = button === addBlock ? selectedId : button.dataset.row;
+      if (!id || !options.onAdd) return;
+      // The menu opens in the page, beside the "+": its box there.
+      const frameBox = frame.getBoundingClientRect();
+      const r = button.getBoundingClientRect();
+      options.onAdd(button === addBlock ? 'block' : 'item', id, {
+        top: frameBox.top + r.top,
+        left: frameBox.left + r.left,
+        width: r.width,
+        height: r.height,
+      });
+    });
+  }
   tools.addEventListener('pointerdown', (event) => {
     const button = /** @type {Element} */ (event.target).closest('button[data-action="move"]');
     if (!button || !selectedId || event.button !== 0) return;

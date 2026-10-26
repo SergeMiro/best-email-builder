@@ -93,12 +93,20 @@ the HTML **compiled by the server**.
   stays captured over the frame): a line shows where the block lands, the
   frame scrolls near its edges, Esc cancels. Keyboard: Delete, Ctrl+Z / Ctrl+Y,
   Ctrl+C / Ctrl+V, Ctrl+D, Escape (parent), Enter (edit the text).
+- **The "+"**: one under the selection, one after the last icon of a social
+  block or link of a menu. The canvas only reports it (the editor's
+  `add-menu` event, with where the "+" is on screen); `ui/CanvasAddMenu.jsx`
+  opens the menu there: the blocks, added after the selection
+  (`editor.addBlock(id, {targetId})`), or what the row's block offers in
+  `items` (the networks), added as a copy of its last item
+  (`editor.addItem(choice, rowId)`). A row with one choice, a menu, gets its
+  new link at once.
 - **Placement** (`engine/placement.js`): MJML's hierarchy decides. A content
   block goes into a column (between two elements, by their middle); over a
   section's top or bottom padding, or outside the sections, it gets a section
   of its own. A layout goes between sections. Social icons, menu links and
   columns are not dragged: the arrows of their toolbar move them among their
-  siblings.
+  siblings, and their row's "+" adds one.
 - **Merge tags** (`engine/mergeTags.js`): a tag under the pointer swaps its
   colors and gets a ×, which takes it out with the space before it.
 

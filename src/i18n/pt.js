@@ -16,6 +16,8 @@ export const pt = {
   "A tip": "Uma dica",
   "Activities": "Atividades",
   "Add a block": "Adicionar um bloco",
+  "Add a link": "Adicionar um link",
+  "Add a network": "Adicionar uma rede",
   "Add to favorites": "Adicionar aos favoritos",
   "Align center": "Centralizar",
   "Align left": "Alinhar à esquerda",

@@ -7,22 +7,28 @@
  * page given (the company's profile), not to a "share this" dialog.
  *
  * The icons are MJML's own, served over https by Mailjet; a network can be
- * changed, a link duplicated (one more network) or deleted from the panel.
- * No text next to the icons: the row stays readable on a phone.
+ * changed in the panel, added with the "+" after the last icon, duplicated
+ * or deleted. No text next to the icons: the row stays readable on a phone.
  */
 
 import { GROUPS, inWhiteSection, prop } from '../shared.js';
 
 /** @typedef {import('../../core/EmailEditor.js').EmailBlock} EmailBlock */
 
-/** Networks MJML ships an icon for (server and canvas). */
+/** Where MJML takes its icons from (`mjml-social`). */
+const ICON_BASE = 'https://www.mailjet.com/images/theme/v1/icons/ico-social/';
+
+/**
+ * Networks MJML ships an icon for (server and canvas). `image` and `color`:
+ * MJML's icon and background for it, shown in the "+" menu.
+ */
 export const SOCIAL_NETWORKS = [
-  { value: 'facebook-noshare', label: 'Facebook', href: 'https://www.facebook.com/' },
-  { value: 'instagram-noshare', label: 'Instagram', href: 'https://www.instagram.com/' },
-  { value: 'linkedin-noshare', label: 'LinkedIn', href: 'https://www.linkedin.com/' },
-  { value: 'x-noshare', label: 'X', href: 'https://x.com/' },
-  { value: 'youtube-noshare', label: 'YouTube', href: 'https://www.youtube.com/' },
-  { value: 'github-noshare', label: 'GitHub', href: 'https://github.com/' },
+  { value: 'facebook-noshare', label: 'Facebook', href: 'https://www.facebook.com/', image: `${ICON_BASE}facebook.png`, color: '#3b5998' },
+  { value: 'instagram-noshare', label: 'Instagram', href: 'https://www.instagram.com/', image: `${ICON_BASE}instagram.png`, color: '#3f729b' },
+  { value: 'linkedin-noshare', label: 'LinkedIn', href: 'https://www.linkedin.com/', image: `${ICON_BASE}linkedin.png`, color: '#0077b5' },
+  { value: 'x-noshare', label: 'X', href: 'https://x.com/', image: `${ICON_BASE}twitter-x.png`, color: '#000000' },
+  { value: 'youtube-noshare', label: 'YouTube', href: 'https://www.youtube.com/', image: `${ICON_BASE}youtube.png`, color: '#EB3323' },
+  { value: 'github-noshare', label: 'GitHub', href: 'https://github.com/', image: `${ICON_BASE}github.png`, color: '#000000' },
 ];
 
 const DEFAULT_NETWORKS = ['facebook-noshare', 'instagram-noshare', 'linkedin-noshare', 'x-noshare'];
@@ -46,6 +52,19 @@ export const socialBlock = {
   order: 60,
   mjml: MJML,
   sectionMjml: inWhiteSection(MJML),
+  // The "+" after the last icon: one more network, a copy of the last icon
+  // (its size, its background) with its own network and link, and MJML's
+  // picture for it rather than the last one's own.
+  items: {
+    tagName: 'mj-social-element',
+    label: 'Add a network',
+    choices: SOCIAL_NETWORKS.map(({ value, label, href, image, color }) => ({
+      label,
+      image,
+      color,
+      attributes: { name: value, href, src: null, alt: null, title: null },
+    })),
+  },
   properties: [
     { key: 'icon-size', label: 'Icon size', type: 'size', group: GROUPS.layout, min: 16, max: 48, unit: 'px' },
     prop.radius(),
@@ -65,7 +84,7 @@ export const socialBlock = {
   ],
 };
 
-/** One icon of the row: selectable, not addable (duplicate it instead). */
+/** One icon of the row: selectable, added with the row's "+". */
 /** @type {EmailBlock} */
 export const socialElementBlock = {
   id: 'social-element',

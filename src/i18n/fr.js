@@ -16,6 +16,8 @@ export const fr = {
   "A tip": "Une astuce",
   "Activities": "Activités",
   "Add a block": "Ajouter un bloc",
+  "Add a link": "Ajouter un lien",
+  "Add a network": "Ajouter un réseau",
   "Add to favorites": "Ajouter aux favoris",
   "Align center": "Centrer",
   "Align left": "Aligner à gauche",

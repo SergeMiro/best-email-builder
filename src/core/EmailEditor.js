@@ -79,6 +79,8 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  * `insertOnly`: a preset of another block's element (a Heading is an
  * `mj-text`): offered in the sidebar, but a selected element of that tag is
  * described by the main block.
+ * `items`: a row of items (a social block's icons, a menu's links) that the
+ * "+" after its last item adds to.
  *
  * @typedef {{
  *   id: string,
@@ -93,7 +95,30 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   properties: BlockProperty[],
  *   editableContent?: boolean,
  *   insertOnly?: boolean,
+ *   items?: BlockItems,
  * }} EmailBlock
+ */
+
+/**
+ * What the "+" after the last item of a row adds: an item of `tagName`,
+ * from `choices` (one is added at once, several are offered in a menu named
+ * `label`). Each choice is a copy of the row's last item, so it keeps the
+ * row's look, with its own `attributes` (null removes one) and `content` (a
+ * translation key: a menu link's label); `image` and `color` show it in the
+ * menu.
+ *
+ * @typedef {{
+ *   tagName: string,
+ *   label: string,
+ *   choices: BlockItemChoice[],
+ * }} BlockItems
+ * @typedef {{
+ *   label: string,
+ *   attributes?: Record<string, string|null>,
+ *   content?: string,
+ *   image?: string,
+ *   color?: string,
+ * }} BlockItemChoice
  */
 
 /**
@@ -165,6 +190,11 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   `device`    the displayed device changed — payload: EmailDevice
  *   `format`    the formatting at the caret of the text being edited
  *               changed — payload: TextFormat (optional)
+ *   `add-menu`  a "+" of the canvas was pressed — payload: {kind, id,
+ *               anchor}: `block`, a block to add after `id` (`addBlock`
+ *               with `targetId`); `item`, an item to add to the row `id`
+ *               (`addItem`). `anchor`: the "+" in the page's viewport
+ *               ({top, left, width, height}), where a menu opens (optional)
  *
  * @typedef {{
  *   name: string,
@@ -179,6 +209,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   }) => Promise<void>,
  *   destroy: () => void,
  *   addBlock: (block: EmailBlock, options?: {targetId?: string|null}) => string|null,
+ *   addItem?: (id: string, choice?: BlockItemChoice|null) => string|null,
  *   remove: (id: string) => boolean,
  *   duplicate: (id: string) => string|null,
  *   move: (id: string, direction: -1|1) => boolean,
@@ -254,6 +285,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   listBlocks: () => EmailBlock[],
  *   getBlock: (blockId: string) => EmailBlock|undefined,
  *   addBlock: (blockId: string, options?: {targetId?: string|null}) => string|null,
+ *   addItem: (choice?: BlockItemChoice|null, id?: string|null) => string|null,
  *   remove: (id?: string|null) => boolean,
  *   duplicate: (id?: string|null) => string|null,
  *   move: (direction: -1|1, id?: string|null) => boolean,
@@ -493,6 +525,16 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
       const block = blocks.get(blockId);
       if (!block || !block.mjml) throw new Error(`EmailEditor: unknown block "${blockId}"`);
       return adapter.addBlock(resolved(block), options);
+    },
+
+    /**
+     * One more item in a row (an icon of a social block, a link of a menu):
+     * a copy of its last item with the choice's attributes and content (the
+     * row's first choice by default). `id`: the row or one of its items.
+     */
+    addItem(choice = null, id = null) {
+      requireReady('addItem');
+      return adapter.addItem ? adapter.addItem(targetOf(id, 'addItem'), choice) : null;
     },
 
     remove(id = null) {
