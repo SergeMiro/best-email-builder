@@ -6,6 +6,13 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- No browser up/down arrows on number fields (corner radius, size, line
+  height, padding…): the arrow keys still step them.
+- The unit of a field (px or %) is picked in the builder's own list, as the
+  font is, not the browser's. The variable dialog's group field no longer
+  opens the browser's suggestions: the groups are the buttons under it.
+
 ## [0.17.0] — 2026-10-26
 
 ### Added

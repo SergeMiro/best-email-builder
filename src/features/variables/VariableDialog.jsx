@@ -188,17 +188,11 @@ export default function VariableDialog({ open, onOpenChange, variable = null, in
             <Input
               dense
               id="eb-var-group"
-              list="eb-var-groups"
               value={form.group}
               onChange={set('group')}
               maxLength={VARIABLE_LIMITS.group}
               placeholder={t(system ? variable.group : CUSTOM_GROUP)}
             />
-            <datalist id="eb-var-groups">
-              {groups.map((g) => (
-                <option key={g} value={g} />
-              ))}
-            </datalist>
             {groups.length > 0 && <div className="eb:flex eb:flex-wrap eb:gap-1">
               {groups.map((group) => <button key={group} type="button" aria-pressed={form.group === group}
                 className="eb:rounded-md eb:border eb:border-border eb:px-2 eb:py-0.5 eb:text-[11px] eb:text-foreground-muted eb:hover:bg-accent eb:aria-pressed:border-primary eb:aria-pressed:text-primary"

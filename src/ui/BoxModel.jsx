@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Ban } from 'lucide-react';
 import { TooltipWrap } from './primitives/misc.jsx';
 import { cn } from './primitives/cn.js';
+import { NO_SPINNER } from './primitives/fields.jsx';
 import { PropertyField, spacingFromSides, useDraft } from './fields.jsx';
 import { BORDER_STYLES, MAX_BORDER, formatBorder, parseBorder, parseSpacing } from '../core/mjmlAttributes.js';
 import { useT } from './context.jsx';
@@ -77,7 +78,7 @@ function SideInput({ id, label, value, placeholder, max, className, onChange, on
       className={cn(
         'eb:h-5 eb:w-8 eb:justify-self-center eb:rounded-md eb:bg-transparent eb:text-center eb:text-[11.5px] eb:text-foreground eb:tabular-nums eb:outline-none eb:transition-colors eb:placeholder:text-foreground-muted',
         'eb:hover:bg-background/80 eb:focus:bg-background eb:focus-visible:ring-2 eb:focus-visible:ring-ring/60',
-        'eb:[appearance:textfield] eb:[&::-webkit-inner-spin-button]:appearance-none eb:[&::-webkit-outer-spin-button]:appearance-none',
+        NO_SPINNER,
         className
       )}
     />

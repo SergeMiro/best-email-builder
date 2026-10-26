@@ -247,15 +247,26 @@ function SizeField({ id, property, value, fallback = '', onCommit }) {
             if (e.key === 'Escape') setDraft(asNumber(value));
           }}
           dense
-          className="eb:pr-8 eb:tabular-nums"
+          className={cn('eb:tabular-nums', property.units ? 'eb:pr-14' : 'eb:pr-8')}
         />
-        <span className="eb:pointer-events-none eb:absolute eb:right-2.5 eb:top-1/2 eb:-translate-y-1/2 eb:text-[12px] eb:text-foreground-muted">
-          {property.units ? <select aria-label={`${t(property.label)} — ${t('Unit')}`} value={unit}
-            className="eb:pointer-events-auto eb:bg-transparent eb:text-foreground eb:outline-none"
-            onChange={(event) => commit(draft || asNumber(fallback) || '0', event.target.value)}>
-            {property.units.map((option) => <option key={option} value={option}>{option}</option>)}
-          </select> : property.unit || 'px'}
-        </span>
+        {property.units ? (
+          // The unit, picked in the builder's own list (as the font's), not the browser's.
+          <Select value={unit} onValueChange={(next) => commit(draft || asNumber(fallback) || '0', next)}>
+            <SelectTrigger
+              aria-label={`${t(property.label)} — ${t('Unit')}`}
+              className="eb:absolute eb:top-1/2 eb:right-1 eb:h-5.5 eb:w-auto eb:-translate-y-1/2 eb:gap-0.5 eb:rounded-md eb:border-0 eb:bg-transparent eb:px-1.5 eb:text-[12px] eb:shadow-none eb:hover:bg-accent eb:[&_svg:not([class*='size-'])]:size-3"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end" className="eb:min-w-[4.5rem]">
+              {property.units.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="eb:pointer-events-none eb:absolute eb:right-2.5 eb:top-1/2 eb:-translate-y-1/2 eb:text-[12px] eb:text-foreground-muted">
+            {property.unit || 'px'}
+          </span>
+        )}
       </div>
     </div>
   );

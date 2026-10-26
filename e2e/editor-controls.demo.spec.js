@@ -128,7 +128,14 @@ test('all blocks have the three spacing layers and an empty center; radius has p
   await expect(radius).toHaveValue('120');
   const section = canvas.locator('.eb-tag-mj-section').filter({ hasText: 'Your big announcement' }).first();
   await expect(section).toHaveCSS('border-top-left-radius', '120px');
-  await panel.getByLabel('Corner radius — Unit', { exact: true }).selectOption('%');
+  // The unit: the builder's own list, as the font's; no browser arrows on the number.
+  await expect(radius).toHaveCSS('appearance', 'textfield');
+  const unit = panel.getByRole('combobox', { name: 'Corner radius — Unit', exact: true });
+  await expect(unit).toHaveText('px');
+  await unit.click();
+  await expect(page.getByRole('listbox')).toHaveCSS('border-top-left-radius', '10px');
+  await page.getByRole('option', { name: '%', exact: true }).click();
+  await expect(unit).toHaveText('%');
   await expect(section).toHaveCSS('border-top-left-radius', '120%');
   await radius.fill('65'); await radius.press('Enter');
   await expect(section).toHaveCSS('border-top-left-radius', '65%');

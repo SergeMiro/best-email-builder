@@ -8,6 +8,10 @@ import { cn } from './cn.js';
  */
 export const DENSE_FIELD = 'eb:h-6.5 eb:px-2.5 eb:text-[12.5px]';
 
+/** A number field without the browser's up/down arrows: the arrow keys still step it. */
+export const NO_SPINNER =
+  'eb:[appearance:textfield] eb:[&::-webkit-inner-spin-button]:appearance-none eb:[&::-webkit-outer-spin-button]:appearance-none';
+
 // forwardRef: React 18 does not pass `ref` as a prop.
 export const Input = forwardRef(function Input({ className, type, dense = false, ...props }, ref) {
   return (
@@ -20,6 +24,7 @@ export const Input = forwardRef(function Input({ className, type, dense = false,
         'eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
         'eb:aria-invalid:border-destructive eb:aria-invalid:ring-destructive/20',
         dense && DENSE_FIELD,
+        type === 'number' && NO_SPINNER,
         className
       )}
       {...props}
