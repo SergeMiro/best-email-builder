@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.17.1] — 2026-10-26
+
 ### Changed
 - No browser up/down arrows on number fields (corner radius, size, line
   height, padding…): the arrow keys still step them.
