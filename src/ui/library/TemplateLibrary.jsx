@@ -747,7 +747,9 @@ function Library({
         <div
           className={cn(
             'eb:grid eb:min-h-0 eb:flex-1 eb:grid-rows-1 eb:divide-x eb:divide-border eb:overflow-hidden',
-            layout === 'wide' ? 'eb:grid-cols-[290px_minmax(0,1fr)_minmax(0,1fr)]' : 'eb:grid-cols-[260px_minmax(0,1fr)]'
+            // Wide: the list a fifth of the width (never under 260 px), the
+            // template and its preview the same width.
+            layout === 'wide' ? 'eb:grid-cols-[minmax(260px,20%)_minmax(0,1fr)_minmax(0,1fr)]' : 'eb:grid-cols-[260px_minmax(0,1fr)]'
           )}
         >
           {listColumn}

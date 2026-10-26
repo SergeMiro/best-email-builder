@@ -20,7 +20,9 @@ the parent's width:
   alone. The side columns are resized by dragging their border, and fold to a
   narrow rail with the round button on it; the editor remembers both in the
   browser;
-- the library has three columns, then two, then the list and the details on two screens.
+- the library has three columns (the list a fifth of the width, never under
+  260 px; the template and its preview the same width), then two, then the
+  list and the details on two screens.
 
 <p align="center">
   <img src="assets/library.png" width="860" alt="The template library: templates with their tags on the left, the selected template's details and its five actions in the middle, its preview on the right">

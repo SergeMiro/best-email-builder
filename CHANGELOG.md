@@ -21,6 +21,11 @@ All notable changes are documented here. The format follows
   it. The other groups are outlined, the one under the pointer lit; Esc
   cancels, and a click still inserts.
 
+### Changed
+- The template library, wide: the list takes a fifth of the width (never
+  under 260 px), and the template's details and its preview share the rest
+  equally.
+
 ### Removed
 - The formatting bar over a text being edited in the canvas: the ribbon
   above the canvas has the same tools (bold, italic, underline, strike,

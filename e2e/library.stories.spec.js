@@ -304,6 +304,23 @@ test('French', async ({ page }) => {
   await expect(dialog.getByRole('radio', { name: 'Bleu canard' })).toBeVisible();
 });
 
+test('wide: the list a fifth of the width, never under 260 px; the template and its preview the same width', async ({ page }) => {
+  const widths = async () => {
+    const width = async (testId) => (await page.getByTestId(testId).boundingBox()).width;
+    return { all: await width('template-library'), list: await width('eb-library-list'), details: await width('eb-library-details'), preview: await width('eb-library-preview') };
+  };
+  await page.setViewportSize({ width: 1912, height: 1016 });
+  await page.goto(STANDALONE);
+  await expect(page.getByTestId('eb-library-preview')).toBeVisible();
+  let w = await widths();
+  expect(Math.abs(w.list - w.all * 0.2)).toBeLessThan(2);
+  expect(Math.abs(w.details - w.preview)).toBeLessThan(2);
+  await page.setViewportSize({ width: 1240, height: 900 });
+  await expect.poll(async () => Math.round((await widths()).list)).toBe(260);
+  w = await widths();
+  expect(Math.abs(w.details - w.preview)).toBeLessThan(2);
+});
+
 test('preview: the editor’s device switch, and the frame narrows and widens smoothly', async ({ page }) => {
   await page.goto(STANDALONE);
   const preview = page.getByTestId('eb-library-preview');
