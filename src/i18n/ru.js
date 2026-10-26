@@ -125,6 +125,7 @@ export const ru = {
   "News": "Новости",
   "Onboarding": "Приветствие",
   "Point at one to see it in the text, click to insert it.": "Наведите, чтобы увидеть в тексте; нажмите, чтобы вставить.",
+  "Point at one to see it in the text, click to insert it, drag it onto a group to move it.": "Наведите, чтобы увидеть в тексте; нажмите, чтобы вставить; перетащите в группу, чтобы переместить.",
   "Recently used": "Недавние",
   "Sales": "Продажи",
   "Events": "События",

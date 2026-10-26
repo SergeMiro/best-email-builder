@@ -125,6 +125,7 @@ export const fr = {
   "News": "Actualités",
   "Onboarding": "Accueil",
   "Point at one to see it in the text, click to insert it.": "Survolez-en un pour le voir dans le texte, cliquez pour l’insérer.",
+  "Point at one to see it in the text, click to insert it, drag it onto a group to move it.": "Survolez-en un pour le voir dans le texte, cliquez pour l’insérer, glissez-le sur un groupe pour l’y déplacer.",
   "Recently used": "Utilisés récemment",
   "Sales": "Ventes",
   "Events": "Événements",

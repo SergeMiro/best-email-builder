@@ -16,6 +16,10 @@ All notable changes are documented here. The format follows
   icons, a menu's links). A block declares its row's choices in `items`;
   the canvas's "+" emits the editor's `add-menu` event with where it is on
   screen.
+- Variables move by drag and drop: a badge dragged onto another group of
+  the *Variables* panel moves there and is saved, as its dialog would save
+  it. The other groups are outlined, the one under the pointer lit; Esc
+  cancels, and a click still inserts.
 
 ## [0.16.0] — 2026-10-26
 

@@ -57,6 +57,60 @@ test('create empty variable groups, assign and move a variable, and retain group
   await expect(panel.getByRole('group', { name: 'SFR', exact: true }).getByRole('button', { name: 'Account code', exact: true })).toBeVisible();
 });
 
+test('drag a variable onto another group: it moves there and stays; Esc cancels; a click still inserts', async ({ page }) => {
+  await open(page);
+  const panel = page.getByTestId('eb-panel-variables');
+  await page.getByTestId('eb-ribbon').locator('[data-drawer="variables"]').click();
+  await panel.getByRole('button', { name: 'New group', exact: true }).click();
+  await page.getByRole('dialog').getByLabel('Name', { exact: true }).fill('Tester');
+  await page.getByRole('dialog').getByRole('button', { name: 'Create', exact: true }).click();
+  const brevo = panel.getByRole('group', { name: 'Brevo', exact: true });
+  const tester = panel.getByRole('group', { name: 'Tester', exact: true });
+  const links = panel.getByRole('group', { name: 'Links', exact: true });
+  await expect(tester).toBeVisible();
+
+  /** Presses a badge and carries it over a group, in steps (the press becomes a drag past a few pixels). */
+  const carry = async (badge, group) => {
+    const from = await badge.boundingBox();
+    const to = await group.getByRole('heading').boundingBox();
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + 10, to.y + to.height / 2, { steps: 8 });
+  };
+
+  // Esc: it stays where it was.
+  await carry(brevo.getByRole('button', { name: 'Last name', exact: true }), tester);
+  await expect(tester).toHaveClass(/outline-primary/);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(tester).not.toHaveClass(/outline-dashed/);
+  await expect(brevo.getByRole('button', { name: 'Last name', exact: true })).toBeVisible();
+
+  // Dropped on the empty group: it moves there, and the click that ends the drag inserts nothing.
+  await carry(brevo.getByRole('button', { name: 'First name', exact: true }), tester);
+  await expect(links).toHaveClass(/outline-dashed/);
+  await expect(brevo).not.toHaveClass(/outline-dashed/);
+  await page.mouse.up();
+  await expect(tester.getByRole('button', { name: 'First name', exact: true })).toBeVisible();
+  await expect(brevo.getByRole('button', { name: 'First name', exact: true })).toHaveCount(0);
+  // Nothing is selected: a click would have said so.
+  const hint = page.getByText('Select a text or a button first.');
+  await expect(hint).toHaveCount(0);
+  await tester.getByRole('button', { name: 'First name', exact: true }).click();
+  await expect(hint).toBeVisible();
+
+  // The unsubscribe link too.
+  await carry(links.getByRole('button', { name: 'Unsubscribe link', exact: true }), brevo);
+  await page.mouse.up();
+  await expect(brevo.getByRole('button', { name: 'Unsubscribe link', exact: true })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+  await page.getByTestId('eb-ribbon').locator('[data-drawer="variables"]').click();
+  await expect(tester.getByRole('button', { name: 'First name', exact: true })).toBeVisible();
+  await expect(brevo.getByRole('button', { name: 'Unsubscribe link', exact: true })).toBeVisible();
+});
+
 test('all blocks have the three spacing layers and an empty center; radius has px and % without an upper limit', async ({ page }) => {
   await open(page);
   const canvas = page.frameLocator('.eb-canvas-frame');

@@ -125,6 +125,7 @@ export const es = {
   "News": "Noticias",
   "Onboarding": "Bienvenida",
   "Point at one to see it in the text, click to insert it.": "Pasa el cursor por uno para verlo en el texto; haz clic para insertarlo.",
+  "Point at one to see it in the text, click to insert it, drag it onto a group to move it.": "Pasa el cursor por uno para verlo en el texto; haz clic para insertarlo; arrástralo a un grupo para moverlo.",
   "Recently used": "Usados recientemente",
   "Sales": "Ventas",
   "Events": "Eventos",

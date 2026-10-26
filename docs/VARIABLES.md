@@ -68,7 +68,9 @@ configured* when a user creates one.
 
 The panel shows variables under their group names. Use **+** beside **Group**
 to create an empty group, such as Platforme, Brevo or SFR. Use a group's **+**
-to create a variable in that group. To move a variable, edit its group.
+to create a variable in that group. To move a variable, drag its badge onto
+another group (mouse or pen; Esc cancels), or edit its group. The move is
+saved as the dialog saves it: a system variable's becomes its edit.
 Empty groups remain available after their last variable is deleted.
 
 Custom storage can implement `listVariableGroups()` and

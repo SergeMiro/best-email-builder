@@ -87,7 +87,7 @@ once and given away.
 - A template library: search, favorites, up to three colored tags per
   template that also filter the list, and *Edit*, *Duplicate*, *Copy HTML*,
   *Download*, *Delete*.
-- Merge-tag variables, including ones your users create.
+- Merge-tag variables, including ones your users create, sorted into groups by drag and drop.
 - Your brand read from your website: logo, colors and font.
 - One Fetch-API handler for Next.js, Hono, Bun, Deno, Cloudflare Workers and Express.
 - Seven interface languages, and any other through a dictionary.

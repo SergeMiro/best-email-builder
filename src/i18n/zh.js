@@ -125,6 +125,7 @@ export const zh = {
   "News": "资讯",
   "Onboarding": "欢迎",
   "Point at one to see it in the text, click to insert it.": "指向一个可在文本中预览，点击即可插入。",
+  "Point at one to see it in the text, click to insert it, drag it onto a group to move it.": "指向一个可在文本中预览，点击即可插入，拖到某个分组即可移动。",
   "Recently used": "最近使用",
   "Sales": "销售",
   "Events": "活动",

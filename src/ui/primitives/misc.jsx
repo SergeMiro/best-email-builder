@@ -159,13 +159,14 @@ export function TooltipContent({ className, sideOffset = 4, children, ...props }
 /**
  * Wraps a control with a tooltip; without a label, renders the control alone.
  * `hoverable: false`: it closes as soon as the pointer leaves the control.
+ * `hidden`: not shown for now (a control being dragged), the control kept.
  */
-export function TooltipWrap({ label, side = 'top', children, asChild = true, delayDuration, hoverable = true }) {
+export function TooltipWrap({ label, side = 'top', children, asChild = true, delayDuration, hoverable = true, hidden = false }) {
   if (!label) return children;
   return (
     <Tooltip delayDuration={delayDuration} disableHoverableContent={!hoverable}>
       <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
-      <TooltipContent side={side} className="eb:px-2 eb:py-1 eb:text-[11px]">
+      <TooltipContent side={side} className={cn('eb:px-2 eb:py-1 eb:text-[11px]', hidden && 'eb:hidden')}>
         {label}
       </TooltipContent>
     </Tooltip>
