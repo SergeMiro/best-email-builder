@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-10-26
+
 ### Added
 - A "+" on the canvas, as in Unlayer. Under the selected element, it opens
   the blocks, and the one picked goes after the element (at the end of a
