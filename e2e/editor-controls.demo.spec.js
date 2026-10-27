@@ -57,6 +57,61 @@ test('create empty variable groups, assign and move a variable, and retain group
   await expect(panel.getByRole('group', { name: 'SFR', exact: true }).getByRole('button', { name: 'Account code', exact: true })).toBeVisible();
 });
 
+test('rename a variable group, its variables with it; delete it, they go back; a group they belong to stays', async ({ page }) => {
+  await open(page);
+  const ribbon = page.getByTestId('eb-ribbon');
+  const panel = page.getByTestId('eb-panel-variables');
+  const reopen = async () => {
+    await page.reload();
+    await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
+    await ribbon.locator('[data-drawer="variables"]').click();
+  };
+  await ribbon.locator('[data-drawer="variables"]').click();
+  await panel.getByRole('button', { name: 'New group', exact: true }).click();
+  await page.getByRole('dialog').getByLabel('Name', { exact: true }).fill('Platforme');
+  await page.getByRole('dialog').getByRole('button', { name: 'Create', exact: true }).click();
+  await panel.getByRole('button', { name: 'New variable in Platforme', exact: true }).click();
+  await page.getByRole('dialog').getByLabel('Name', { exact: true }).fill('Account code');
+  await page.getByRole('dialog').getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(panel.getByRole('group', { name: 'Platforme', exact: true }).getByRole('button', { name: 'Account code', exact: true })).toBeVisible();
+
+  // Renamed: in its place, with its variable.
+  await panel.getByRole('button', { name: 'Edit the group “Platforme”', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit group', exact: true });
+  await expect(dialog.getByLabel('Name', { exact: true })).toHaveValue('Platforme');
+  await dialog.getByLabel('Name', { exact: true }).fill(' brevo ');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toContainText('already exists');
+  await dialog.getByLabel('Name', { exact: true }).fill('Partners');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const partners = panel.getByRole('group', { name: 'Partners', exact: true });
+  await expect(partners.getByRole('button', { name: 'Account code', exact: true })).toBeVisible();
+  await expect(panel.getByRole('group', { name: 'Platforme', exact: true })).toHaveCount(0);
+  await reopen();
+  await expect(partners.getByRole('button', { name: 'Account code', exact: true })).toBeVisible();
+  await expect(panel.getByRole('group', { name: 'Platforme', exact: true })).toHaveCount(0);
+
+  // The provider's variables belong to Brevo: it cannot be deleted.
+  await panel.getByRole('button', { name: 'Edit the group “Brevo”', exact: true }).click();
+  await expect(dialog.getByText('it cannot be deleted')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Delete', exact: true })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+
+  // Deleted: its variable goes back to Custom.
+  await panel.getByRole('button', { name: 'Edit the group “Partners”', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'Delete the group “Partners”?', exact: true });
+  await expect(confirm).toContainText('default group');
+  await confirm.getByRole('button', { name: 'Delete', exact: true }).click();
+  await expect(partners).toHaveCount(0);
+  const custom = panel.getByRole('group', { name: 'Custom', exact: true });
+  await expect(custom.getByRole('button', { name: 'Account code', exact: true })).toBeVisible();
+  await reopen();
+  await expect(partners).toHaveCount(0);
+  await expect(custom.getByRole('button', { name: 'Account code', exact: true })).toBeVisible();
+});
+
 test('drag a variable onto another group: it moves there and stays; Esc cancels; a click still inserts', async ({ page }) => {
   await open(page);
   const panel = page.getByTestId('eb-panel-variables');

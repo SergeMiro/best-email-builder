@@ -6,6 +6,15 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Variable groups can be renamed and deleted: the pencil beside a group's
+  "+". Renamed, its variables follow it; deleted, they go back to their
+  default group (the application's, or Custom). A group its variables belong
+  to by default cannot be deleted.
+- Storage: `renameVariableGroup(from, name)` and `deleteVariableGroup(name)`;
+  server: `PUT` and `DELETE {base}/variable-groups/:name`, with the
+  repository's `renameGroup` and `removeGroup`.
+
 ## [0.17.1] — 2026-10-26
 
 ### Changed

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { FolderPlus, Link2, Pencil, Plus } from 'lucide-react';
+import { FolderPlus, Link2, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useUi } from '../../ui/context.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { TooltipWrap } from '../../ui/primitives/misc.jsx';
@@ -39,13 +39,18 @@ const DRAG_THRESHOLD = 5;
  * press is a drag, not a click) moves its variable there, as its dialog
  * would: the other groups are outlined, the one under the pointer lit, Esc
  * cancels. On touch screens a drag scrolls the panel; the dialog moves it.
+ *
+ * A group's pencil renames it, its variables with it, or deletes it: its
+ * variables go back to their default group (the application's, or Custom),
+ * so a group they belong to cannot be deleted.
  */
 export default function VariablesPanel({ context }) {
-  const { editor, ready, variables, storage, canManageVariables, reloadVariables } = context;
-  const { t, notify } = useUi();
+  const { editor, ready, variables, systemVariables, storage, canManageVariables, reloadVariables } = context;
+  const { t, notify, confirm } = useUi();
   const [dialog, setDialog] = useState(null); // { variable } | {}
   const [savedGroups, setSavedGroups] = useState([]);
   const [groupOpen, setGroupOpen] = useState(false);
+  const [groupFrom, setGroupFrom] = useState(null); // the group being edited; null: a new one
   const [groupName, setGroupName] = useState('');
   const [groupError, setGroupError] = useState('');
   const [groupBusy, setGroupBusy] = useState(false);
@@ -57,6 +62,7 @@ export default function VariablesPanel({ context }) {
   const press = useRef(null);
   const listRef = useRef(/** @type {HTMLDivElement|null} */ (null));
   const canManageGroups = canManageVariables && typeof storage.saveVariableGroup === 'function';
+  const canEditGroups = canManageGroups && typeof storage.renameVariableGroup === 'function' && typeof storage.deleteVariableGroup === 'function';
   useEffect(() => {
     let live = true;
     storage.listVariableGroups?.().then((groups) => live && setSavedGroups(groups)).catch((error) => notify('error', error.message));
@@ -68,6 +74,11 @@ export default function VariablesPanel({ context }) {
   const ordered = [...variables.filter((v) => v.kind !== 'link'), ...variables.filter((v) => v.kind === 'link')];
   const groupOf = (variable) => (moved?.key === variable.key ? moved.group : variable.group || CUSTOM_GROUP);
   const groups = [...new Set([...savedGroups, ...ordered.map(groupOf)])];
+  const membersOf = (group) => ordered.filter((variable) => groupOf(variable) === group);
+  /** Where a variable goes when its group is deleted: the application's group, or Custom. */
+  const homeOf = (variable) => (variable.custom ? null : systemVariables?.find((v) => v.key === variable.key)?.group) || CUSTOM_GROUP;
+  // The group being edited cannot be deleted while a variable of it belongs there.
+  const groupStuck = groupFrom !== null && membersOf(groupFrom).some((variable) => homeOf(variable) === groupFrom);
   // Esc drops nothing.
   const dragging = Boolean(drag);
   useEffect(() => {
@@ -82,27 +93,74 @@ export default function VariablesPanel({ context }) {
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [dragging]);
-  const createGroup = async (event) => {
+  const openGroup = (from = null) => {
+    setGroupFrom(from);
+    setGroupName(from === null ? '' : t(from));
+    setGroupError('');
+    setGroupOpen(true);
+  };
+  /** Creates a group, or renames the one being edited: its variables follow, as a drag moves them. */
+  const submitGroup = async (event) => {
     event.preventDefault();
     const name = groupName.trim();
     if (!name) return;
-    if (groups.some((group) => group.toLowerCase() === name.toLowerCase())) {
+    if (groupFrom !== null && (name === groupFrom || name === t(groupFrom))) {
+      setGroupOpen(false);
+      return;
+    }
+    const others = groups.filter((group) => group !== groupFrom);
+    if (others.some((group) => [group, t(group)].some((label) => label.toLowerCase() === name.toLowerCase()))) {
       setGroupError(t('This group already exists.'));
       return;
     }
     setGroupBusy(true);
     try {
-      const saved = await storage.saveVariableGroup(name);
-      setSavedGroups((previous) => [...previous, saved]);
+      if (groupFrom === null) {
+        const saved = await storage.saveVariableGroup(name);
+        setSavedGroups((previous) => [...previous, saved]);
+      } else {
+        const saved = await storage.renameVariableGroup(groupFrom, name);
+        setSavedGroups((previous) => (previous.includes(groupFrom) ? previous.map((group) => (group === groupFrom ? saved : group)) : [...previous, saved]));
+        try {
+          for (const variable of membersOf(groupFrom)) await regroup(variable, saved);
+        } finally {
+          await reloadVariables();
+        }
+      }
       setGroupOpen(false);
     } catch (error) {
       setGroupError(error.message);
     } finally { setGroupBusy(false); }
   };
+  /** Deletes the group being edited: its variables go back to their default group first. */
+  const deleteGroup = async () => {
+    const group = groupFrom;
+    const members = membersOf(group);
+    const ok = await confirm({
+      title: t('Delete the group “{group}”?', { group: t(group) }),
+      description: members.length ? t('Its variables go back to their default group.') : t('It has no variables.'),
+      confirmLabel: t('Delete'),
+      destructive: true,
+    });
+    if (!ok) return;
+    setGroupBusy(true);
+    try {
+      try {
+        for (const variable of members) await regroup(variable, homeOf(variable));
+      } finally {
+        if (members.length) await reloadVariables();
+      }
+      await storage.deleteVariableGroup(group);
+      setSavedGroups((previous) => previous.filter((name) => name !== group));
+      setGroupOpen(false);
+      notify('success', t('Group deleted.'));
+    } catch (error) {
+      setGroupError(error.message);
+    } finally { setGroupBusy(false); }
+  };
 
-  /** Moves a variable to another group: saved as its dialog saves it. */
-  const move = async (variable, group) => {
-    setMoved({ key: variable.key, group });
+  /** Saves a variable in another group, as its dialog saves it. */
+  const regroup = async (variable, group) => {
     const form = {
       label: labelOf(variable, t),
       key: variable.key,
@@ -112,9 +170,14 @@ export default function VariablesPanel({ context }) {
       description: variable.description || '',
     };
     const check = variable.custom ? validateCustomVariable(form, { editing: variable.key, t }) : validateVariableEdit(variable, form, { t });
+    if (check.errors) throw new Error(Object.values(check.errors)[0]);
+    await storage.saveVariable(check.variable);
+  };
+  /** Moves a dropped variable to another group. */
+  const move = async (variable, group) => {
+    setMoved({ key: variable.key, group });
     try {
-      if (check.errors) throw new Error(Object.values(check.errors)[0]);
-      await storage.saveVariable(check.variable);
+      await regroup(variable, group);
       await reloadVariables();
     } catch (error) {
       notify('error', error.message);
@@ -233,7 +296,7 @@ export default function VariablesPanel({ context }) {
         <span className="eb:text-[12px] eb:font-medium eb:text-foreground">{t('Group')}</span>
         {canManageGroups && <TooltipWrap label={t('New group')}>
           <Button variant="ghost" size="icon-xs" aria-label={t('New group')} disabled={!ready}
-            className="eb:text-primary" onClick={() => { setGroupName(''); setGroupError(''); setGroupOpen(true); }}><FolderPlus /></Button>
+            className="eb:text-primary" onClick={() => openGroup()}><FolderPlus /></Button>
         </TooltipWrap>}
       </div>
       <div
@@ -253,8 +316,12 @@ export default function VariablesPanel({ context }) {
           )}>
           <div className="eb:flex eb:items-center eb:justify-between eb:gap-2">
             <h4 className="eb:min-w-0 eb:truncate eb:text-[11px] eb:font-medium eb:text-foreground-muted">{t(group)}</h4>
-            {canManageVariables && <button type="button" disabled={!ready} aria-label={t('New variable in {group}', { group })}
-              onClick={() => setDialog({ group })} className="eb:rounded-md eb:p-1 eb:text-primary eb:hover:bg-primary/10"><Plus className="eb:size-3" /></button>}
+            {canManageVariables && <div className="eb:flex eb:shrink-0 eb:items-center">
+              {canEditGroups && <button type="button" disabled={!ready} aria-label={t('Edit the group “{group}”', { group: t(group) })} title={t('Edit group')}
+                onClick={() => openGroup(group)} className="eb:rounded-md eb:p-1 eb:text-foreground-muted eb:hover:bg-accent eb:hover:text-foreground"><Pencil className="eb:size-3" /></button>}
+              <button type="button" disabled={!ready} aria-label={t('New variable in {group}', { group })}
+                onClick={() => setDialog({ group })} className="eb:rounded-md eb:p-1 eb:text-primary eb:hover:bg-primary/10"><Plus className="eb:size-3" /></button>
+            </div>}
           </div>
           <div className="eb:flex eb:flex-wrap eb:gap-1">{ordered.filter((v) => groupOf(v) === group).map(badge)}</div>
         </section>)}
@@ -313,15 +380,32 @@ export default function VariablesPanel({ context }) {
       )}
       <Dialog open={groupOpen} onOpenChange={setGroupOpen}>
         <DialogContent className="eb:sm:max-w-[360px]" onMouseDown={(event) => event.stopPropagation()} onCloseAutoFocus={(event) => event.preventDefault()}>
-          <DialogHeader><DialogTitle>{t('New group')}</DialogTitle><DialogDescription>{t('Organize your variables into groups.')}</DialogDescription></DialogHeader>
-          <form className="eb:space-y-3" onSubmit={createGroup}>
+          <DialogHeader>
+            <DialogTitle>{groupFrom === null ? t('New group') : t('Edit group')}</DialogTitle>
+            <DialogDescription>{groupFrom === null ? t('Organize your variables into groups.') : t('Its variables follow the new name.')}</DialogDescription>
+          </DialogHeader>
+          <form className="eb:space-y-3" onSubmit={submitGroup}>
             <div className="eb:space-y-1.5"><Label htmlFor="eb-variable-group-name">{t('Name')}</Label>
               <Input dense autoFocus id="eb-variable-group-name" value={groupName} maxLength={VARIABLE_LIMITS.group} disabled={groupBusy}
                 aria-invalid={Boolean(groupError)} onChange={(event) => { setGroupName(event.target.value); setGroupError(''); }} />
               {groupError && <p role="alert" className="eb:text-[12px] eb:text-destructive">{groupError}</p>}
             </div>
-            <div className="eb:flex eb:justify-end eb:gap-2"><Button variant="outline" disabled={groupBusy} onClick={() => setGroupOpen(false)}>{t('Cancel')}</Button>
-              <Button type="submit" disabled={groupBusy || !groupName.trim()}>{t('Create')}</Button></div>
+            {groupStuck && <p className="eb:text-[11px] eb:text-foreground-muted">{t('Its variables belong to it: it cannot be deleted.')}</p>}
+            <div className="eb:flex eb:items-center eb:gap-2">
+              {groupFrom !== null && !groupStuck && (
+                <Button variant="ghost" className="eb:text-destructive eb:hover:text-destructive" disabled={groupBusy} onClick={deleteGroup}>
+                  <Trash2 />
+                  {t('Delete')}
+                </Button>
+              )}
+              <div className="eb:ml-auto eb:flex eb:gap-2">
+                <Button variant="outline" disabled={groupBusy} onClick={() => setGroupOpen(false)}>{t('Cancel')}</Button>
+                <Button type="submit" disabled={groupBusy || !groupName.trim()}>
+                  {groupBusy && <Loader2 className="eb:animate-spin" />}
+                  {groupFrom === null ? t('Create') : t('Save')}
+                </Button>
+              </div>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

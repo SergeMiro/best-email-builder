@@ -73,10 +73,21 @@ another group (mouse or pen; Esc cancels), or edit its group. The move is
 saved as the dialog saves it: a system variable's becomes its edit.
 Empty groups remain available after their last variable is deleted.
 
-Custom storage can implement `listVariableGroups()` and
-`saveVariableGroup(name)`. The HTTP storage uses `GET /variable-groups` and
-`POST /variable-groups` with `{ name }`. A server repository can implement
-`listGroups()` and `insertGroup(name)` to store empty groups.
+A group's pencil renames or deletes it. Renamed, it keeps its place and its
+variables follow it, each saved as a drag saves it. Deleted, its variables go
+back to their default group first: the application's for a system variable,
+**Custom** for a custom one. A group that some of its variables belong to by
+default, such as the application's own, cannot be deleted.
+
+Custom storage can implement `listVariableGroups()`,
+`saveVariableGroup(name)`, `renameVariableGroup(from, name)` and
+`deleteVariableGroup(name)`; the pencil shows when the last two exist. The
+HTTP storage uses `GET /variable-groups`, `POST /variable-groups` with
+`{ name }`, `PUT /variable-groups/:name` with `{ name }` and
+`DELETE /variable-groups/:name`. A server repository can implement
+`listGroups()`, `insertGroup(name)`, `renameGroup(from, name)` and
+`removeGroup(name)` to store empty groups. The builder moves the variables
+itself: the storage only keeps the names.
 
 ## Editing a system variable
 

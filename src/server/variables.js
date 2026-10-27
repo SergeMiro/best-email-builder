@@ -28,6 +28,8 @@ import { HttpError } from './errors.js';
  *   remove: (key: string) => Promise<boolean>,
  *   listGroups?: () => Promise<string[]>,
  *   insertGroup?: (name: string) => Promise<boolean>,
+ *   renameGroup?: (from: string, to: string) => Promise<boolean>,
+ *   removeGroup?: (name: string) => Promise<void>,
  * }} VariableRepository
  */
 
@@ -75,6 +77,29 @@ export function createVariableService({ repository = null, system = DEFAULT_VARI
         throw new HttpError(409, t('This group already exists.'), 'DUPLICATE_GROUP');
       }
       return name;
+    },
+    /**
+     * Renames a stored group, or stores `to` when `from` is not; its variables
+     * are moved by the builder, one by one, as a drag moves them.
+     * @param {string} from @param {unknown} input
+     */
+    async renameGroup(from, input) {
+      const name = typeof input === 'string' ? input.trim() : '';
+      if (!name || name.length > 40) throw new HttpError(400, t('Name is required'), 'INVALID_GROUP');
+      const store = requireRepository();
+      if (!store.renameGroup) throw new HttpError(501, t('Custom variables are not configured'), 'NO_GROUP_STORE');
+      const others = (await service.listGroups()).filter((group) => group !== from);
+      if (others.some((group) => group.toLowerCase() === name.toLowerCase()) || !await store.renameGroup(from, name)) {
+        throw new HttpError(409, t('This group already exists.'), 'DUPLICATE_GROUP');
+      }
+      return name;
+    },
+    /** Forgets a stored group; the builder has moved its variables out first. @param {string} name */
+    async removeGroup(name) {
+      const store = requireRepository();
+      if (!store.removeGroup) throw new HttpError(501, t('Custom variables are not configured'), 'NO_GROUP_STORE');
+      await store.removeGroup(name);
+      return { name };
     },
     /** Custom variables, and the edits of system ones (no `custom` flag). */
     async listCustom() {
@@ -137,6 +162,17 @@ export function createMemoryVariableRepository() {
       if ([...groups].some((group) => group.toLowerCase() === name.toLowerCase())) return false;
       groups.add(name);
       return true;
+    },
+    async renameGroup(from, to) {
+      if ([...groups].some((group) => group !== from && group.toLowerCase() === to.toLowerCase())) return false;
+      // In its place: the panel keeps its order.
+      const renamed = groups.has(from) ? [...groups].map((group) => (group === from ? to : group)) : [...groups, to];
+      groups.clear();
+      for (const group of renamed) groups.add(group);
+      return true;
+    },
+    async removeGroup(name) {
+      groups.delete(name);
     },
     async list() {
       return [...rows.values()].map((row) => ({ ...row })).sort((a, b) => a.label.localeCompare(b.label));

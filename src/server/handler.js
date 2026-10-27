@@ -26,6 +26,10 @@
  *   PUT    {base}/variables/:key                  write   edit (label, group, sample, fallback), a system
  *                                                         variable's too (its tag stays yours)
  *   DELETE {base}/variables/:key                  write   delete; a system variable's edit: back to yours
+ *   GET    {base}/variable-groups                 read    the groups, empty ones too
+ *   POST   {base}/variable-groups                 write   create an empty group ({name})
+ *   PUT    {base}/variable-groups/:name           write   rename it ({name}); the builder moves its variables
+ *   DELETE {base}/variable-groups/:name           write   forget it, once the builder has moved its variables out
  *   GET    {base}/tags                            read    the workspace's tags
  *   POST   {base}/tags                            write   create a tag (needs `tagStore`)
  *   PUT    {base}/tags/:id                        write   rename it, change its color
@@ -402,6 +406,16 @@ export function createEmailBuilderHandler(options) {
       if (method === 'POST') {
         await userFor(request, 'write');
         return json({ data: await customVariables.createGroup((await readJson(request))?.name) }, 201);
+      }
+    }
+    if (section === 'variable-groups' && id && !sub) {
+      if (method === 'PUT') {
+        await userFor(request, 'write');
+        return json({ data: await customVariables.renameGroup(id, (await readJson(request))?.name) });
+      }
+      if (method === 'DELETE') {
+        await userFor(request, 'write');
+        return json({ data: await customVariables.removeGroup(id) });
       }
     }
 

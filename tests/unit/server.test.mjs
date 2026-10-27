@@ -370,3 +370,19 @@ test('variable groups: authenticated creation, duplicates and empty groups survi
   const groups = (await (await call('GET', '/api/email-builder/variable-groups')).json()).data;
   assert.ok(groups.includes('Brevo'));
 });
+
+test('variable groups: renamed and deleted by name, with authentication', async () => {
+  const { call } = setup();
+  await call('POST', '/api/email-builder/variable-groups', { name: 'Brevo' });
+  await call('POST', '/api/email-builder/variable-groups', { name: 'SFR' });
+  const groups = async () => (await (await call('GET', '/api/email-builder/variable-groups')).json()).data;
+  assert.equal((await call('PUT', '/api/email-builder/variable-groups/Brevo', { name: 'Sendinblue' }, { auth: false })).status, 401);
+  assert.equal((await call('PUT', '/api/email-builder/variable-groups/Brevo', { name: 'sfr' })).status, 409);
+  assert.equal((await call('PUT', '/api/email-builder/variable-groups/Brevo', { name: '' })).status, 400);
+  const renamed = await call('PUT', '/api/email-builder/variable-groups/Brevo', { name: 'Sendinblue' });
+  assert.equal((await renamed.json()).data, 'Sendinblue');
+  assert.deepEqual((await groups()).slice(0, 2), ['Sendinblue', 'SFR']);
+  assert.equal((await call('DELETE', '/api/email-builder/variable-groups/SFR', null, { auth: false })).status, 401);
+  assert.equal((await call('DELETE', '/api/email-builder/variable-groups/SFR')).status, 200);
+  assert.ok(!(await groups()).includes('SFR'));
+});

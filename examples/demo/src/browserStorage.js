@@ -334,6 +334,17 @@ export function createDemoStorage({ locale = 'en', sender = {}, variables = DEFA
       write(VARIABLE_GROUPS_KEY, [...existing, saved]);
       return saved;
     },
+    async renameVariableGroup(from, name) {
+      const existing = await listVariableGroups();
+      if (existing.some((group) => group !== from && group.toLowerCase() === name.trim().toLowerCase())) throw new Error(t('This group already exists.'));
+      const saved = await storage.renameVariableGroup(from, name);
+      write(VARIABLE_GROUPS_KEY, existing.includes(from) ? existing.map((group) => (group === from ? saved : group)) : [...existing, saved]);
+      return saved;
+    },
+    async deleteVariableGroup(name) {
+      await storage.deleteVariableGroup(name);
+      write(VARIABLE_GROUPS_KEY, read(VARIABLE_GROUPS_KEY).filter((group) => group !== name));
+    },
     async listVariables() {
       await ready;
       return storage.listVariables();

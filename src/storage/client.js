@@ -113,6 +113,8 @@ import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/
  *   listVariables?: () => Promise<EmailVariable[]>,
  *   listVariableGroups?: () => Promise<string[]>,
  *   saveVariableGroup?: (name: string) => Promise<string>,
+ *   renameVariableGroup?: (from: string, to: string) => Promise<string>,
+ *   deleteVariableGroup?: (name: string) => Promise<void>,
  *   saveVariable?: (variable: Partial<EmailVariable>, options?: {create?: boolean}) => Promise<EmailVariable>,
  *   deleteVariable?: (key: string) => Promise<void>,
  *   loadBrand?: () => Promise<Brand>,
@@ -223,6 +225,11 @@ export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = 
     listVariables: async () => call('/variables'),
     listVariableGroups: async () => call('/variable-groups'),
     saveVariableGroup: async (name) => call('/variable-groups', { method: 'POST', body: JSON.stringify({ name }) }),
+    renameVariableGroup: async (from, name) =>
+      call(`/variable-groups/${encodeURIComponent(from)}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+    deleteVariableGroup: async (name) => {
+      await call(`/variable-groups/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    },
     saveVariable: async (variable, { create = false } = {}) =>
       create
         ? call('/variables', { method: 'POST', body: JSON.stringify(variable) })
@@ -476,6 +483,22 @@ export function createMemoryStorage({
       }
       variableGroups.add(name);
       return name;
+    },
+    async renameVariableGroup(from, input) {
+      const name = String(input || '').trim();
+      if (!name || name.length > 40) throw new StorageError('Invalid group name', 400, 'INVALID_GROUP');
+      const others = [...variableGroups, ...[...customVariables.values()].map((variable) => variable.group)].filter((group) => group !== from);
+      if (others.some((group) => group.toLowerCase() === name.toLowerCase())) {
+        throw new StorageError('This group already exists.', 409, 'DUPLICATE_GROUP');
+      }
+      // In its place: the panel keeps its order.
+      const renamed = variableGroups.has(from) ? [...variableGroups].map((group) => (group === from ? name : group)) : [...variableGroups, name];
+      variableGroups.clear();
+      for (const group of renamed) variableGroups.add(group);
+      return name;
+    },
+    async deleteVariableGroup(name) {
+      variableGroups.delete(name);
     },
     async listVariables() {
       return [...customVariables.values()].map((v) => ({ ...v }));

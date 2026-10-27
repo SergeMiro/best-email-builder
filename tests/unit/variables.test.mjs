@@ -174,3 +174,23 @@ test('variable groups persist while empty and reject duplicate names', async () 
   await storage.deleteVariable('coupon');
   assert.deepEqual(await storage.listVariableGroups(), ['Platforme', 'Brevo', 'SFR']);
 });
+
+test('variable groups: renamed in place, deleted, duplicates rejected', async () => {
+  const { createMemoryStorage } = await import('../../src/storage/client.js');
+  const storage = createMemoryStorage();
+  await storage.saveVariableGroup('Platforme');
+  await storage.saveVariableGroup('Brevo');
+  await storage.saveVariableGroup('SFR');
+  assert.equal(await storage.renameVariableGroup('Brevo', ' Sendinblue '), 'Sendinblue');
+  assert.deepEqual(await storage.listVariableGroups(), ['Platforme', 'Sendinblue', 'SFR']);
+  // Its own name in another case: still itself.
+  assert.equal(await storage.renameVariableGroup('SFR', 'sfr'), 'sfr');
+  await assert.rejects(() => storage.renameVariableGroup('sfr', 'platforme'), (e) => e.status === 409);
+  await assert.rejects(() => storage.renameVariableGroup('sfr', ' '), (e) => e.status === 400);
+  // A group known by its variables only: the new name is kept.
+  await storage.saveVariable({ key: 'coupon', label: 'Coupon', group: 'Promo' }, { create: true });
+  await storage.renameVariableGroup('Promo', 'Offers');
+  assert.ok((await storage.listVariableGroups()).includes('Offers'));
+  await storage.deleteVariableGroup('Sendinblue');
+  assert.deepEqual((await storage.listVariableGroups()).slice(0, 2), ['Platforme', 'sfr']);
+});
