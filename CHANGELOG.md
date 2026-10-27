@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-10-27
+
 ### Added
 - Variable groups can be renamed and deleted: the pencil beside a group's
   "+". Renamed, its variables follow it; deleted, they go back to their
