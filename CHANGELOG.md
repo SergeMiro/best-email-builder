@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-10-30
+
 ### Added
 - Desktop and phone styles apart: in the Mobile view, every style changed
   (font, size, color, spacing, borders, alignment, backgrounds…) applies to
