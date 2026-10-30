@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-10-30
+
 ### Added
 - Images side by side line up: when an image of a row gets its file, every
   image of the row takes the height the first one has, cropped
