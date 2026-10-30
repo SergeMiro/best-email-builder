@@ -59,6 +59,19 @@ box settings into email tables and corrects mixed vertical alignment.
 These settings survive an MJML round trip through encoded CSS classes.
 An external MJML compiler alone does not apply those additional box settings.
 
+## Desktop and phone
+
+The Desktop / Mobile switch also chooses which styles you edit. In the
+Mobile view every style changed applies to phones only and is stored beside
+the computer's as `mobile-<attribute>` (`font-size="40px"
+mobile-font-size="28px"`); a padding or margin side stands for the whole
+group. The compiler builds the email twice and sends the phone's differences
+as `!important` rules under the breakpoint, so the canvas, the preview and the
+sent email agree. Addresses, pictures, full width and column widths are the
+same on every screen. In the Mobile view the panel lists what differs and
+puts each back; `editor.clearMobileStyles(id?)` removes them all. Like the
+box settings, the phone styles need the package's compiler.
+
 ## A + B, nothing to wire
 
 ```jsx

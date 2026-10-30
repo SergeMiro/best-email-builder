@@ -187,3 +187,60 @@ export function toValues(attributes, properties) {
   }
   return values;
 }
+
+/*
+ * ── PHONE VALUES SIT BESIDE THE OTHERS ─────────────────────────────────────
+ * An element keeps what it looks like on a phone as `mobile-<attribute>`
+ * (`mobile-font-size="32px"`, `mobile-padding-top="8px"`): the compiled email
+ * gives them to screens under the breakpoint, the editor shows them in its
+ * Mobile view. A side stands for its attribute: a phone padding replaces the
+ * whole padding, never half of it.
+ */
+export const MOBILE_PREFIX = 'mobile-';
+
+/** `padding-top` → `padding`. @param {string} key */
+export const attributeOf = (key) => key.replace(/-(?:top|right|bottom|left)$/, '');
+
+/**
+ * What a phone shows is the content of the email, not a copy of it: these are
+ * the same on every screen, as is the layer under the whole content.
+ */
+const SHARED_ATTRIBUTES = new Set(['src', 'alt', 'href', 'title', 'name', 'background-url', 'css-class', 'mode', 'full-width', 'fluid-on-mobile', 'vertical-align', 'content-background-color']);
+
+/**
+ * May an element have its own value of the attribute on a phone? The width of
+ * the email or of a column cannot: on a phone the columns stack, full width.
+ * @param {string} tag @param {string} key
+ */
+export function mobileAllowed(tag, key) {
+  const name = attributeOf(key);
+  return !SHARED_ATTRIBUTES.has(name) && !(name === 'width' && (tag === 'mj-body' || tag === 'mj-column'));
+}
+
+/** The attributes a phone overrides, by attribute (`padding` for all four sides). @param {Record<string, unknown>} attributes */
+export function mobileOverrides(attributes) {
+  return new Set(Object.keys(attributes).filter((key) => key.startsWith(MOBILE_PREFIX)).map((key) => attributeOf(key.slice(MOBILE_PREFIX.length))));
+}
+
+/** The attributes without their phone values. @template {Record<string, any>} T @param {T} attributes @returns {T} */
+export function withoutMobile(attributes) {
+  return /** @type {T} */ (Object.fromEntries(Object.entries(attributes).filter(([key]) => !key.startsWith(MOBILE_PREFIX))));
+}
+
+/** The attributes as a phone has them. @template {Record<string, any>} T @param {T} attributes @returns {T} */
+export function withMobile(attributes) {
+  const overrides = mobileOverrides(attributes);
+  if (!overrides.size) return attributes;
+  const out = Object.fromEntries(Object.entries(attributes).filter(([key]) => !key.startsWith(MOBILE_PREFIX) && !overrides.has(attributeOf(key))));
+  for (const [key, value] of Object.entries(attributes)) if (key.startsWith(MOBILE_PREFIX)) out[key.slice(MOBILE_PREFIX.length)] = value;
+  return /** @type {T} */ (out);
+}
+
+/**
+ * Attributes to set (see toAttributes) → the phone's, for the ones it may have
+ * its own of. A removed one (`null`) gives the phone the computer's value back.
+ * @param {Record<string, string|null>} attributes @param {string} tag
+ */
+export function toMobileAttributes(attributes, tag) {
+  return Object.fromEntries(Object.entries(attributes).map(([key, value]) => [mobileAllowed(tag, key) ? `${MOBILE_PREFIX}${key}` : key, value]));
+}

@@ -99,7 +99,8 @@ export function useEmailEditorState(editor) {
       editor.on('selection', (selection) => patch({ selection })),
       editor.on('format', (format) => patch({ format })),
       editor.on('history', ({ canUndo, canRedo }) => patch({ canUndo, canRedo })),
-      editor.on('device', (device) => patch({ device })),
+      // The Mobile view shows the selection as a phone has it.
+      editor.on('device', (device) => patch({ device, selection: editor.getSelection() })),
       editor.on('change', () => {
         setState((s) => ({ ...s, changes: s.changes + 1 }));
         measure();

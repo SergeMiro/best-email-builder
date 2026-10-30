@@ -5,7 +5,7 @@ import { Label } from './primitives/fields.jsx';
 import { Textarea } from './primitives/fields.jsx';
 import { SectionLabel } from './primitives/misc.jsx';
 import { TruncatedText as FadedText } from './primitives/misc.jsx';
-import { Trash2, X } from 'lucide-react';
+import { Smartphone, Trash2, X } from 'lucide-react';
 import { GROUPS } from '../blocks/shared.js';
 import { PropertyField } from './fields.jsx';
 import BoxModel, { boxRole } from './BoxModel.jsx';
@@ -78,6 +78,48 @@ function PropertyGroups({ editor, element, block, idPrefix, services = null, hid
       </section>
     );
   });
+}
+
+/** Names of the styles the ribbon sets without a property of the block. */
+const STYLE_LABELS = { 'font-weight': 'Bold', 'font-style': 'Italic', 'text-decoration': 'Underline' };
+
+/**
+ * The Mobile view edits the phone: what the element has of its own there,
+ * each given back to the computer's value by its ×, or all at once.
+ */
+function MobileStyles({ editor, element, block }) {
+  const t = useT();
+  const labelOf = (key) => block?.properties?.find((property) => property.key === key)?.label || STYLE_LABELS[key] || key;
+  return (
+    <section className="eb:space-y-2 eb:rounded-lg2 eb:border eb:border-primary/30 eb:bg-primary/5 eb:p-3" data-testid="eb-mobile-styles">
+      <p className="eb:flex eb:items-start eb:gap-2 eb:text-[12px] eb:leading-relaxed eb:text-foreground-lighter">
+        <Smartphone className="eb:mt-0.5 eb:size-3.5 eb:shrink-0 eb:text-primary" aria-hidden="true" />
+        {t('Mobile view: the styles you change here apply to phones only. Links and pictures are the same on every screen.')}
+      </p>
+      {element.mobileOverrides.length > 0 && (
+        <>
+          <ul aria-label={t('Different on phones')} className="eb:flex eb:flex-wrap eb:gap-1">
+            {element.mobileOverrides.map((key) => (
+              <li key={key} className="eb:inline-flex eb:h-6 eb:items-center eb:gap-0.5 eb:rounded-md eb:bg-background eb:pr-0.5 eb:pl-2 eb:text-[12px] eb:text-foreground eb:ring-1 eb:ring-border">
+                {t(labelOf(key))}
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t('Back to the desktop value: {name}', { name: t(labelOf(key)) })}
+                  onClick={() => editor.updateProperties({ [key]: null }, element.id)}
+                >
+                  <X />
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <Button variant="outline" size="sm-compact" onClick={() => editor.clearMobileStyles(element.id)}>
+            {t('Same as desktop')}
+          </Button>
+        </>
+      )}
+    </section>
+  );
 }
 
 const LABEL_PROPERTY = { key: 'content', label: 'Label', type: 'text', group: GROUPS.content };
@@ -247,6 +289,7 @@ export default function PropertiesPanel({
             </div>
           ) : (
           <div className="eb:space-y-4 eb:p-4">
+            {editor.getDevice() === 'mobile' && <MobileStyles editor={editor} element={selection} block={block} />}
             {selection.content !== null && selection.content !== undefined && (
               <section className="eb:space-y-3">
                 <SectionLabel>{t(GROUPS.content)}</SectionLabel>

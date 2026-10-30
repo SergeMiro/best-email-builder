@@ -26,7 +26,7 @@
 import { createEmitter } from './events.js';
 import { EMAIL_DEVICES } from './constants.js';
 import { createDocument, readDocument } from './document.js';
-import { LONGHAND_SPACING, toAttributes, toValues } from './mjmlAttributes.js';
+import { LONGHAND_SPACING, MOBILE_PREFIX, mobileOverrides, toAttributes, toMobileAttributes, toValues, withMobile } from './mjmlAttributes.js';
 import { MJML_DEFAULTS } from './mjmlDefaults.js';
 import { identity } from '../i18n/index.js';
 import { applyBrandToFragment } from '../features/brand/brand.js';
@@ -159,7 +159,11 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   label: string,
  *   values: Record<string, string>,
  *   defaults: Record<string, string>,
+ *   mobileOverrides: string[],
  * }} EmailSelection
+ *   In the Mobile view, `attributes` and `values` are the phone's.
+ *   `mobileOverrides`: the attributes it has its own value of on a phone
+ *   (`padding` for its four sides).
  */
 
 /**
@@ -299,6 +303,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   getElement: (id: string) => EmailSelection|null,
  *   getRootId: () => string|null,
  *   updateProperties: (values: Record<string, string|null>, id?: string|string[]|null) => void,
+ *   clearMobileStyles: (id?: string|null) => void,
  *   setContent: (content: string, id?: string|null, options?: {reveal?: boolean}) => void,
  *   setContents: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
@@ -421,15 +426,22 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
     return { values, defaults: toValues(fallback, properties) };
   }
 
-  /** @param {EngineSelection|null} selection @returns {EmailSelection|null} */
+  /**
+   * In the Mobile view an element is described as a phone shows it: its
+   * phone values in place of its own (see withMobile).
+   * @param {EngineSelection|null} selection @returns {EmailSelection|null}
+   */
   function toEmailSelection(selection) {
     if (!selection) return null;
     const block = blockForTag(selection.tagName);
+    const raw = selection.attributes || {};
+    const shown = adapter.getDevice?.() === 'mobile' ? { ...selection, attributes: withMobile(raw) } : selection;
     return {
-      ...selection,
+      ...shown,
       blockId: block?.id || null,
       label: labelFor(selection, block),
-      ...valuesOf(selection, block),
+      mobileOverrides: [...mobileOverrides(raw)],
+      ...valuesOf(shown, block),
     };
   }
 
@@ -581,7 +593,19 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
 
     updateProperties(values, id = null) {
       requireReady('updateProperties');
-      adapter.updateProperties(Array.isArray(id) ? id : targetOf(id, 'updateProperties'), toAttributes(values));
+      const ids = Array.isArray(id) ? id : [targetOf(id, 'updateProperties')];
+      const attributes = toAttributes(values);
+      // In the Mobile view, the phone's values: the computer keeps its own.
+      const tag = adapter.getDevice?.() === 'mobile' ? adapter.describe(ids[0])?.tagName : null;
+      adapter.updateProperties(Array.isArray(id) ? ids : ids[0], tag ? toMobileAttributes(attributes, tag) : attributes);
+    },
+
+    /** The phone looks like the computer again: the element's phone values go. */
+    clearMobileStyles(id = null) {
+      requireReady('clearMobileStyles');
+      const target = targetOf(id, 'clearMobileStyles');
+      const keys = Object.keys(adapter.describe(target)?.attributes || {}).filter((key) => key.startsWith(MOBILE_PREFIX));
+      if (keys.length) adapter.updateProperties(target, Object.fromEntries(keys.map((key) => [key, null])));
     },
 
     /** `reveal`: its words come in one after the other on the canvas (a text the AI wrote). */

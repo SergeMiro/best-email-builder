@@ -765,6 +765,50 @@ test.describe('Panel features for well-made emails', () => {
     await expect(ribbon.locator('[data-command="link"]')).toBeDisabled();
   });
 
+  test('desktop and mobile styles apart: the Mobile view edits the phone, the computer keeps its own', async ({ page }) => {
+    await openBuilder(page);
+    await page.evaluate(() =>
+      window.__emailEditor.loadMjml(
+        '<mjml><mj-body><mj-section><mj-column><mj-text font-size="40px" color="#111111">Big news</mj-text></mj-column></mj-section></mj-body></mjml>'
+      )
+    );
+    const ribbon = page.getByTestId('eb-ribbon');
+    const size = ribbon.locator('[data-control="font-size"]');
+    const shown = () => canvas(page).getByText('Big news').evaluate((el) => getComputedStyle(el).fontSize);
+    await canvas(page).getByText('Big news').click();
+    await expect(page.getByTestId('eb-mobile-styles')).toHaveCount(0);
+
+    await page.getByRole('tab', { name: 'Mobile' }).click();
+    await expect(page.getByTestId('eb-mobile-styles')).toBeVisible();
+    await expect(size).toHaveValue('40');
+    await size.fill('28');
+    await size.press('Enter');
+    await expect.poll(async () => (await nodes(page, 'mj-text'))[0].attributes).toMatchObject({ 'font-size': '40px', 'mobile-font-size': '28px' });
+    await expect.poll(shown).toBe('28px');
+    await expect(page.getByTestId('eb-mobile-styles').getByRole('listitem')).toHaveText(['Size']);
+
+    // The computer: its own size, on the canvas and in the ribbon.
+    await page.getByRole('tab', { name: 'Desktop' }).click();
+    await expect(size).toHaveValue('40');
+    await expect.poll(shown).toBe('40px');
+    // A change there leaves the phone's.
+    await size.fill('44');
+    await size.press('Enter');
+    await expect.poll(async () => (await nodes(page, 'mj-text'))[0].attributes).toMatchObject({ 'font-size': '44px', 'mobile-font-size': '28px' });
+
+    // The sent email: the phone's size under the breakpoint.
+    const html = await page.evaluate(() => window.__emailEditor.exportHtml());
+    expect(typeof html === 'string' ? html : html.html).toMatch(/@media only screen and \(max-width:479px\)\{\.eb-m\d+\{font-size:28px!important\}/);
+
+    // Back on the phone, its × gives it the computer's size again.
+    await page.getByRole('tab', { name: 'Mobile' }).click();
+    await expect(size).toHaveValue('28');
+    await page.getByRole('button', { name: 'Back to the desktop value: Size' }).click();
+    await expect(size).toHaveValue('44');
+    await expect.poll(async () => (await nodes(page, 'mj-text'))[0].attributes['mobile-font-size'] ?? null).toBe(null);
+    await expect(page.getByTestId('eb-mobile-styles').getByRole('listitem')).toHaveCount(0);
+  });
+
   test('a section background across the whole screen', async ({ page }) => {
     await openBuilder(page);
     await page.locator('[data-block-id="columns-1"]').click();

@@ -5,6 +5,7 @@ import { createNode, findFirst, walk } from '../engine/model.js';
 import { toValues, parseBorder, parseSpacing } from '../core/mjmlAttributes.js';
 import { MJML_DEFAULTS } from '../core/mjmlDefaults.js';
 import { prepareColumnAlignment } from './columnAlignment.js';
+import { mergeDevices, splitDevices } from './mobileStyles.js';
 
 /** Only lengths may become outside or inside spacing. @param {string} value */
 const spacing = (value) => parseSpacing(value || '0px').map((part) => {
@@ -112,8 +113,20 @@ function prepareImageHeights(source) {
   return serializeMjml(root);
 }
 
-/** Compile both native MJML and the editor's independent box controls. @param {string} source @param {(source: string, options: any) => any} compile @param {any} [options] */
+/**
+ * Compile both native MJML and the editor's independent box controls; the
+ * phone values of the elements become the email's styles under the breakpoint.
+ * @param {string} source @param {(source: string, options: any) => any} compile @param {any} [options]
+ */
 export async function compileEditorMjml(source, compile, options = {}) {
+  const devices = splitDevices(source);
+  if (!devices) return compileOne(source, compile, options);
+  const [desktop, mobile] = await Promise.all([compileOne(devices.desktop, compile, options), compileOne(devices.mobile, compile, options)]);
+  return { ...desktop, html: mergeDevices(desktop.html, mobile.html, devices.breakpoint) };
+}
+
+/** @param {string} source @param {(source: string, options: any) => any} compile @param {any} options */
+async function compileOne(source, compile, options) {
   const prepared = prepareBoxes(source);
   const result = await compile(prepareColumnAlignment(prepareImageHeights(prepared.mjml)), options);
   let html = String(result.html || '');
