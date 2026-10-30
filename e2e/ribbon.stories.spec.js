@@ -157,6 +157,13 @@ test.describe('Text ribbon', () => {
     await page.keyboard.press('Shift+Control+ArrowLeft');
     await tool(page, 'link').click();
     await page.getByRole('button', { name: 'Insert a variable in the link' }).click();
+    // Under the field, flush with its edges (once it has zoomed in).
+    const field = await page.getByRole('textbox', { name: 'Link URL' }).boundingBox();
+    const list = page.locator('[data-slot="popover-content"]').filter({ has: page.getByTestId('variable-picker') });
+    await expect.poll(async () => {
+      const box = await list.boundingBox();
+      return [Math.round(box.x - field.x), Math.round(box.width - field.width), box.y > field.y + field.height];
+    }).toEqual([0, 0, true]);
     // The link variables too, unlike in the subject.
     await page.getByTestId('variable-picker').getByRole('option', { name: /Unsubscribe link/ }).click();
     const url = page.getByRole('textbox', { name: 'Link URL' });

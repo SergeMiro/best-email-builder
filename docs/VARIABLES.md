@@ -111,8 +111,9 @@ This needs the `variableStore` repository, as custom variables do.
   where it would go, and wipes it out when the pointer leaves. Nothing is
   saved until you click the badge.
 - A click inserts the tag at the caret of the text being edited, otherwise at
-  the end of the selected text or button. The unsubscribe link is inserted as
-  a link, or becomes the URL of a selected button.
+  the end of the selected text or button; the unsubscribe link too, like any
+  other. To make it the address of a link or a button, pick it from the `{ }`
+  in the link field.
 - The `{ }` buttons next to *Subject* and *Preview text* insert a tag there.
 - `{{contact.firstname|there}}` sets a fallback for that one place.
 - The preview flags unknown tags, such as `{{contact.fistname}}`, before they

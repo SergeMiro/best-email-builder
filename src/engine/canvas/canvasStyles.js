@@ -46,6 +46,14 @@ td.eb-placeholder { outline: 1.5px dashed #c3cad6; outline-offset: -8px; }
   box-shadow: 0 0 0 2px #fff, 0 3px 10px -3px color-mix(in oklab, ${PRIMARY} 70%, transparent); transition: transform 0.12s ease; }
 .eb-ui-add:hover, .eb-ui-add:focus-visible { transform: scale(1.15); }
 .eb-ui-add svg { width: 14px; height: 14px; stroke-width: 2.75; }
+.eb-ui-column-border { position: absolute; width: 11px; margin-left: -5.5px; cursor: col-resize; pointer-events: auto;
+  touch-action: none; outline: none; }
+.eb-ui-column-border::before { content: ''; position: absolute; top: 0; bottom: 0; left: 4.5px; width: 2px; border-radius: 1px;
+  background: color-mix(in oklab, ${PRIMARY} 45%, transparent); transition: background 0.12s ease; }
+.eb-ui-column-border::after { content: ''; position: absolute; top: 50%; left: 2.5px; width: 6px; height: 24px; margin-top: -12px;
+  border-radius: 3px; background: ${PRIMARY}; box-shadow: 0 0 0 1.5px #fff; }
+.eb-ui-column-border:hover::before, .eb-ui-column-border:focus-visible::before, .eb-ui-column-border[data-active]::before {
+  background: ${PRIMARY}; }
 .eb-ui-drop { position: absolute; height: 4px; margin-top: -2px; border-radius: 2px; background: ${PRIMARY};
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); pointer-events: none; }
 .eb-ui-drop::before, .eb-ui-drop::after { content: ''; position: absolute; top: -3px; width: 10px; height: 10px;

@@ -32,6 +32,7 @@
  */
 
 import { canvasMjml, markedAncestor } from '../canvasMjml.js';
+import { pathTo } from '../model.js';
 import { dropTargetFor } from '../placement.js';
 import { cleanRichText } from '../richText.js';
 import { findTags, removalSpan, textMap } from '../mergeTags.js';
@@ -68,6 +69,7 @@ const EDGE = 56;
  *   onAdd?: (kind: 'block'|'item', id: string, anchor: {top: number, left: number, width: number, height: number}) => void,
  *   onRemoveTag: (id: string, index: number) => void,
  *   onDrop: (payload: DragPayload, target: DropTarget) => void,
+ *   onResizeColumns?: (widths: Record<string, string>) => void,
  *   onEditStart: (id: string) => void,
  *   onEditInput: (id: string, html: string) => void,
  *   onEditEnd: (id: string, html: string) => void,
@@ -78,6 +80,8 @@ const EDGE = 56;
  *   (and `editing: false` when no text is edited any more).
  *   `info(id).row`: the row of items the element belongs to (itself, or its
  *   parent), its last item and the name of its "+".
+ *   `onResizeColumns`: a border between columns was moved: every column of
+ *   the row with its width (`"40%"`), the others kept as they were shown.
  *   `onAdd`: a "+" was pressed — after the element `id` (`block`) or in the
  *   row `id` (`item`); `anchor`: the "+" in the page's viewport.
  */
@@ -165,6 +169,10 @@ export function createCanvasView(options) {
   tagClear.hidden = true;
   tagClear.innerHTML = ICONS.x;
   ui.appendChild(tagClear);
+  // The borders between the columns of the selection's row: dragged (or moved
+  // with the arrow keys once focused) to share the row's width between them.
+  const columnBorders = doc.createElement('div');
+  ui.appendChild(columnBorders);
   // A text the AI is working on: a shimmer over it until its new words come.
   const workBox = make('eb-ui-box eb-ui-working');
   workBox.setAttribute('data-testid', 'eb-canvas-working');
@@ -298,6 +306,75 @@ export function createCanvasView(options) {
     drawAdd(box, details);
   }
 
+  /** Narrowest share a column is given by its border (%). */
+  const COLUMN_MIN = 10;
+
+  /** The row of columns around an element (itself, or its closest container with two columns or more). @param {string} id */
+  function rowAround(id) {
+    const path = pathTo(getRoot(), id) || [];
+    for (let i = path.length - 1; i >= 0; i -= 1) {
+      if (path[i].children.filter((child) => child.tag === 'mj-column').length > 1) return path[i];
+    }
+    return null;
+  }
+
+  /** The columns of a row side by side, with their shares of its width as shown; null when stacked (mobile). @param {EmailNode} row */
+  function shownColumns(row) {
+    const columns = row.children.filter((child) => child.tag === 'mj-column');
+    const found = columns.map((column) => docBoxOf(column.id));
+    if (!found.every(Boolean)) return null;
+    const boxes = /** @type {{top: number, left: number, width: number, height: number}[]} */ (found);
+    if (boxes.some((box, i) => i > 0 && Math.abs(box.top - boxes[0].top) > 2)) return null;
+    const total = boxes.reduce((sum, box) => sum + box.width, 0);
+    return { ids: columns.map((column) => column.id), boxes, total, shares: boxes.map((box) => (box.width / total) * 100) };
+  }
+
+  /** Shares after moving border `index` by `delta` %: only the two columns beside it change. */
+  function sharesAfter(shares, index, delta) {
+    const pair = shares[index] + shares[index + 1];
+    const left = Math.round(Math.min(pair - COLUMN_MIN, Math.max(COLUMN_MIN, Math.round(shares[index] + delta))) * 100) / 100;
+    const next = shares.map((share) => Math.round(share * 100) / 100);
+    next[index] = left;
+    next[index + 1] = Math.round((pair - left) * 100) / 100;
+    return next;
+  }
+
+  /** @param {string[]} ids @param {number[]} shares */
+  const resizeColumns = (ids, shares) => options.onResizeColumns?.(Object.fromEntries(ids.map((id, i) => [id, `${shares[i]}%`])));
+
+  function drawColumnBorders() {
+    const row = selectedId && !editingId && !drag && options.onResizeColumns ? rowAround(selectedId) : null;
+    const shown = row ? shownColumns(row) : null;
+    const count = shown ? shown.ids.length - 1 : 0;
+    while (columnBorders.children.length > count) columnBorders.lastElementChild?.remove();
+    while (columnBorders.children.length < count) {
+      const border = doc.createElement('div');
+      border.className = 'eb-ui-column-border';
+      border.tabIndex = 0;
+      border.setAttribute('role', 'separator');
+      border.setAttribute('aria-orientation', 'vertical');
+      border.setAttribute('data-testid', 'eb-canvas-column-border');
+      columnBorders.appendChild(border);
+    }
+    if (!shown || !row) return;
+    const top = Math.min(...shown.boxes.map((box) => box.top));
+    const bottom = Math.max(...shown.boxes.map((box) => box.top + box.height));
+    [...columnBorders.children].forEach((element, i) => {
+      const border = /** @type {HTMLElement} */ (element);
+      const box = shown.boxes[i];
+      border.style.top = `${top}px`;
+      border.style.left = `${box.left + box.width}px`;
+      border.style.height = `${bottom - top}px`;
+      border.dataset.row = row.id;
+      border.dataset.index = String(i);
+      border.title = t('Drag to change the widths of the columns');
+      border.setAttribute('aria-label', t('Column width'));
+      border.setAttribute('aria-valuenow', String(Math.round(shown.shares[i])));
+      border.setAttribute('aria-valuemin', String(COLUMN_MIN));
+      border.setAttribute('aria-valuemax', String(Math.round(shown.shares[i] + shown.shares[i + 1] - COLUMN_MIN)));
+    });
+  }
+
   /**
    * The "+" of the selection: centred on its bottom edge; and the row's,
    * just after its last item (beside the row's start when it has none),
@@ -351,6 +428,7 @@ export function createCanvasView(options) {
     if (destroyed) return;
     drawMulti();
     drawSelection();
+    drawColumnBorders();
     drawHover();
     drawTag();
     drawWorking();
@@ -695,6 +773,49 @@ export function createCanvasView(options) {
       savedRange = selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null;
     } else options.onRemoveTag(at.id, at.index);
   });
+
+  /* ── Column borders ────────────────────────────────────────────────────── */
+
+  /** @param {Event} event */
+  const borderOf = (event) => {
+    const border = /** @type {HTMLElement|null} */ (/** @type {Element} */ (event.target).closest?.('.eb-ui-column-border'));
+    const row = border?.dataset.row ? findNodeIn(border.dataset.row) : null;
+    const shown = row ? shownColumns(row) : null;
+    return border && shown ? { border, shown, index: Number(border.dataset.index) } : null;
+  };
+  /** @param {string} id */
+  const findNodeIn = (id) => (pathTo(getRoot(), id) || []).at(-1) || null;
+
+  columnBorders.addEventListener('pointerdown', (event) => {
+    const at = event.button === 0 ? borderOf(event) : null;
+    if (!at) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const { border, shown, index } = at;
+    const startX = event.clientX;
+    border.setPointerCapture(event.pointerId);
+    border.dataset.active = '';
+    const move = (/** @type {PointerEvent} */ e) => resizeColumns(shown.ids, sharesAfter(shown.shares, index, ((e.clientX - startX) / shown.total) * 100));
+    const end = () => {
+      delete border.dataset.active;
+      border.removeEventListener('pointermove', move);
+      border.removeEventListener('pointerup', end);
+      border.removeEventListener('pointercancel', end);
+    };
+    border.addEventListener('pointermove', move);
+    border.addEventListener('pointerup', end);
+    border.addEventListener('pointercancel', end);
+  });
+  columnBorders.addEventListener('keydown', (event) => {
+    const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+    const at = step ? borderOf(event) : null;
+    if (!at || !step) return;
+    event.preventDefault();
+    event.stopPropagation();
+    resizeColumns(at.shown.ids, sharesAfter(at.shown.shares, at.index, step * (event.shiftKey ? 5 : 1)));
+  });
+  // Not a click on the email: the selection stays.
+  columnBorders.addEventListener('click', (event) => event.stopPropagation());
 
   /* ── Element toolbar ───────────────────────────────────────────────────── */
 

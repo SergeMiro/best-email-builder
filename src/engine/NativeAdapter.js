@@ -163,6 +163,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       content: LABEL_TAGS.has(node.tag) ? textOfHtml(node.content || '') : null,
       html: node.tag === 'mj-text' ? node.content || '' : null,
       children: node.children.map((child) => child.id),
+      parentId: parentOf(root, id)?.id || null,
       canRemove: !locked,
       canDuplicate: !locked,
       canMoveUp: !locked && index > 0,
@@ -692,6 +693,12 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
         onDrop: (payload, target) => {
           if (payload.nodeId) moveTo(payload.nodeId, target);
           else if (payload.block) insertBlock(payload.block, target);
+        },
+        // A border between columns dragged: one step of history for the whole drag.
+        onResizeColumns: (widths) => {
+          let next = requireRoot();
+          for (const [id, width] of Object.entries(widths)) next = setAttributes(next, id, { width });
+          commit(next, { merge: `columns:${Object.keys(widths).join('+')}` });
         },
         onEditStart: () => {
           history.key = null;

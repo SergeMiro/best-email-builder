@@ -160,8 +160,16 @@ export default function TextRibbon({ editor, ready, selection, format, variables
     }
   };
   if (element) walk(element.children);
-  /** What a key acts on: the selected element when its block has it, otherwise every element inside it that has it. */
-  const targetsOf = (key) => (element && own(element, key) ? [element] : inside.filter((target) => own(target, key)));
+  const parent = element?.parentId ? editor.getElement(element.parentId) : null;
+  /**
+   * What a key acts on: the selected element when its block has it, otherwise
+   * every element inside it that has it, otherwise its parent (a menu link aligns with its menu).
+   */
+  const targetsOf = (key) => {
+    if (element && own(element, key)) return [element];
+    const found = inside.filter((target) => own(target, key));
+    return found.length || !parent || !own(parent, key) ? found : [parent];
+  };
   /** The property, as the first element it acts on has it. @param {string} key */
   const propertyOf = (key) => {
     const [first] = targetsOf(key);
@@ -181,7 +189,7 @@ export default function TextRibbon({ editor, ready, selection, format, variables
   const words = ready && (format.editing || element?.tagName === 'mj-text');
   const run = (command, value) => editor.formatText(command, value);
 
-  // No words in hand: italic, underline and strikethrough style whole elements, where MJML takes them.
+  // No words in hand: bold, italic, underline and strikethrough style whole elements, where MJML takes them.
   const styledTargets = element && STYLED_TAGS.has(element.tagName) ? [element] : inside.filter((target) => STYLED_TAGS.has(target.tagName));
   const styled = !words && styledTargets.length > 0;
   const styleOn = (command) => styledTargets.length > 0 && styledTargets.every((target) => target.attributes?.[STYLES[command][0]] === STYLES[command][1]);
@@ -189,14 +197,23 @@ export default function TextRibbon({ editor, ready, selection, format, variables
     const [attribute, on, off] = STYLES[command];
     editor.updateProperties({ [attribute]: styleOn(command) ? off : on }, styledTargets.map((target) => target.id));
   };
-  // Not editing: bold is the weight of the whole element, where its block has one
-  // (a selected text keeps its words in <b>, a weight it already has is taken off).
-  const weight = !format.editing ? propertyOf('font-weight') : null;
-  const bold = weight ? heavy(valueOf('font-weight')) || format.bold : format.bold;
+  // Bold, so, is the elements' weight; a selected text keeps its words in <b>,
+  // and a weight it already has is taken off.
+  const weightOf = (target) => target.attributes?.['font-weight'] || target.values?.['font-weight'] || target.defaults?.['font-weight'] || '';
+  const weightOn = styledTargets.length > 0 && styledTargets.every((target) => heavy(weightOf(target)));
+  const textWeight = words && !format.editing && element ? heavy(weightOf(element)) : false;
+  const bold = styled ? weightOn : format.bold || textWeight;
   const toggleBold = () => {
-    if (weight && (heavy(valueOf('font-weight')) || (!words && !format.bold))) set('font-weight', heavy(valueOf('font-weight')) ? 'normal' : 'bold');
+    if (styled) editor.updateProperties({ 'font-weight': weightOn ? 'normal' : 'bold' }, styledTargets.map((target) => target.id));
+    else if (textWeight && element) editor.updateProperties({ 'font-weight': 'normal' }, element.id);
     else run('bold');
   };
+  // No words in hand either, the link is the address of the one element that has one (a menu link, a button, an image).
+  const hrefTargets = words ? [] : targetsOf('href');
+  const linked = hrefTargets.length === 1;
+  const href = words ? format.link || '' : linked ? valueOf('href') : '';
+  const clearStyles = () =>
+    editor.updateProperties({ 'font-weight': null, 'font-style': null, 'text-decoration': null }, styledTargets.map((target) => target.id));
   const font = propertyOf('font-family');
   const fontValue = font?.options?.find((option) => fontKey(option.value) === fontKey(valueOf('font-family')))?.value;
   const color = propertyOf('color');
@@ -243,7 +260,7 @@ export default function TextRibbon({ editor, ready, selection, format, variables
             <button
               type="button"
               className={ICON_BUTTON}
-              disabled={command === 'bold' ? !words && !weight : !words && !styled}
+              disabled={!words && !styled}
               aria-label={t(label)}
               aria-pressed={Boolean(command === 'bold' ? bold : styled ? styleOn(command) : format[command])}
               data-command={command}
@@ -292,15 +309,15 @@ export default function TextRibbon({ editor, ready, selection, format, variables
           </DropdownMenuContent>
         </DropdownMenu>
         <Separator />
-        <LinkButton disabled={!words} href={format.link || ''} variables={variables} onApply={(href) => run('link', href)} />
+        <LinkButton disabled={!words && !linked} href={href} variables={variables} onApply={(next) => (words ? run('link', next) : set('href', next))} />
         <Tip label={t('Remove the link')}>
-          <button type="button" className={ICON_BUTTON} disabled={!words || !format.link} aria-label={t('Remove the link')} data-command="unlink" onClick={() => run('unlink')}>
+          <button type="button" className={ICON_BUTTON} disabled={!href} aria-label={t('Remove the link')} data-command="unlink" onClick={() => (words ? run('unlink') : set('href', null))}>
             <Unlink aria-hidden="true" />
           </button>
         </Tip>
         <Separator />
         <Tip label={t('Clear formatting')}>
-          <button type="button" className={ICON_BUTTON} disabled={!words} aria-label={t('Clear formatting')} data-command="clear" onClick={() => run('clear')}>
+          <button type="button" className={ICON_BUTTON} disabled={!words && !styled} aria-label={t('Clear formatting')} data-command="clear" onClick={() => (words ? run('clear') : clearStyles())}>
             <RemoveFormatting aria-hidden="true" />
           </button>
         </Tip>

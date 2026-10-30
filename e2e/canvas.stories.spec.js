@@ -656,6 +656,115 @@ test.describe('Panel features for well-made emails', () => {
     await expect.poll(async () => (await nodes(page, 'mj-column')).map((c) => c.attributes.width)).toEqual(['25%', '50%', '25%']);
   });
 
+  test('column borders: dragged on the canvas, only the two columns beside one change; the arrow keys too; one undo step', async ({ page }) => {
+    await openBuilder(page);
+    await page.evaluate(() =>
+      window.__emailEditor.loadMjml(
+        '<mjml><mj-body><mj-section><mj-column><mj-text>One</mj-text></mj-column><mj-column><mj-text>Two</mj-text></mj-column>' +
+          '<mj-column><mj-text>Three</mj-text></mj-column></mj-section></mj-body></mjml>'
+      )
+    );
+    const widths = async () => (await nodes(page, 'mj-column')).map((c) => c.attributes.width ?? null);
+    const borders = canvas(page).getByTestId('eb-canvas-column-border');
+    // Nothing selected: no borders. A text in the row: the row's two.
+    await expect(borders).toHaveCount(0);
+    await canvas(page).getByText('One').click();
+    await expect(borders).toHaveCount(2);
+    await expect(borders.first()).toHaveAttribute('aria-valuenow', '33');
+
+    // The first border 60 px to the right: of the row's 600 px, 10 %.
+    const box = await borders.first().boundingBox();
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 30, y, { steps: 3 });
+    await page.mouse.move(x + 60, y, { steps: 3 });
+    await page.mouse.up();
+    await expect.poll(widths).toEqual(['43%', '23.67%', '33.33%']);
+    // Never under 10 %.
+    await borders.first().focus();
+    for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+ArrowRight');
+    await expect.poll(widths).toEqual(['56.67%', '10%', '33.33%']);
+    // Still selected: the text, not the column under the border.
+    await expect(panel(page).getByRole('heading', { name: 'Text' })).toBeVisible();
+
+    // The drag, one step of history (the keys, within a second of it, joined it).
+    await page.evaluate(() => window.__emailEditor.undo());
+    await expect.poll(widths).toEqual([null, null, null]);
+  });
+
+  test('a column holding a menu: bold on all its links', async ({ page }) => {
+    await openBuilder(page);
+    await page.evaluate(() =>
+      window.__emailEditor.loadMjml(
+        '<mjml><mj-body><mj-section><mj-column><mj-navbar><mj-navbar-link href="https://a.example/">Shop</mj-navbar-link>' +
+          '<mj-navbar-link href="https://b.example/">Blog</mj-navbar-link></mj-navbar></mj-column><mj-column></mj-column></mj-section></mj-body></mjml>'
+      )
+    );
+    await canvas(page).getByText('Shop').click();
+    // Up to the menu, then to its column.
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await expect(panel(page).getByRole('heading', { name: 'Column' })).toBeVisible();
+    const bold = page.getByTestId('eb-ribbon').locator('[data-command="bold"]');
+    await expect(bold).toBeEnabled();
+    await bold.click();
+    await expect.poll(async () => (await nodes(page, 'mj-navbar-link')).map((n) => n.attributes['font-weight'])).toEqual(['bold', 'bold']);
+    await expect(bold).toHaveAttribute('aria-pressed', 'true');
+    await bold.click();
+    await expect.poll(async () => (await nodes(page, 'mj-navbar-link')).map((n) => n.attributes['font-weight'])).toEqual(['normal', 'normal']);
+  });
+
+  test('a menu link and its menu: every ribbon icon acts on them', async ({ page }) => {
+    await openBuilder(page);
+    await page.evaluate(() =>
+      window.__emailEditor.loadMjml(
+        '<mjml><mj-body><mj-section><mj-column><mj-navbar align="center"><mj-navbar-link href="https://a.example/" font-size="14px">Shop</mj-navbar-link>' +
+          '<mj-navbar-link href="https://b.example/" font-size="14px">Blog</mj-navbar-link></mj-navbar></mj-column></mj-section></mj-body></mjml>'
+      )
+    );
+    const ribbon = page.getByTestId('eb-ribbon');
+    const links = async (key) => (await nodes(page, 'mj-navbar-link')).map((n) => n.attributes[key] ?? null);
+    await canvas(page).getByText('Shop').click();
+    for (const command of ['bold', 'italic', 'underline', 'strike', 'link', 'unlink', 'clear']) await expect(ribbon.locator(`[data-command="${command}"]`)).toBeEnabled();
+    await expect(ribbon.locator('[data-control="line-height"]')).toBeEnabled();
+    // Bold, then cleared.
+    await ribbon.locator('[data-command="bold"]').click();
+    await ribbon.locator('[data-command="italic"]').click();
+    await expect.poll(() => links('font-style')).toEqual(['italic', null]);
+    await ribbon.locator('[data-command="clear"]').click();
+    await expect.poll(() => Promise.all([links('font-weight'), links('font-style')])).toEqual([[null, null], [null, null]]);
+    // Its address, then none.
+    await ribbon.locator('[data-command="link"]').click();
+    await page.getByRole('dialog').getByRole('textbox', { name: 'Link URL' }).fill('https://c.example/');
+    await page.getByRole('button', { name: 'Apply the link' }).click();
+    await expect.poll(() => links('href')).toEqual(['https://c.example/', 'https://b.example/']);
+    await ribbon.locator('[data-command="unlink"]').click();
+    await expect.poll(() => links('href')).toEqual([null, 'https://b.example/']);
+    // Line height, of the link.
+    await ribbon.locator('[data-control="line-height"]').click();
+    await page.getByRole('menu', { name: 'Line height' }).getByRole('menuitem').filter({ hasText: '1.5' }).click();
+    await expect.poll(() => links('line-height')).toEqual(['21px', null]);
+    // Alignment: the menu's.
+    await ribbon.getByRole('radio', { name: 'Align right' }).click();
+    await expect.poll(async () => (await nodes(page, 'mj-navbar'))[0].attributes.align).toBe('right');
+
+    // The whole menu: all its links; one address for all of them would make no sense.
+    await page.keyboard.press('Escape');
+    await expect(panel(page).getByRole('heading', { name: 'Menu' })).toBeVisible();
+    await ribbon.locator('[data-command="bold"]').click();
+    await expect.poll(() => links('font-weight')).toEqual(['bold', 'bold']);
+    await ribbon.locator('[data-command="clear"]').click();
+    await expect.poll(() => links('font-weight')).toEqual([null, null]);
+    await ribbon.locator('[data-control="line-height"]').click();
+    await page.getByRole('menu', { name: 'Line height' }).getByRole('menuitem').filter({ hasText: /^2\s*28 px$/ }).click();
+    await expect.poll(() => links('line-height')).toEqual(['28px', '28px']);
+    await ribbon.getByRole('radio', { name: 'Align left' }).click();
+    await expect.poll(async () => (await nodes(page, 'mj-navbar'))[0].attributes.align).toBe('left');
+    await expect(ribbon.locator('[data-command="link"]')).toBeDisabled();
+  });
+
   test('a section background across the whole screen', async ({ page }) => {
     await openBuilder(page);
     await page.locator('[data-block-id="columns-1"]').click();

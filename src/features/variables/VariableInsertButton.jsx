@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Braces } from 'lucide-react';
 import { Button } from '../../ui/primitives/button.jsx';
-import { Popover, PopoverContent, PopoverTrigger } from '../../ui/primitives/overlays.jsx';
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '../../ui/primitives/overlays.jsx';
 import { tokenOf } from './catalog.js';
 import VariablePicker from './VariablePicker.jsx';
 
@@ -47,7 +47,9 @@ export default function VariableInsertButton({ variables, inputRef, value, onCha
           <Braces />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="eb:w-72 eb:p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
+      {/* Under the field, its edges and width: not hanging off the small button. */}
+      <PopoverAnchor virtualRef={inputRef} />
+      <PopoverContent align="start" className="eb:w-(--radix-popover-trigger-width) eb:min-w-64 eb:p-0" onCloseAutoFocus={(e) => e.preventDefault()}>
         <VariablePicker variables={variables} onPick={insert} filter={links ? undefined : (v) => v.kind !== 'link'} />
       </PopoverContent>
     </Popover>

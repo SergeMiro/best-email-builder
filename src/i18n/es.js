@@ -318,6 +318,8 @@ export const es = {
   "Insecure http link ({count})": "Enlace http no seguro ({count})",
   "Insert a variable in the preview text": "Insertar una variable en el texto de vista previa",
   "Insert a variable in the link": "Insertar una variable en el enlace",
+  "Column width": "Ancho de columna",
+  "Drag to change the widths of the columns": "Arrastra para cambiar el ancho de las columnas",
   "Insert a variable in the subject": "Insertar una variable en el asunto",
   "Internal error": "Error interno",
   "Invalid JSON": "JSON no válido",

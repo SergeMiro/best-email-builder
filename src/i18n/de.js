@@ -318,6 +318,8 @@ export const de = {
   "Insecure http link ({count})": "Unsichere http-Links: {count}",
   "Insert a variable in the preview text": "Variable in den Vorschautext einfügen",
   "Insert a variable in the link": "Variable in den Link einfügen",
+  "Column width": "Spaltenbreite",
+  "Drag to change the widths of the columns": "Ziehen, um die Breite der Spalten zu ändern",
   "Insert a variable in the subject": "Variable in den Betreff einfügen",
   "Internal error": "Interner Fehler",
   "Invalid JSON": "Ungültiges JSON",

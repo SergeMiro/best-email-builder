@@ -6,6 +6,29 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Column widths by hand: with a layout selected, or anything inside it, the
+  lines between its columns can be dragged on the canvas (or moved with the
+  arrow keys, Shift for 5 %). Only the two columns beside the line change,
+  never below 10 %; the whole drag is one undo step.
+- A menu link has a line height.
+- `parentId` on a selected element: the element it is in.
+
+### Fixed
+- Bold on a column, a section or a menu: every text, button and menu link
+  inside takes the weight.
+- Every ribbon icon acts on a menu link and on a menu: bold, italic,
+  underline, strikethrough, clear formatting (their weight, slant and lines
+  go), line height, alignment (a link's is its menu's); the link and remove
+  the link change a menu link's address, a button's or an image's. A whole
+  menu keeps the link off: one address for all its links would make no sense.
+- The unsubscribe link of the Variables panel behaves like every variable:
+  its tag (`{{ unsubscribe }}`) is typed and previewed, no longer a ready-made
+  "Unsubscribe" link. As an address, it is picked from the `{ }` of the link
+  field.
+- The variables of a field open under it, flush with its edges, rather than
+  hanging off the `{ }` button.
+
 ## [0.19.0] — 2026-10-30
 
 ### Added

@@ -138,9 +138,11 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   columnCount?: number,
  *   multiple?: number,
  *   children?: string[],
+ *   parentId?: string|null,
  * }} EngineSelection
  *   `content`: the label of a button or a menu link, as plain text.
  *   `children`: the ids of the elements inside it, in order.
+ *   `parentId`: the id of the element it is in.
  *   `html`: the HTML of a text (`mj-text`), as stored.
  *   `columnCount`: for a section, how many columns it holds (its name).
  *   `multiple`: the whole email is selected (Ctrl+A) — how many sections;

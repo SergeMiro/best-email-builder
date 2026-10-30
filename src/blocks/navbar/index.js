@@ -67,6 +67,7 @@ export const navbarLinkBlock = {
     prop.color('Text'),
     prop.fontFamily(),
     prop.fontSize(10, 24),
+    prop.lineHeight(),
     {
       // MJML writes menu links in capitals unless told otherwise.
       key: 'text-transform',

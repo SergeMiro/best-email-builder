@@ -681,27 +681,17 @@ test.describe('Variables', () => {
     await expect(badges.getByRole('button', { name: 'Edit “First name”' })).toBeVisible();
   });
 
-  test('unsubscribe on a selected button becomes its URL', async ({ page }) => {
-    await openBuilder(page);
-    await canvas(page).getByText('Learn more').click();
-    await expect(panel(page).getByRole('heading', { name: 'Button' })).toBeVisible();
-    const badges = await openBar(page);
-    const unsubscribe = badges.getByRole('button', { name: 'Unsubscribe link', exact: true });
-    // A link: no typed preview, its tag in the tooltip.
-    await unsubscribe.hover();
-    await expect(page.getByRole('tooltip')).toHaveText('{{ unsubscribe }}');
-    await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveCount(0);
-    await unsubscribe.click();
-    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*href="\{\{ unsubscribe \}\}"/);
-  });
-
-  test('unsubscribe in a text being edited: a link at the caret', async ({ page }) => {
+  test('unsubscribe like every variable: its tag, previewed under the pointer, typed at the caret', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Your headline').dblclick();
     await page.keyboard.press('End');
     const badges = await openBar(page);
-    await badges.getByRole('button', { name: 'Unsubscribe link', exact: true }).click();
-    await expect.poll(() => mjml(page)).toMatch(/Your headline\s*<a href="\{\{ unsubscribe \}\}">Unsubscribe<\/a>/);
+    const unsubscribe = badges.getByRole('button', { name: 'Unsubscribe link', exact: true });
+    await unsubscribe.hover();
+    await expect(page.getByRole('tooltip')).toHaveText('{{ unsubscribe }}');
+    await unsubscribe.click();
+    await expect.poll(() => mjml(page)).toMatch(/Your headline\s*\{\{ unsubscribe \}\}/);
+    expect(await mjml(page)).not.toMatch(/<a href="\{\{ unsubscribe \}\}">Unsubscribe<\/a>/);
   });
 
   test('variables panel: a badge under the pointer types its tag into the selected button, wipes it out when it leaves; a click inserts it', async ({ page }) => {

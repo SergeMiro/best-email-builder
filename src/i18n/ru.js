@@ -318,6 +318,8 @@ export const ru = {
   "Insecure http link ({count})": "Небезопасные ссылки http: {count}",
   "Insert a variable in the preview text": "Вставить переменную в прехедер",
   "Insert a variable in the link": "Вставить переменную в ссылку",
+  "Column width": "Ширина колонки",
+  "Drag to change the widths of the columns": "Перетащите, чтобы изменить ширину колонок",
   "Insert a variable in the subject": "Вставить переменную в тему",
   "Internal error": "Внутренняя ошибка",
   "Invalid JSON": "Некорректный JSON",

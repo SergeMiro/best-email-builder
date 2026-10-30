@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { FolderPlus, Link2, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+import { FolderPlus, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useUi } from '../../ui/context.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { TooltipWrap } from '../../ui/primitives/misc.jsx';
@@ -32,8 +32,7 @@ const DRAG_THRESHOLD = 5;
  * their badge; they are shared by every template. The application's get a
  * pencil too, the unsubscribe link included: their name, sample… change,
  * their tag does not, and the dialog restores the application's. The
- * unsubscribe link is inserted as a link (or becomes the URL of the selected
- * button), so it shows no typed preview.
+ * unsubscribe link is inserted like the others: its tag, as typed.
  *
  * A badge dragged onto another group (mouse or pen: past a few pixels, the
  * press is a drag, not a click) moves its variable there, as its dialog
@@ -54,7 +53,7 @@ export default function VariablesPanel({ context }) {
   const [groupName, setGroupName] = useState('');
   const [groupError, setGroupError] = useState('');
   const [groupBusy, setGroupBusy] = useState(false);
-  // The badge being dragged: {key, label, link, from, over, x, y}.
+  // The badge being dragged: {key, label, from, over, x, y}.
   const [drag, setDrag] = useState(null);
   // A badge dropped on a group: shown there until the storage answers.
   const [moved, setMoved] = useState(null); // { key, group }
@@ -212,7 +211,7 @@ export default function VariablesPanel({ context }) {
       const from = groupOf(variable);
       const over = groupAt(event.currentTarget, event.clientX, event.clientY);
       start.over = over !== from ? over : null;
-      setDrag({ key: variable.key, label, link: variable.kind === 'link', from, over: start.over, x: event.clientX, y: event.clientY });
+      setDrag({ key: variable.key, label, from, over: start.over, x: event.clientX, y: event.clientY });
     },
     onPointerUp: () => {
       const start = press.current;
@@ -233,33 +232,29 @@ export default function VariablesPanel({ context }) {
     },
   });
 
+  // Every variable alike, the unsubscribe link too: its tag, as typed.
   const insert = (variable) => {
-    const done =
-      variable.kind === 'link'
-        ? editor.insertLink(tokenOf(variable), t('Unsubscribe'))
-        : editor.insertText(tokenOf(variable));
+    const done = editor.insertText(tokenOf(variable));
     if (!done) notify('info', t('Select a text or a button first.'));
   };
 
   const badge = (variable) => {
-    const link = variable.kind === 'link';
     const label = labelOf(variable, t);
     const button = (
       <button
         type="button"
         disabled={!ready}
         data-variable={variable.key}
-        onMouseEnter={link ? undefined : () => !drag && editor.previewText(tokenOf(variable))}
-        onMouseLeave={link ? undefined : () => editor.clearPreview()}
-        onFocus={link ? undefined : () => editor.previewText(tokenOf(variable))}
-        onBlur={link ? undefined : () => editor.clearPreview()}
+        onMouseEnter={() => !drag && editor.previewText(tokenOf(variable))}
+        onMouseLeave={() => editor.clearPreview()}
+        onFocus={() => editor.previewText(tokenOf(variable))}
+        onBlur={() => editor.clearPreview()}
         onClick={() => {
           if (!press.current?.dragged) insert(variable);
         }}
         {...(canManageVariables ? dragHandlers(variable, label) : {})}
         className={cn(BADGE, canManageVariables && 'eb:cursor-grab eb:rounded-r-none eb:border-r-0 eb:pr-1.5 eb:active:cursor-grabbing')}
       >
-        {link && <Link2 className="eb:size-3" aria-hidden="true" />}
         {label}
       </button>
     );
@@ -346,7 +341,6 @@ export default function VariablesPanel({ context }) {
           className={cn(BADGE, 'eb:pointer-events-none eb:fixed eb:z-50 eb:border-primary/50 eb:text-primary eb:shadow-md')}
           style={{ left: drag.x + 10, top: drag.y + 10 }}
         >
-          {drag.link && <Link2 className="eb:size-3" aria-hidden="true" />}
           {drag.label}
         </span>
       )}

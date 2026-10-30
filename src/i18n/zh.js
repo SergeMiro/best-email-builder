@@ -318,6 +318,8 @@ export const zh = {
   "Insecure http link ({count})": "不安全的 http 链接（{count}）",
   "Insert a variable in the preview text": "在预览文本中插入变量",
   "Insert a variable in the link": "在链接中插入变量",
+  "Column width": "列宽",
+  "Drag to change the widths of the columns": "拖动以更改列宽",
   "Insert a variable in the subject": "在主题中插入变量",
   "Internal error": "内部错误",
   "Invalid JSON": "JSON 无效",
