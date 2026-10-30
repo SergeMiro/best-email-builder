@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-10-30
+
 ### Added
 - Column widths by hand: with a layout selected, or anything inside it, the
   lines between its columns can be dragged on the canvas (or moved with the
