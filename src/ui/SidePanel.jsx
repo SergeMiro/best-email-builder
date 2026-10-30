@@ -25,8 +25,8 @@ import { TooltipWrap } from './primitives/misc.jsx';
  */
 
 export const SIDE_PANELS = {
-  // Three blocks in a row.
-  blocks: { width: 328, min: 200, max: 480 },
+  // Two blocks in a row: wider, the row takes three.
+  blocks: { width: 272, min: 200, max: 480 },
   properties: { width: 416, min: 296, max: 640 },
 };
 
@@ -40,6 +40,11 @@ export const FOLD_MS = 350;
 export const CANVAS_MIN = { wide: 640, medium: 480 };
 
 const STORAGE_KEY = 'best-email-builder:side-panels';
+/**
+ * The blocks' former default width, saved by every visit until 0.18 whether
+ * changed or not: read as no choice, so those viewers get the new default.
+ */
+const FORMER_BLOCKS_WIDTH = 328;
 /** Centred on the border between the panel and the canvas. */
 const EDGE = { left: 'eb:right-0 eb:translate-x-1/2', right: 'eb:left-0 eb:-translate-x-1/2' };
 const KEY_STEP = 16;
@@ -61,7 +66,7 @@ function initialPanels() {
       const entry = saved?.[name];
       if (!entry) continue;
       const { min, max } = SIDE_PANELS[name];
-      if (Number.isFinite(entry.width)) panels[name].width = clamp(entry.width, min, max);
+      if (Number.isFinite(entry.width) && !(name === 'blocks' && entry.width === FORMER_BLOCKS_WIDTH)) panels[name].width = clamp(entry.width, min, max);
       panels[name].collapsed = entry.collapsed === true;
     }
   } catch {

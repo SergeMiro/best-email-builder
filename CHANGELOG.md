@@ -7,6 +7,12 @@ All notable changes are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Images side by side line up: when an image of a row gets its file, every
+  image of the row takes the height the first one has, cropped
+  (`object-fit: cover`) rather than stretched, so the texts and buttons under
+  them line up. On a phone, where the columns stack, each keeps its own
+  proportions; Outlook on Windows stretches instead of cropping. An image's
+  Height is in its panel, to change or clear.
 - The text ribbon holds every text tool: font, size, line height, text
   color, capitals, bold, italic, underline, strikethrough, alignment. The
   properties panel no longer repeats them.
@@ -18,6 +24,9 @@ All notable changes are documented here. The format follows
   ribbon's link field.
 
 ### Changed
+- The blocks panel opens two blocks to a row (272 px, was three at 328 px).
+  A width the viewer chose is still remembered; the former default, which
+  every visit saved, is not taken for a choice.
 - Every input and select is as tall as the toolbar's buttons (28 px), with
   their border and background.
 - A button's and a section's corner radius is in px only: a percentage of a

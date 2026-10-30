@@ -43,6 +43,7 @@ import { withoutTag, withoutTagInText } from './mergeTags.js';
 import { EDITABLE_TAGS, createCanvasView } from './canvas/CanvasView.js';
 import { functionExport } from './unwrapModule.js';
 import { compileEditorMjml } from '../renderer/compileEditorMjml.js';
+import { ID_CLASS_PREFIX, imageWidths } from './canvasMjml.js';
 
 /**
  * @typedef {import('../core/EmailEditor.js').EmailEditorAdapter} EmailEditorAdapter
@@ -308,6 +309,44 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
     emitHistory();
     emitSelection();
     if (render) void view?.render();
+  }
+
+  /**
+   * The images side by side in the row of an image, with a file: the first
+   * image of each column.
+   * @param {EmailNode} current @param {string} id
+   */
+  function rowImages(current, id) {
+    for (let node = parentOf(current, id); node; node = parentOf(current, node.id)) {
+      const columns = node.children.filter((child) => child.tag === 'mj-column');
+      if (columns.length > 1) {
+        return /** @type {EmailNode[]} */ (columns.map((column) => findFirst(column, 'mj-image')).filter((image) => image?.attributes.src));
+      }
+    }
+    return [];
+  }
+
+  /**
+   * Images side by side take the height the row's first one has, cropped
+   * rather than stretched (`object-fit` at compile): the texts and buttons
+   * under them line up. Done when an image of the row gets its file, with the
+   * first image's proportions as the canvas loaded it.
+   * @param {string} id @param {string} merge
+   */
+  async function fitRowImages(id, merge) {
+    const [first, ...others] = rowImages(requireRoot(), id);
+    if (!first || !others.length || !view) return;
+    await view.render();
+    const img = /** @type {HTMLImageElement|null} */ (view?.document.querySelector(`.${ID_CLASS_PREFIX}${first.id} img`) || null);
+    if (!img) return;
+    if (!img.complete) await new Promise((done) => { img.addEventListener('load', done, { once: true }); img.addEventListener('error', done, { once: true }); });
+    const width = root ? imageWidths(root).get(first.id) : 0;
+    if (!img.naturalWidth || !width) return;
+    const height = `${Math.round((width * img.naturalHeight) / img.naturalWidth)}px`;
+    let next = requireRoot();
+    // The row as it is now: it may have changed while the image loaded.
+    for (const image of rowImages(next, id)) if (image.attributes.height !== height) next = setAttributes(next, image.id, { height });
+    commit(next, { merge });
   }
 
   /**
@@ -768,7 +807,10 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
         }
         if (node.tag === 'mj-column' && 'width' in attributes) next = balanceColumns(next, one, attributes.width);
       }
-      commit(next, { merge: `attributes:${ids.join('+')}:${keys}` });
+      const merge = `attributes:${ids.join('+')}:${keys}`;
+      commit(next, { merge });
+      const image = ids.find((one) => attributes.src && findNode(current, one)?.tag === 'mj-image');
+      if (image) void fitRowImages(image, merge);
     },
 
     setContent(id, content, { reveal = false } = {}) {

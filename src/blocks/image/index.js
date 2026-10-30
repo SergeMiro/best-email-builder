@@ -41,6 +41,8 @@ export const imageBlock = {
     },
     prop.href('Link on click'),
     { key: 'width', label: 'Width', type: 'size', group: GROUPS.layout, min: 20, max: 600, unit: 'px' },
+    // Set by itself beside other images (the first one's): cropped to it.
+    { key: 'height', label: 'Height', type: 'size', group: GROUPS.layout, min: 20, max: 1200, unit: 'px' },
     {
       // A photo given a width keeps it on a phone unless told otherwise.
       key: 'fluid-on-mobile',

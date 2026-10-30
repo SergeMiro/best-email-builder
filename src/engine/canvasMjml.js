@@ -82,7 +82,7 @@ export function imagePlaceholder(label, width = 600) {
  * @param {EmailNode} root
  * @returns {Map<string, number>}
  */
-function imageWidths(root) {
+export function imageWidths(root) {
   /** @type {Map<string, number>} */
   const widths = new Map();
   /** @param {string|undefined} value @param {number} of */

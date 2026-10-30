@@ -195,13 +195,25 @@ test.describe('Side panels', () => {
   const sidePanel = (page, name) => page.locator(`[data-panel="${name}"]`);
   const widthOf = async (locator) => Math.round((await locator.boundingBox()).width);
 
-  test('wide by default: three blocks in a row, a roomier properties panel', async ({ page }) => {
+  test('by default: two blocks in a row, a roomier properties panel', async ({ page }) => {
     await openBuilder(page);
-    expect(await widthOf(sidePanel(page, 'blocks'))).toBe(328);
+    expect(await widthOf(sidePanel(page, 'blocks'))).toBe(272);
     expect(await widthOf(sidePanel(page, 'properties'))).toBe(416);
-    const tops = await page.locator('[data-block-id]').evaluateAll((tiles) => tiles.slice(0, 4).map((tile) => Math.round(tile.getBoundingClientRect().top)));
-    expect(tops.slice(0, 3)).toEqual([tops[0], tops[0], tops[0]]);
-    expect(tops[3]).toBeGreaterThan(tops[0]);
+    const tops = await page.locator('[data-block-id]').evaluateAll((tiles) => tiles.slice(0, 3).map((tile) => Math.round(tile.getBoundingClientRect().top)));
+    expect(tops[1]).toBe(tops[0]);
+    expect(tops[2]).toBeGreaterThan(tops[0]);
+  });
+
+  test('the former default width, saved by an earlier visit, is not a choice: two in a row', async ({ page }) => {
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem('seeded')) {
+        localStorage.setItem('best-email-builder:side-panels', JSON.stringify({ blocks: { width: 328, collapsed: false }, properties: { width: 400, collapsed: false } }));
+        sessionStorage.setItem('seeded', '1');
+      }
+    });
+    await openBuilder(page);
+    expect(await widthOf(sidePanel(page, 'blocks'))).toBe(272);
+    expect(await widthOf(sidePanel(page, 'properties'))).toBe(400);
   });
 
   test('a border dragged resizes its panel; the arrow keys too; remembered after a reload', async ({ page }) => {
@@ -220,7 +232,7 @@ test.describe('Side panels', () => {
       await page.mouse.up();
     }
     expect(await widthOf(properties)).toBe(356);
-    expect(await widthOf(blocks)).toBe(408);
+    expect(await widthOf(blocks)).toBe(352);
     // The canvas keeps its room: dragging further stops at it.
     const border = await blocks.getByRole('separator').boundingBox();
     await page.mouse.move(border.x + border.width / 2, border.y + 300);
@@ -256,7 +268,7 @@ test.describe('Side panels', () => {
     await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready');
     await page.getByRole('button', { name: 'Show the blocks' }).click();
     await page.getByRole('button', { name: 'Show the properties' }).click();
-    await expect.poll(() => widthOf(sidePanel(page, 'blocks'))).toBe(328);
+    await expect.poll(() => widthOf(sidePanel(page, 'blocks'))).toBe(272);
     await expect(panel(page).getByRole('heading', { name: 'Email' })).toBeVisible();
   });
 

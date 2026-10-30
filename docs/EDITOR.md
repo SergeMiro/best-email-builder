@@ -37,6 +37,11 @@ percentage makes an oval). Vertical alignment is available on every block.
 On a content block, it aligns the containing column. On a layout, it aligns
 all its columns. A single column needs extra height from its row for a
 vertical position change to be visible.
+
+Images side by side take the height of the row's first image when one of
+them gets its file: cropped, not stretched, so what is under them lines up.
+The height is in the image's panel; on a phone each image keeps its own
+proportions.
 Columns in the same desktop row have equal heights. Their content keeps its
 chosen vertical alignment. On mobile, stacked columns use their natural height.
 

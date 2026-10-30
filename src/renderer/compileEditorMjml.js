@@ -1,7 +1,7 @@
 // @ts-check
 import { parseMjml, serializeMjml, encodeAttribute } from '../engine/mjml.js';
 import { boxKeys } from '../core/blockBox.js';
-import { walk } from '../engine/model.js';
+import { createNode, findFirst, walk } from '../engine/model.js';
 import { toValues, parseBorder, parseSpacing } from '../core/mjmlAttributes.js';
 import { MJML_DEFAULTS } from '../core/mjmlDefaults.js';
 import { prepareColumnAlignment } from './columnAlignment.js';
@@ -86,10 +86,36 @@ function styled(opening, style) {
   return /\bstyle="/.test(opening) ? opening.replace(/\bstyle="([^"]*)"/, (_, previous) => `style="${previous};${safe}"`) : opening.replace(/>$/, ` style="${safe}">`);
 }
 
+/**
+ * An image given a height (those side by side, fitted to the first) is
+ * cropped to it, not stretched; on a phone, where the columns stack, it keeps
+ * its own proportions. Outlook on Windows has no `object-fit`: it stretches.
+ * @param {string} source
+ */
+function prepareImageHeights(source) {
+  if (!/<mj-image\b[^>]*\sheight="\d/.test(source)) return source;
+  const root = parseMjml(source);
+  walk(root, (node) => {
+    if (node.tag === 'mj-image' && /^\d+(?:\.\d+)?px$/.test(node.attributes.height || '')) {
+      node.attributes['css-class'] = `${node.attributes['css-class'] || ''} eb-fill`.trim();
+    }
+  });
+  let head = findFirst(root, 'mj-head');
+  if (!head) {
+    head = createNode('mj-head');
+    root.children.unshift(head);
+  }
+  const width = Number.parseFloat(findFirst(head, 'mj-breakpoint')?.attributes.width || '') || 480;
+  head.children.push(createNode('mj-style', { content:
+    '.eb-fill img {object-fit:cover;}' +
+    `@media only screen and (max-width:${width - 1}px) {.eb-fill img {height:auto!important;}}` }));
+  return serializeMjml(root);
+}
+
 /** Compile both native MJML and the editor's independent box controls. @param {string} source @param {(source: string, options: any) => any} compile @param {any} [options] */
 export async function compileEditorMjml(source, compile, options = {}) {
   const prepared = prepareBoxes(source);
-  const result = await compile(prepareColumnAlignment(prepared.mjml), options);
+  const result = await compile(prepareColumnAlignment(prepareImageHeights(prepared.mjml)), options);
   let html = String(result.html || '');
   // Children first: outer wrappers retain every nested canvas marker.
   for (const box of prepared.boxes.reverse()) {

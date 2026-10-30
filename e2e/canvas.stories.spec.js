@@ -686,6 +686,29 @@ test.describe('Panel features for well-made emails', () => {
       .toBeGreaterThan(250);
   });
 
+  test('images side by side: the next takes the first one’s height, cropped; the buttons under them line up', async ({ page }) => {
+    const svg = (width, height) => `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="100%" height="100%" fill="#3b82f6"/></svg>`;
+    await page.route('https://img.example/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'image/svg+xml', body: route.request().url().endsWith('wide.svg') ? svg(800, 400) : svg(400, 300) })
+    );
+    await openBuilder(page);
+    const column = (name) =>
+      `<mj-column><mj-image src="https://img.example/${name}.svg" alt="${name}"></mj-image><mj-button href="https://example.com/">Buy ${name}</mj-button></mj-column>`;
+    await page.evaluate((source) => window.__emailEditor.loadMjml(source), `<mjml><mj-body><mj-section>${column('square')}${column('wide')}</mj-section></mj-body></mjml>`);
+    const [, wide] = await nodes(page, 'mj-image');
+    // The second gets its file again, as from the panel.
+    await page.evaluate((id) => window.__emailEditor.updateProperties({ src: 'https://img.example/wide.svg?v=2' }, id), wide.id);
+    // 4:3 at the column's 250 px: 188 px, for both.
+    await expect.poll(async () => (await nodes(page, 'mj-image')).map((image) => image.attributes.height)).toEqual(['188px', '188px']);
+    const top = (name) => canvas(page).getByRole('link', { name: `Buy ${name}` }).evaluate((link) => Math.round(link.getBoundingClientRect().top));
+    await expect.poll(async () => (await top('square')) - (await top('wide'))).toBe(0);
+    // Cropped, not stretched.
+    await expect(canvas(page).getByRole('img', { name: 'wide' })).toHaveCSS('object-fit', 'cover');
+    // One step of history with the file.
+    await page.evaluate(() => window.__emailEditor.undo());
+    await expect.poll(async () => (await nodes(page, 'mj-image')).map((image) => image.attributes.height ?? null)).toEqual([null, null]);
+  });
+
   test('menu links: as typed by default, capitals on demand', async ({ page }) => {
     await openBuilder(page, { lang: 'fr' });
     await page.locator('[data-block-id="navbar"]').click();
