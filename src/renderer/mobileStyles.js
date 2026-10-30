@@ -13,7 +13,8 @@
  * Only styles change between the two: the attributes that would change the
  * markup itself (an address, a picture, full width) are the same on every
  * screen (see mobileAllowed). If the two still differ in their tags, the
- * phone keeps the computer's look rather than a wrong one.
+ * phone keeps the computer's look rather than a wrong one, and the compiler
+ * says so (MOBILE_MISMATCH).
  */
 
 import { parseMjml, serializeMjml } from '../engine/mjml.js';
@@ -54,6 +55,8 @@ export function splitDevices(source) {
   const width = Number.parseFloat(findFirst(root, 'mj-breakpoint')?.attributes.width || '') || 480;
   return { desktop, mobile: serializeMjml(root), breakpoint: width };
 }
+
+export const MOBILE_MISMATCH = 'Phone styles not applied: the phone version is built differently, so phones show the desktop styles. Undo the last phone change, or use "Same as desktop" on the element.';
 
 const TAGS = /<!--[\s\S]*?-->|<([a-z][\w:-]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)>/gi;
 
@@ -96,13 +99,15 @@ function tagsOf(html) {
 
 /**
  * The computer's HTML, its tags that look different on a phone marked, and the
- * phone's styles for them under the breakpoint.
+ * phone's styles for them under the breakpoint; null when the two are not
+ * built alike.
  * @param {string} desktop @param {string} mobile @param {number} breakpoint
+ * @returns {string|null}
  */
 export function mergeDevices(desktop, mobile, breakpoint) {
   const computer = tagsOf(desktop);
   const phone = tagsOf(mobile);
-  if (computer.length !== phone.length || computer.some((tag, index) => tag.name !== phone[index].name)) return desktop;
+  if (computer.length !== phone.length || computer.some((tag, index) => tag.name !== phone[index].name)) return null;
   const rules = [];
   let html = desktop;
   for (let index = computer.length - 1; index >= 0; index -= 1) {

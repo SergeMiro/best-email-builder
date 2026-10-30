@@ -12,7 +12,9 @@ All notable changes are documented here. The format follows
   phones only, and the computer keeps its own. The values are stored beside
   the others as `mobile-*` attributes (`mobile-font-size="28px"`) and sent as
   a media query under the breakpoint. Links, pictures and column widths stay
-  the same on every screen.
+  the same on every screen. If an email's phone version were ever built
+  differently from the computer's, phones keep the computer's styles and the
+  save says so (a compile warning) instead of sending a broken look.
 - The panel lists, in the Mobile view, what differs on phones; each one goes
   back to the computer's value, or all at once ("Same as desktop").
 - `editor.clearMobileStyles(id?)` and `mobileOverrides` on a selected element.

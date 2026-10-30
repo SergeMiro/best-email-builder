@@ -5,7 +5,7 @@ import { createNode, findFirst, walk } from '../engine/model.js';
 import { toValues, parseBorder, parseSpacing } from '../core/mjmlAttributes.js';
 import { MJML_DEFAULTS } from '../core/mjmlDefaults.js';
 import { prepareColumnAlignment } from './columnAlignment.js';
-import { mergeDevices, splitDevices } from './mobileStyles.js';
+import { MOBILE_MISMATCH, mergeDevices, splitDevices } from './mobileStyles.js';
 
 /** Only lengths may become outside or inside spacing. @param {string} value */
 const spacing = (value) => parseSpacing(value || '0px').map((part) => {
@@ -122,7 +122,8 @@ export async function compileEditorMjml(source, compile, options = {}) {
   const devices = splitDevices(source);
   if (!devices) return compileOne(source, compile, options);
   const [desktop, mobile] = await Promise.all([compileOne(devices.desktop, compile, options), compileOne(devices.mobile, compile, options)]);
-  return { ...desktop, html: mergeDevices(desktop.html, mobile.html, devices.breakpoint) };
+  const html = mergeDevices(desktop.html, mobile.html, devices.breakpoint);
+  return html === null ? { ...desktop, errors: [...(desktop.errors || []), { message: MOBILE_MISMATCH }] } : { ...desktop, html };
 }
 
 /** @param {string} source @param {(source: string, options: any) => any} compile @param {any} options */

@@ -11,6 +11,8 @@ import { emailBlocks } from '../../src/blocks/index.js';
 import { parseMjml, serializeMjml } from '../../src/engine/mjml.js';
 import { walk } from '../../src/engine/model.js';
 import { MJML_DEFAULTS } from '../../src/core/mjmlDefaults.js';
+import { compileEditorMjml } from '../../src/renderer/compileEditorMjml.js';
+import { MOBILE_MISMATCH } from '../../src/renderer/mobileStyles.js';
 import { mobileAllowed, mobileOverrides, toAttributes, toMobileAttributes, toValues, withMobile } from '../../src/core/mjmlAttributes.js';
 
 const propertiesOf = (tag) => emailBlocks.list().filter((block) => block.tagName === tag && !block.insertOnly).flatMap((block) => block.properties || []);
@@ -92,4 +94,14 @@ test('the phone styles cannot leave their rule', async () => {
   const rules = RULES.exec(html)?.[1] || '';
   assert.match(rules, /font-size:20px!important/);
   assert.doesNotMatch(rules, /evil|body\{/);
+});
+
+test('a phone version built differently keeps the computer\'s look, and says so', async () => {
+  // A compiler whose phone version has one tag more.
+  const compile = async (/** @type {string} */ mjml) => ({ html: mjml.includes('20px') ? '<div><p>Hi</p><br></div>' : '<div><p>Hi</p></div>', errors: [] });
+  const result = await compileEditorMjml('<mjml><mj-body><mj-section><mj-column><mj-text mobile-font-size="20px">Hi</mj-text></mj-column></mj-section></mj-body></mjml>', compile);
+  assert.equal(result.html, '<div><p>Hi</p></div>');
+  assert.deepEqual(result.errors, [{ message: MOBILE_MISMATCH }]);
+  const { warnings } = await compileMjml('<mjml><mj-body><mj-section><mj-column><mj-text mobile-font-size="20px">Hi</mj-text></mj-column></mj-section></mj-body></mjml>');
+  assert.deepEqual(warnings, []);
 });
