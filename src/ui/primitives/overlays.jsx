@@ -8,7 +8,7 @@ import {
 import { CheckIcon, ChevronDownIcon, XIcon } from 'lucide-react';
 import { useT } from '../context.jsx';
 import { cn } from './cn.js';
-import { DENSE_FIELD } from './fields.jsx';
+import { FIELD } from './fields.jsx';
 
 /*
  * Overlays render in a portal, outside the builder's root element: each one
@@ -195,14 +195,14 @@ export function SelectValue(props) {
   return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
-/** `dense`: see `DENSE_FIELD`. */
-export function SelectTrigger({ className, children, dense = false, ...props }) {
+/** As tall as every field: see `FIELD`. */
+export function SelectTrigger({ className, children, dense: _dense, ...props }) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "eb:flex eb:h-8 eb:w-full eb:items-center eb:justify-between eb:gap-2 eb:rounded-lg2 eb:border eb:border-border-strong eb:bg-surface-75 eb:px-3 eb:py-1 eb:text-[13px] eb:whitespace-nowrap eb:text-foreground eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:disabled:cursor-not-allowed eb:disabled:opacity-50 eb:data-[placeholder]:text-foreground-muted eb:*:data-[slot=select-value]:line-clamp-1 eb:*:data-[slot=select-value]:flex eb:*:data-[slot=select-value]:items-center eb:*:data-[slot=select-value]:gap-2 eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4",
-        dense && DENSE_FIELD,
+        FIELD,
+        "eb:flex eb:h-7 eb:w-full eb:items-center eb:justify-between eb:gap-2 eb:py-1 eb:whitespace-nowrap eb:transition-[color,box-shadow] eb:outline-none eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50 eb:disabled:cursor-not-allowed eb:disabled:opacity-50 eb:data-[placeholder]:text-foreground-muted eb:*:data-[slot=select-value]:line-clamp-1 eb:*:data-[slot=select-value]:flex eb:*:data-[slot=select-value]:items-center eb:*:data-[slot=select-value]:gap-2 eb:[&_svg]:pointer-events-none eb:[&_svg]:shrink-0 eb:[&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

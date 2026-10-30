@@ -173,7 +173,7 @@ export default function ModelPicker({ aiKey, provider, apiKey, address = '', del
         aria-describedby={hintId}
         onClick={() => onOpenChange(!open)}
         className={cn(
-          'eb:flex eb:h-9 eb:w-full eb:min-w-0 eb:items-center eb:gap-2 eb:rounded-lg2 eb:border eb:border-input eb:bg-transparent eb:px-3 eb:text-left eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
+          'eb:flex eb:h-7 eb:w-full eb:min-w-0 eb:items-center eb:gap-2 eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:px-2.5 eb:text-left eb:shadow-xs eb:transition-[color,box-shadow] eb:outline-none eb:focus-visible:border-ring eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50',
           open && 'eb:border-ring'
         )}
         data-testid="eb-ai-connect-model"
@@ -209,7 +209,7 @@ export default function ModelPicker({ aiKey, provider, apiKey, address = '', del
                 autoCapitalize="off"
                 autoCorrect="off"
                 spellCheck={false}
-                className="eb:h-8 eb:w-full eb:rounded-lg2 eb:bg-surface-75 eb:pr-2 eb:pl-7 eb:text-[13px] eb:text-foreground eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:ring-2 eb:focus-visible:ring-ring/40"
+                className="eb:h-7 eb:w-full eb:rounded-lg2 eb:border eb:border-border eb:bg-background eb:pr-2 eb:pl-7 eb:text-[12px] eb:text-foreground eb:shadow-xs eb:outline-none eb:placeholder:text-foreground-muted eb:focus-visible:ring-2 eb:focus-visible:ring-ring/40"
                 data-testid="eb-ai-connect-model-search"
               />
             </div>

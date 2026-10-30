@@ -419,7 +419,7 @@ test.describe('Moving, selecting, the toolbar', () => {
     await expect.poll(() => mjml(page)).toMatch(/>Replaced<\/mj-text>/);
     expect((await nodes(page, 'mj-section')).length).toBe(2);
     await canvas(page).getByText('Right').click();
-    await panel(page).getByLabel('Size', { exact: true }).click();
+    await panel(page).locator('#eb-prop-container-background-color').click();
     await page.keyboard.press('Control+a');
     await expect(panel(page).getByRole('heading', { name: 'Text' })).toBeVisible();
   });
@@ -490,9 +490,9 @@ test.describe('Text, edited in place', () => {
     await canvas(page).getByText('Top').click();
     await canvas(page).getByText('Top').click();
     await expect(canvas(page).locator('[contenteditable="true"]')).toBeFocused();
-    // Changing the size from the panel ends the edit and applies.
-    await panel(page).getByLabel('Size', { exact: true }).fill('20');
-    await panel(page).getByLabel('Size', { exact: true }).press('Enter');
+    // Changing the size from the ribbon ends the edit and applies.
+    await page.getByTestId('eb-ribbon').locator('[data-control="font-size"]').fill('20');
+    await page.getByTestId('eb-ribbon').locator('[data-control="font-size"]').press('Enter');
     await expect.poll(() => mjml(page)).toMatch(/font-size="20px">Top</);
   });
 });
@@ -693,8 +693,9 @@ test.describe('Panel features for well-made emails', () => {
     await expect(link).toHaveText('Boutique');
     await link.click();
     await expect(panel(page).getByRole('heading', { name: 'Lien du menu' })).toBeVisible();
-    await panel(page).getByLabel('Majuscules').click();
-    await page.getByRole('option', { name: 'Tout en majuscules', exact: true }).click();
+    // In the ribbon, with the other text tools.
+    await page.getByTestId('eb-ribbon').locator('[data-control="text-transform"]').click();
+    await page.getByRole('menuitem', { name: 'Tout en majuscules', exact: true }).click();
     await expect.poll(() => link.innerText()).toBe('BOUTIQUE');
     expect(await mjml(page)).toMatch(/text-transform="uppercase"[^>]*>Boutique</);
   });

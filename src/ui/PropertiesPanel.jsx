@@ -11,6 +11,7 @@ import { PropertyField } from './fields.jsx';
 import BoxModel, { boxRole } from './BoxModel.jsx';
 import { useT } from './context.jsx';
 import VariableInsertButton from '../features/variables/VariableInsertButton.jsx';
+import { RIBBON_KEYS } from './TextRibbon.jsx';
 
 /**
  * Properties panel, right of the canvas.
@@ -24,7 +25,9 @@ import VariableInsertButton from '../features/variables/VariableInsertButton.jsx
  * toolbar of its selection frame (and Del); every block selected (Ctrl+A) has
  * no frame of its own, so the panel keeps its Delete. `ai` (the AI module, `createAi`):
  * with its `rewrite`, a text or a button also gets "Rewrite with AI"; with its
- * `suggestSubjects`, the subject gets "Suggest subjects". `onDismiss`: the
+ * `suggestSubjects`, the subject gets "Suggest subjects". What the ribbon
+ * above the canvas sets (font, size, line height, weight, color, capitals,
+ * alignment) is not repeated here: one place for each. `onDismiss`: the
  * panel is shown in a drawer — its header button closes the drawer rather
  * than deselecting.
  */
@@ -44,9 +47,9 @@ function grouped(properties) {
   );
 }
 
-function PropertyGroups({ editor, element, block, idPrefix, services = null }) {
+function PropertyGroups({ editor, element, block, idPrefix, services = null, hidden = null }) {
   const t = useT();
-  return grouped(block?.properties || []).map(([group, properties]) => {
+  return grouped((block?.properties || []).filter((property) => !hidden?.has(property.key))).map(([group, properties]) => {
     // Margin, border, padding: one diagram, as in a browser's developer tools.
     const box = properties.filter(boxRole);
     return (
@@ -262,7 +265,7 @@ export default function PropertiesPanel({
             {ai?.rewrite && REWRITABLE_TAGS.has(selection.tagName) && (
               <ai.components.Rewrite key={selection.id} editor={editor} selection={selection} rewrite={ai.rewrite} />
             )}
-            <PropertyGroups editor={editor} element={selection} block={block} idPrefix="eb-prop" services={services} />
+            <PropertyGroups editor={editor} element={selection} block={block} idPrefix="eb-prop" services={services} hidden={RIBBON_KEYS} />
           </div>
           )}
         </>

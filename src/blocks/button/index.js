@@ -48,7 +48,7 @@ export const buttonBlock = {
         { value: 'normal', label: 'Normal' },
       ],
     },
-    prop.radius(),
+    prop.radius(['px']),
     {
       key: 'width',
       label: 'Width',

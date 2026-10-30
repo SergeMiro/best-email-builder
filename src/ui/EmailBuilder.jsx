@@ -622,6 +622,7 @@ function Builder({
                 ready={ready}
                 selection={state.selection}
                 format={state.format}
+                variables={variables}
                 drawers={panelFeatures.map((feature) => ({ id: feature.id, ...feature.drawer }))}
                 openDrawer={openPanel?.id ?? null}
                 onToggleDrawer={(id) => setCanvasPanel((current) => (current === id ? null : id))}

@@ -261,7 +261,7 @@ export default function BrandButton({ context }) {
                       disabled={reading}
                     />
                   </div>
-                  <Button type="submit" size="sm" className="eb:h-6.5" disabled={reading || !form.website.trim()}>
+                  <Button type="submit" size="sm" className="eb:h-7" disabled={reading || !form.website.trim()}>
                     {reading ? <Loader2 className="eb:animate-spin" /> : <WandSparkles />}
                     {t('Get my brand')}
                   </Button>

@@ -137,8 +137,10 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   canMoveDown: boolean,
  *   columnCount?: number,
  *   multiple?: number,
+ *   children?: string[],
  * }} EngineSelection
  *   `content`: the label of a button or a menu link, as plain text.
+ *   `children`: the ids of the elements inside it, in order.
  *   `html`: the HTML of a text (`mj-text`), as stored.
  *   `columnCount`: for a section, how many columns it holds (its name).
  *   `multiple`: the whole email is selected (Ctrl+A) — how many sections;
@@ -217,7 +219,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   getSelection: () => EngineSelection|null,
  *   describe: (id: string) => EngineSelection|null,
  *   getRootId: () => string|null,
- *   updateProperties: (id: string, attributes: Record<string, string|null>) => void,
+ *   updateProperties: (id: string|string[], attributes: Record<string, string|null>) => void,
  *   setContent: (id: string, content: string, options?: {reveal?: boolean}) => void,
  *   setContents?: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
@@ -294,7 +296,7 @@ import { applyBrandToFragment } from '../features/brand/brand.js';
  *   getSelection: () => EmailSelection|null,
  *   getElement: (id: string) => EmailSelection|null,
  *   getRootId: () => string|null,
- *   updateProperties: (values: Record<string, string|null>, id?: string|null) => void,
+ *   updateProperties: (values: Record<string, string|null>, id?: string|string[]|null) => void,
  *   setContent: (content: string, id?: string|null, options?: {reveal?: boolean}) => void,
  *   setContents: (entries: {id: string, content: string}[]) => void,
  *   insertText: (text: string) => boolean,
@@ -577,7 +579,7 @@ export function createEmailEditor({ adapter, blocks, features = null, t = identi
 
     updateProperties(values, id = null) {
       requireReady('updateProperties');
-      adapter.updateProperties(targetOf(id, 'updateProperties'), toAttributes(values));
+      adapter.updateProperties(Array.isArray(id) ? id : targetOf(id, 'updateProperties'), toAttributes(values));
     },
 
     /** `reveal`: its words come in one after the other on the canvas (a text the AI wrote). */

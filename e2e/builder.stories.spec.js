@@ -81,12 +81,15 @@ test.describe('Interface', () => {
     await expect(props.getByText('Address not allowed')).toBeVisible();
     await props.getByLabel('Link URL').fill('https://example.com/meeting/');
     await props.getByLabel('Link URL').press('Enter');
-    await props.getByLabel('Size', { exact: true }).fill('18');
-    await props.getByLabel('Size', { exact: true }).press('Enter');
+    // Size, weight and alignment: in the ribbon, not repeated in the panel.
+    const ribbon = page.getByTestId('eb-ribbon');
+    await expect(props.getByLabel('Size', { exact: true })).toHaveCount(0);
+    await ribbon.locator('[data-control="font-size"]').fill('18');
+    await ribbon.locator('[data-control="font-size"]').press('Enter');
     await props.locator('#eb-prop-background-color').fill('#c2603e');
-    await props.getByLabel('Weight').click();
-    await page.getByRole('option', { name: 'Normal', exact: true }).click();
-    await props.getByRole('radio', { name: 'Right' }).click();
+    await expect(ribbon.getByRole('button', { name: 'Bold (Ctrl+B)' })).toHaveAttribute('aria-pressed', 'true');
+    await ribbon.getByRole('button', { name: 'Bold (Ctrl+B)' }).click();
+    await ribbon.getByRole('radio', { name: 'Align right' }).click();
     await props.getByLabel('Margin — Top', { exact: true }).fill('30');
     await props.getByLabel('Margin — Top', { exact: true }).press('Enter');
 
@@ -139,7 +142,7 @@ test.describe('Interface', () => {
     await openBuilder(page);
     await canvas(page).getByText('Your headline').click();
     await expect(panel(page).getByRole('heading', { name: 'Text' })).toBeVisible();
-    await expect(panel(page).getByLabel('Size', { exact: true })).toHaveValue('24');
+    await expect(page.getByTestId('eb-ribbon').locator('[data-control="font-size"]')).toHaveValue('24');
   });
 
   test('leaving with changes asks first; nothing is lost without consent', async ({ page }) => {
@@ -298,14 +301,16 @@ test.describe('Side panels', () => {
     expect((await glide('Hide the properties'))[0]).toEqual({ width: 40, content: 0, opacity: 0 });
   });
 
-  test('the properties are compact: a field and a select of the same height', async ({ page }) => {
+  test('a field and a select as tall as the toolbar\'s buttons', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Your headline').click();
     const props = panel(page);
     const field = await props.locator('[data-slot=input]').first().boundingBox();
     const select = await props.locator('[data-slot=select-trigger]').first().boundingBox();
-    expect(Math.round(field.height)).toBe(26);
-    expect(Math.round(select.height)).toBe(26);
+    const save = await page.getByRole('button', { name: 'Save', exact: true }).boundingBox();
+    expect(Math.round(field.height)).toBe(28);
+    expect(Math.round(select.height)).toBe(28);
+    expect(Math.round(save.height)).toBe(28);
   });
 
   test('a text box is resized in height only: its width stays the panel’s', async ({ page }) => {

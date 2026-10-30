@@ -94,7 +94,7 @@ test('build a template, preview it, find it again after a reload', async ({ page
   await page.getByTestId('eb-panel-variables').getByRole('button', { name: 'New variable', exact: true }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Available in every template.' });
   for (const input of await dialog.locator('input').all()) {
-    await expect(input).toHaveCSS('height', '26px');
+    await expect(input).toHaveCSS('height', '28px');
   }
   await dialog.getByLabel('Name').fill('Coupon code');
   await dialog.getByLabel('Sample value').fill('WELCOME10');
@@ -148,7 +148,7 @@ test("Brevo's variables: the panel inserts Brevo's tags, the preview shows their
   await badges.getByRole('button', { name: 'Edit “First name”' }).click();
   const edit = page.getByRole('dialog').filter({ hasText: 'Edit variable' });
   for (const input of await edit.locator('input').all()) {
-    await expect(input).toHaveCSS('height', '26px');
+    await expect(input).toHaveCSS('height', '28px');
   }
   await expect(edit.getByText('{{ contact.FIRSTNAME }}')).toBeVisible();
   await edit.getByLabel('Sample value').fill('Marie');

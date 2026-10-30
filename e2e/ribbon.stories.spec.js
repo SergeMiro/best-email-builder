@@ -149,6 +149,22 @@ test.describe('Text ribbon', () => {
     await expect(tool(page, 'unlink')).toBeDisabled();
   });
 
+  test('link: a variable as its address, picked from the { } in the field', async ({ page }) => {
+    await openBuilder(page);
+    await canvas(page).getByText('Your text.').dblclick();
+    await page.keyboard.press('Control+End');
+    await page.keyboard.press('Shift+Control+ArrowLeft');
+    await page.keyboard.press('Shift+Control+ArrowLeft');
+    await tool(page, 'link').click();
+    await page.getByRole('button', { name: 'Insert a variable in the link' }).click();
+    // The link variables too, unlike in the subject.
+    await page.getByTestId('variable-picker').getByRole('option', { name: /Unsubscribe link/ }).click();
+    const url = page.getByRole('textbox', { name: 'Link URL' });
+    await expect(url).toHaveValue('{{ unsubscribe }}');
+    await page.getByRole('button', { name: 'Apply the link' }).click();
+    await expect.poll(() => textOf(page, 'Hello,')).toMatch(/Your <a href="\{\{ unsubscribe \}\}"[^>]*>text\.<\/a>/);
+  });
+
   test('size, line height and alignment of the selected text, as its properties', async ({ page }) => {
     await openBuilder(page);
     await canvas(page).getByText('Your text.').click();
@@ -158,7 +174,8 @@ test.describe('Text ribbon', () => {
     await control(page, 'font-size').fill('18');
     await control(page, 'font-size').press('Enter');
     await expect.poll(() => textOf(page, 'Hello,')).toContain('font-size="18px"');
-    await expect(panel(page).getByLabel('Size', { exact: true })).toHaveValue('18');
+    // The ribbon's, not repeated in the panel.
+    await expect(panel(page).getByLabel('Size', { exact: true })).toHaveCount(0);
     await control(page, 'font-size').fill('99');
     await control(page, 'font-size').press('Enter');
     await expect.poll(() => textOf(page, 'Hello,')).toContain('font-size="48px"');
@@ -184,14 +201,67 @@ test.describe('Text ribbon', () => {
     await expect(center).toHaveAttribute('aria-checked', 'true');
     await expect(ribbon(page).getByRole('radio', { name: 'Align left' })).toHaveAttribute('aria-checked', 'false');
 
-    // A button: no word to format, its own bounds, no justify.
+    // A button: bold is its weight, its own bounds, no justify.
     await canvas(page).getByText('Learn more').click();
     await expect(panel(page).getByRole('heading', { name: 'Button' })).toBeVisible();
-    await expect(tool(page, 'bold')).toBeDisabled();
+    await expect(tool(page, 'bold')).toHaveAttribute('aria-pressed', 'true');
+    await tool(page, 'bold').click();
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*font-weight="normal"/);
     await expect(ribbon(page).getByRole('radio', { name: 'Justify' })).toBeDisabled();
     await control(page, 'font-size').fill('40');
     await control(page, 'font-size').press('Enter');
     await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*font-size="28px"/);
+  });
+
+  test('a menu selected: font, size, colour and capitals on all its links, one step undone; a button in italic', async ({ page }) => {
+    await openBuilder(page);
+    await page.evaluate(() =>
+      window.__emailEditor.loadMjml(
+        '<mjml><mj-body><mj-section><mj-column><mj-navbar>' +
+          '<mj-navbar-link href="https://a.example/">One</mj-navbar-link><mj-navbar-link href="https://b.example/">Two</mj-navbar-link>' +
+          '</mj-navbar><mj-button href="https://c.example/">Go</mj-button></mj-column></mj-section></mj-body></mjml>'
+      )
+    );
+    const links = async () => (await mjml(page)).match(/<mj-navbar-link[^>]*>/g) || [];
+    // A link, then Escape climbs to its menu.
+    await canvas(page).getByText('One').click();
+    await page.keyboard.press('Escape');
+    await expect(panel(page).getByRole('heading', { name: 'Menu' })).toBeVisible();
+
+    await control(page, 'font-family').click();
+    await page.getByRole('option', { name: 'Georgia' }).click();
+    await expect.poll(links).toEqual([expect.stringContaining('Georgia'), expect.stringContaining('Georgia')]);
+    await control(page, 'font-size').fill('20');
+    await control(page, 'font-size').press('Enter');
+    await expect.poll(async () => (await links()).every((link) => link.includes('font-size="20px"'))).toBe(true);
+    await control(page, 'text-transform').click();
+    await page.getByRole('menuitem', { name: 'All capitals' }).click();
+    await expect.poll(async () => (await links()).every((link) => link.includes('text-transform="uppercase"'))).toBe(true);
+    await control(page, 'color').click();
+    await page.getByRole('button', { name: '#EF4444', exact: true }).click();
+    await expect.poll(async () => (await links()).every((link) => /color="#EF4444"/i.test(link))).toBe(true);
+    await page.keyboard.press('Escape');
+
+    // One step of history for both links.
+    await page.evaluate(() => window.__emailEditor.undo());
+    await expect.poll(async () => (await links()).some((link) => /color=/i.test(link))).toBe(false);
+    await expect.poll(async () => (await links()).every((link) => link.includes('text-transform="uppercase"'))).toBe(true);
+
+    // A link alone: the ribbon shows its values; its panel repeats none of them.
+    await canvas(page).getByText('Two').click();
+    await expect(control(page, 'font-size')).toHaveValue('20');
+    await expect(panel(page).getByLabel('Link URL')).toBeVisible();
+    for (const label of ['Font', 'Size', 'Text', 'Capitals']) await expect(panel(page).getByLabel(label, { exact: true })).toHaveCount(0);
+
+    // A button: italic and underline as its attributes, shown pressed.
+    await canvas(page).getByText('Go').click();
+    await tool(page, 'italic').click();
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*font-style="italic"/);
+    await expect(tool(page, 'italic')).toHaveAttribute('aria-pressed', 'true');
+    await tool(page, 'underline').click();
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*text-decoration="underline"/);
+    await tool(page, 'italic').click();
+    await expect.poll(() => mjml(page)).toMatch(/<mj-button[^>]*font-style="normal"/);
   });
 });
 

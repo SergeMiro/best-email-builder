@@ -101,8 +101,12 @@ export const prop = {
   border: () => ({ key: 'border', label: 'Border', type: 'border', group: GROUPS.spacing, box: 'border' }),
   /** @returns {BlockProperty} */
   href: (label = 'Link URL') => ({ key: 'href', label, type: 'url', group: GROUPS.link, placeholder: 'https://' }),
-  /** @returns {BlockProperty} */
-  radius: () => ({ key: 'border-radius', label: 'Corner radius', type: 'size', group: GROUPS.layout, min: 0, unit: 'px', units: ['px', '%'] }),
+  /**
+   * `%` only where the box is square enough to want it (an image, an icon: 50 % is a circle):
+   * on a wide button or section, a percentage of the width and of the height makes an oval.
+   * @returns {BlockProperty}
+   */
+  radius: (units = ['px', '%']) => ({ key: 'border-radius', label: 'Corner radius', type: 'size', group: GROUPS.layout, min: 0, unit: 'px', ...(units.length > 1 ? { units } : {}) }),
 };
 
 /**

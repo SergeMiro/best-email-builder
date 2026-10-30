@@ -25,7 +25,7 @@ export const buttonVariants = cva(
         'icon-sm-compact': "eb:size-7 eb:[&_svg:not([class*='size-'])]:size-3",
         'icon-sm': 'eb:size-8',
         // Beside a `dense` field.
-        'icon-dense': "eb:size-6.5 eb:rounded-lg2 eb:[&_svg:not([class*='size-'])]:size-3.5",
+        'icon-dense': "eb:size-7 eb:rounded-lg2 eb:[&_svg:not([class*='size-'])]:size-3.5",
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },

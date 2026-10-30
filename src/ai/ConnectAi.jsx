@@ -228,7 +228,7 @@ export default function ConnectAi({ aiKey }) {
                   spellCheck={false}
                   aria-invalid={where && !addressOk ? true : undefined}
                   aria-describedby={addressHintId}
-                  className="eb:h-9 eb:font-mono eb:text-[12.5px]"
+                  className="eb:font-mono"
                   data-testid="eb-ai-connect-address"
                 />
                 <p id={addressHintId} className="eb:text-[11.5px] eb:leading-relaxed eb:text-foreground-muted">
@@ -256,12 +256,12 @@ export default function ConnectAi({ aiKey }) {
                   autoCorrect="off"
                   spellCheck={false}
                   aria-describedby={hintId}
-                  className="eb:h-9 eb:pr-10 eb:font-mono eb:text-[12.5px]"
+                  className="eb:pr-10 eb:font-mono"
                   data-testid="eb-ai-connect-key"
                 />
                 <button
                   type="button"
-                  className="eb:absolute eb:top-1/2 eb:right-1 eb:flex eb:size-7 eb:-translate-y-1/2 eb:items-center eb:justify-center eb:rounded-md eb:text-foreground-muted eb:transition-colors eb:outline-none eb:hover:bg-muted eb:hover:text-foreground eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50"
+                  className="eb:absolute eb:top-1/2 eb:right-1 eb:flex eb:size-6 eb:-translate-y-1/2 eb:items-center eb:justify-center eb:rounded-md eb:text-foreground-muted eb:transition-colors eb:outline-none eb:hover:bg-muted eb:hover:text-foreground eb:focus-visible:ring-[3px] eb:focus-visible:ring-ring/50"
                   onClick={() => setShown((current) => !current)}
                   aria-label={shown ? t('Hide the key') : t('Show the key')}
                   aria-pressed={shown}

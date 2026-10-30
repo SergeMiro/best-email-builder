@@ -190,7 +190,7 @@ function ImageField({ id, property, value, onCommit, services }) {
         type="button"
         variant="outline"
         size="xs"
-        className="eb:h-6.5"
+        className="eb:h-7"
         disabled={busy}
         onClick={() => inputRef.current?.click()}
       >
@@ -274,9 +274,10 @@ function SizeField({ id, property, value, fallback = '', onCommit }) {
 
 /**
  * Color: swatch + hex code. Dragged in the picker, the color paints the email
- * as it moves; typed, it is committed after a short pause.
+ * as it moves; typed, it is committed after a short pause. `trigger`: the
+ * ribbon's button opens the picker, with no label.
  */
-function ColorField({ id, property, value, fallback = '', onCommit }) {
+export function ColorField({ id, property, value, fallback = '', onCommit, trigger = null }) {
   const t = useT();
   const [draft, setDraft, ref] = useDraft(value, colorToHex);
   const timer = useRef(null);
@@ -305,9 +306,9 @@ function ColorField({ id, property, value, fallback = '', onCommit }) {
   };
 
   return (
-    <div ref={ref} className="eb:space-y-1">
-      <FieldLabel id={id}>{t(property.label)}</FieldLabel>
-      <ColorPicker id={id} value={draft} placeholder={emailColor(fallback) || ''} onChange={change} dense />
+    <div ref={ref} className={trigger ? 'eb:contents' : 'eb:space-y-1'}>
+      {!trigger && <FieldLabel id={id}>{t(property.label)}</FieldLabel>}
+      <ColorPicker id={id} value={draft} placeholder={emailColor(fallback) || ''} onChange={change} dense trigger={trigger} />
     </div>
   );
 }

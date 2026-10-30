@@ -31,8 +31,9 @@ the parent's width:
 ## Spacing and controls
 
 Built-in blocks have three spacing layers: margin, border and padding.
-The diagram has an empty center. Corner radius accepts pixels or percentages,
-with no upper limit. Vertical alignment is available on every block.
+The diagram has an empty center. Corner radius has no upper limit; it is in
+pixels, and also in percentages on an image or an icon (on a wide button a
+percentage makes an oval). Vertical alignment is available on every block.
 On a content block, it aligns the containing column. On a layout, it aligns
 all its columns. A single column needs extra height from its row for a
 vertical position change to be visible.

@@ -166,7 +166,7 @@ test('drag a variable onto another group: it moves there and stays; Esc cancels;
   await expect(brevo.getByRole('button', { name: 'Unsubscribe link', exact: true })).toBeVisible();
 });
 
-test('all blocks have the three spacing layers and an empty center; radius has px and % without an upper limit', async ({ page }) => {
+test('all blocks have the three spacing layers and an empty center; radius without an upper limit, % only on an image or an icon', async ({ page }) => {
   await open(page);
   const canvas = page.frameLocator('.eb-canvas-frame');
   const panel = page.getByTestId('eb-properties');
@@ -183,17 +183,20 @@ test('all blocks have the three spacing layers and an empty center; radius has p
   await expect(radius).toHaveValue('120');
   const section = canvas.locator('.eb-tag-mj-section').filter({ hasText: 'Your big announcement' }).first();
   await expect(section).toHaveCSS('border-top-left-radius', '120px');
-  // The unit: the builder's own list, as the font's; no browser arrows on the number.
+  // No browser arrows on the number.
   await expect(radius).toHaveCSS('appearance', 'textfield');
+  // A wide section or button takes no %: a share of its width and of its height is an oval.
   const unit = panel.getByRole('combobox', { name: 'Corner radius — Unit', exact: true });
+  await expect(unit).toHaveCount(0);
+  await page.locator('[data-block-id="button"]').click();
+  await expect(unit).toHaveCount(0);
+  // An image does (50 % is a circle), in the builder's own list, as the font's.
+  await page.locator('[data-block-id="image"]').click();
   await expect(unit).toHaveText('px');
   await unit.click();
   await expect(page.getByRole('listbox')).toHaveCSS('border-top-left-radius', '10px');
   await page.getByRole('option', { name: '%', exact: true }).click();
   await expect(unit).toHaveText('%');
-  await expect(section).toHaveCSS('border-top-left-radius', '120%');
-  await radius.fill('65'); await radius.press('Enter');
-  await expect(section).toHaveCSS('border-top-left-radius', '65%');
   await expect(radius).toHaveCSS('border-top-left-radius', '10px');
   await expect(panel.getByLabel('Vertical alignment', { exact: true })).toHaveCSS('border-top-left-radius', '10px');
 });

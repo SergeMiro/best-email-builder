@@ -6,6 +6,23 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- The text ribbon holds every text tool: font, size, line height, text
+  color, capitals, bold, italic, underline, strikethrough, alignment. The
+  properties panel no longer repeats them.
+- The ribbon works on any block: on a menu, a section or a column, its
+  tools act on every element inside that has them (a menu's links, a
+  section's texts and buttons), in one step of the history. On a button or
+  a menu link, italic and underline are its own attributes.
+- A link's address can be a variable (`{{ unsubscribe }}`): the `{ }` in the
+  ribbon's link field.
+
+### Changed
+- Every input and select is as tall as the toolbar's buttons (28 px), with
+  their border and background.
+- A button's and a section's corner radius is in px only: a percentage of a
+  wide box made an oval. An image and an icon keep %.
+
 ## [0.18.0] — 2026-10-27
 
 ### Added

@@ -50,9 +50,10 @@ export function colorToHex(value) {
  * picker or picked from the presets — what it paints should follow at once —
  * not while a code is typed. `alpha`: the transparency slider (off for a
  * colour that must stay opaque). `dense`: the height of the properties
- * panel's fields.
+ * panel's fields. `trigger`: a button of the caller's that opens the picker,
+ * in place of the swatch and the code beside it (the ribbon's).
  */
-export function ColorPicker({ value, onChange, id, className, placeholder = '', alpha = true, dense = false }) {
+export function ColorPicker({ value, onChange, id, className, placeholder = '', alpha = true, dense = false, trigger = null }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const hex = colorToHex(value);
@@ -64,13 +65,13 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '', 
     <div className={cn('eb:flex eb:gap-2', className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button
+          {trigger || <button
             type="button"
             aria-label={t('Pick a colour')}
             title={t('Pick a colour')}
             className={cn(
-              'eb-checker eb:relative eb:h-8 eb:w-[44px] eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:shadow-sm eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-[1.04]',
-              dense && 'eb:h-6.5 eb:w-9'
+              'eb-checker eb:relative eb:h-7 eb:w-[44px] eb:shrink-0 eb:overflow-hidden eb:rounded-lg2 eb:shadow-sm eb:ring-1 eb:ring-black/10 eb:ring-inset eb:transition-transform eb:hover:scale-[1.04]',
+              dense && 'eb:w-9'
             )}
           >
             {/* Empty: the colour MJML renders by default, faded. */}
@@ -79,7 +80,7 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '', 
               style={{ backgroundColor: valid ? hex : colorToHex(placeholder) || 'transparent', opacity: valid ? 1 : 0.45 }}
               aria-hidden
             />
-          </button>
+          </button>}
         </PopoverTrigger>
         <PopoverContent align="start" className="eb:w-64 eb:space-y-3 eb:p-3">
           <div className="eb-picker">
@@ -98,7 +99,7 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '', 
               placeholder="#RRGGBB"
               maxLength={9}
               aria-label={t('Hex code')}
-              className="eb:h-8 eb:flex-1 eb:font-mono eb:text-[12px] eb:uppercase"
+              className="eb:flex-1 eb:font-mono eb:uppercase"
             />
           </div>
           <div className="eb:grid eb:grid-cols-6 eb:gap-1.5 eb:border-t eb:border-border eb:pt-2.5">
@@ -120,15 +121,15 @@ export function ColorPicker({ value, onChange, id, className, placeholder = '', 
           </div>
         </PopoverContent>
       </Popover>
-      <Input
+      {!trigger && <Input
         id={id}
         value={hex}
         onChange={(e) => onChange(e.target.value)}
         maxLength={9}
         placeholder={colorToHex(placeholder) || '#RRGGBB'}
         dense={dense}
-        className={cn('eb:flex-1 eb:font-mono', dense ? 'eb:text-[12px]' : 'eb:text-[13px]')}
-      />
+        className="eb:flex-1 eb:font-mono"
+      />}
     </div>
   );
 }

@@ -37,14 +37,15 @@ test.describe('Phone', () => {
     const drawer = page.getByTestId('eb-properties-drawer');
     await expect(drawer).toHaveAttribute('data-open', 'true');
     await expect(drawer.getByRole('heading', { name: 'Text' })).toBeVisible();
-    const size = drawer.getByLabel('Size', { exact: true });
-    await size.fill('30');
-    await size.press('Enter');
-    expect(await mjml(page)).toContain('font-size="30px"');
 
     // One header, whose button closes the drawer (the element stays selected).
     await drawer.getByRole('button', { name: 'Close' }).tap();
     await expect(drawer).toHaveAttribute('data-open', 'false');
+    // Its size: in the ribbon above the canvas.
+    const size = page.getByTestId('eb-ribbon').locator('[data-control="font-size"]');
+    await size.fill('30');
+    await size.press('Enter');
+    await expect.poll(() => mjml(page)).toContain('font-size="30px"');
     await expect(page.getByRole('button', { name: 'Edit: Text' })).toBeVisible();
     await page.getByRole('button', { name: 'Edit: Text' }).tap();
     await expect(drawer).toHaveAttribute('data-open', 'true');

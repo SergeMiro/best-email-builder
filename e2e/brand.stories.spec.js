@@ -147,7 +147,7 @@ test.describe('Brand', () => {
     await expect(square.getByRole('img', { name: 'Logo' })).toBeVisible();
 
     for (const field of [box.getByLabel('Your website'), box.getByLabel('Company name'), box.getByLabel('Main color'), box.getByLabel('Font', { exact: true })]) {
-      expect((await field.boundingBox()).height).toBe(26);
+      expect((await field.boundingBox()).height).toBe(28);
     }
     // A brand color stays opaque: no transparency slider.
     await box.getByLabel('Main color').locator('xpath=..').getByRole('button', { name: 'Pick a colour' }).click();

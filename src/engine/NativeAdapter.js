@@ -161,6 +161,7 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       } : {}) },
       content: LABEL_TAGS.has(node.tag) ? textOfHtml(node.content || '') : null,
       html: node.tag === 'mj-text' ? node.content || '' : null,
+      children: node.children.map((child) => child.id),
       canRemove: !locked,
       canDuplicate: !locked,
       canMoveUp: !locked && index > 0,
@@ -750,19 +751,24 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
     describe: (id) => describe(id),
     getRootId: () => (root ? findFirst(root, 'mj-body')?.id || null : null),
 
+    /** Several ids (the ribbon on a menu's links): one step of the history. */
     updateProperties(id, attributes) {
+      const ids = Array.isArray(id) ? id : [id];
       const current = requireRoot();
-      const node = findNode(current, id);
-      if (!node) return;
-      if (view?.editingId() === id) view.finishEditing();
       const keys = Object.keys(attributes).sort().join(',');
       const { 'vertical-align': alignment, ...own } = attributes;
-      let next = setAttributes(current, id, own);
-      if ('vertical-align' in attributes) {
-        for (const target of alignmentTargets(current, node)) next = setAttributes(next, target.id, { 'vertical-align': alignment });
+      let next = current;
+      for (const one of ids) {
+        const node = findNode(current, one);
+        if (!node) continue;
+        if (view?.editingId() === one) view.finishEditing();
+        next = setAttributes(next, one, own);
+        if ('vertical-align' in attributes) {
+          for (const target of alignmentTargets(current, node)) next = setAttributes(next, target.id, { 'vertical-align': alignment });
+        }
+        if (node.tag === 'mj-column' && 'width' in attributes) next = balanceColumns(next, one, attributes.width);
       }
-      if (node.tag === 'mj-column' && 'width' in attributes) next = balanceColumns(next, id, attributes.width);
-      commit(next, { merge: `attributes:${id}:${keys}` });
+      commit(next, { merge: `attributes:${ids.join('+')}:${keys}` });
     },
 
     setContent(id, content, { reveal = false } = {}) {
