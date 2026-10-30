@@ -751,8 +751,8 @@ test.describe('Panel features for well-made emails', () => {
     await expect.poll(async () => (await nodes(page, 'mj-navbar'))[0].attributes.align).toBe('right');
 
     // The whole menu: all its links; one address for all of them would make no sense.
-    await page.keyboard.press('Escape');
-    await expect(panel(page).getByRole('heading', { name: 'Menu' })).toBeVisible();
+    await canvas(page).getByRole('button', { name: 'Select the parent' }).click();
+    await expect(panel(page).getByRole('heading', { name: 'Menu', exact: true })).toBeVisible();
     await ribbon.locator('[data-command="bold"]').click();
     await expect.poll(() => links('font-weight')).toEqual(['bold', 'bold']);
     await ribbon.locator('[data-command="clear"]').click();
