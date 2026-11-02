@@ -15,9 +15,10 @@
  *   GET    {base}/templates/:id/versions          read    versions
  *   GET    {base}/templates/:id/versions/:vid     read    version with its project
  *   POST   {base}/render                          read    preview (server rendering); { contactId } or
- *                                                         { email }: with that recipient's values
+ *                                                         { email }: with that recipient's values (returned in `values`)
  *   POST   {base}/test                            write   test send (needs `transport`); { emails, contacts: [ids] }
- *   GET    {base}/contacts?q=                     read    contacts to test with (needs `contactStore`)
+ *   GET    {base}/contacts?q=&list=               read    contacts to test with (needs `contactStore`), of one list
+ *   GET    {base}/contacts/lists                  read    the host's contact lists ([] without `contactStore.lists`)
  *   POST   {base}/assets                          write   image upload (multipart, field `file`)
  *   POST   {base}/rewrite                         write   write or rewrite one text of an email (needs `generator`,
  *                                                         the AI module: best-email-builder/ai/server)
@@ -110,9 +111,11 @@ import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
  *
  * @typedef {{id: string|number, email: string, label?: string|null, detail?: string|null,
  *            values?: Record<string, string|null|undefined>}} TestContactRecord
+ * @typedef {{id: string|number, name: string, detail?: string|null, count?: number|null}} ContactListRecord
  * @typedef {{
- *   search: (query: string, context: {user: User, limit: number}) => Promise<TestContactRecord[]>,
+ *   search: (query: string, context: {user: User, limit: number, list: string|null}) => Promise<TestContactRecord[]>,
  *   get: (ids: string[], context: {user: User}) => Promise<TestContactRecord[]>,
+ *   lists?: (context: {user: User}) => Promise<ContactListRecord[]>,
  * }} ContactRepository
  */
 
@@ -348,11 +351,26 @@ export function createEmailBuilderHandler(options) {
       }
     }
 
+    if (section === 'contacts' && id === 'lists' && !sub && method === 'GET') {
+      const user = await userFor(request, 'read');
+      if (!contactStore) throw new HttpError(501, t('Contacts are not configured'), 'NO_CONTACTS');
+      const lists = typeof contactStore.lists === 'function' ? await contactStore.lists({ user }) : [];
+      return json({
+        data: (lists || []).map((l) => ({
+          id: String(l.id),
+          name: String(l.name || ''),
+          detail: l.detail ? String(l.detail) : null,
+          count: Number.isFinite(Number(l.count)) && l.count != null ? Number(l.count) : null,
+        })),
+      });
+    }
+
     if (section === 'contacts' && !id && method === 'GET') {
       const user = await userFor(request, 'read');
       if (!contactStore) throw new HttpError(501, t('Contacts are not configured'), 'NO_CONTACTS');
       const query = (url.searchParams.get('q') || '').trim().slice(0, 100);
-      const found = await contactStore.search(query, { user, limit: MAX_CONTACT_RESULTS });
+      const list = (url.searchParams.get('list') || '').trim().slice(0, 64) || null;
+      const found = await contactStore.search(query, { user, limit: MAX_CONTACT_RESULTS, list });
       return json({
         data: found.slice(0, MAX_CONTACT_RESULTS).map((c) => ({
           id: String(c.id),
@@ -388,6 +406,8 @@ export function createEmailBuilderHandler(options) {
           html,
           subject: applyVariablesToText(body?.subject || '', values, catalog),
           preheader: applyVariablesToText(body?.preheader || '', values, catalog),
+          // What the variables were filled with: the dialog shows the test's values.
+          values: Object.fromEntries(catalog.map((v) => [v.key, values[v.key] == null ? '' : String(values[v.key])])),
           warnings,
           quality,
         },

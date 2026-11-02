@@ -11,8 +11,17 @@ All notable changes are documented here. The format follows
   will get it. With a `contactStore` on the server (`createHttpStorage({
   contacts: true })`), a field finds your contacts: a contact gets its own
   values, empty ones included, read by the server from its id. A typed
-  address still gets sample values. Recipients are remembered for the next
-  test.
+  address still gets sample values. Typed addresses are remembered for the
+  next test; contacts are not.
+- The test dialog is the preview's: devices, dark mode, refresh, the inbox
+  line and the points to check, plus the VALUES the email's variables take
+  for the selected recipient. Contacts are picked from the host's lists
+  (`contactStore.lists`), addresses typed in a field of their own; while the
+  test leaves, the preview goes from one recipient to the next.
+
+### Changed
+- A variable is inserted with a space after it (none in a link's address,
+  nor before a space already there): the next word is typed right away.
 
 ### Fixed
 - The variable list of a link field opened in the window's top-left corner

@@ -13,8 +13,10 @@ import { test, expect } from '@playwright/test';
 
 const STORY = '/?story=builder--interface&mode=preview';
 
-async function openBuilder(page, { lang, variables, contacts } = {}) {
-  await page.goto(`${STORY}${lang ? `&lang=${lang}` : ''}${variables ? `&variables=${variables}` : ''}${contacts ? '&contacts=1' : ''}`);
+async function openBuilder(page, { lang, variables, contacts, sendMs } = {}) {
+  await page.goto(
+    `${STORY}${lang ? `&lang=${lang}` : ''}${variables ? `&variables=${variables}` : ''}${contacts ? '&contacts=1' : ''}${sendMs ? `&sendMs=${sendMs}` : ''}`
+  );
   await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
 }
 
@@ -1090,41 +1092,68 @@ test.describe('Images, preview, test send', () => {
     await expect(recipients.getByLabel('Sent')).toBeVisible();
   });
 
-  test('test send: the preview on the left, contacts found on the right, each previewed with its values', async ({ page }) => {
-    await openBuilder(page, { contacts: true });
+  test('test send: the preview on the left, contact lists and addresses on the right, each recipient previewed with its values', async ({ page }) => {
+    await openBuilder(page, { contacts: true, sendMs: 2500 });
     await page.evaluate(() => window.localStorage.removeItem('best-email-builder:test-addresses'));
+    await panel(page).getByLabel('Subject', { exact: true }).fill('Hello {{contact.firstname}}');
     await page.getByRole('button', { name: 'Test', exact: true }).click();
     const dialog = page.getByRole('dialog').filter({ hasText: 'Send a test' });
     const preview = dialog.locator('iframe[title="Email preview"]');
     const recipients = dialog.getByTestId('eb-test-recipients');
     const found = dialog.getByTestId('eb-test-contacts');
+    const details = dialog.getByTestId('eb-test-details');
     await expect(preview).toHaveAttribute('srcdoc', /data-recipient>sample</);
-    // Side by side: the preview on the left, the contacts on the right.
-    const [frameBox, listBox] = [await preview.boundingBox(), await found.boundingBox()];
-    expect(frameBox.x + frameBox.width).toBeLessThan(listBox.x);
+    // As in the preview: devices, refresh, the inbox line, the points to check.
+    await expect(dialog.getByRole('tab', { name: 'Mobile' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Refresh' })).toBeVisible();
+    await expect(details.getByText('Images without alt text: 1')).toBeVisible();
+    // Side by side: the preview, its details, then the contacts.
+    const [frameBox, detailsBox, listBox] = [await preview.boundingBox(), await details.boundingBox(), await found.boundingBox()];
+    expect(frameBox.x + frameBox.width).toBeLessThan(detailsBox.x);
+    expect(detailsBox.x + detailsBox.width).toBeLessThan(listBox.x);
 
-    await dialog.getByLabel('Find a contact').fill('grace');
+    // A list: its contacts only.
+    await expect(found.getByRole('button')).toHaveCount(2);
+    await dialog.getByRole('combobox', { name: 'Contact lists' }).click();
+    await page.getByRole('option', { name: /Navy/ }).click();
     await expect(found.getByRole('button')).toHaveCount(1);
     await found.getByRole('button', { name: /Grace Hopper/ }).click();
     await expect(recipients.getByText('Grace Hopper')).toBeVisible();
+    // Her email: the preview, the subject and the values are hers.
     await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Grace Hopper</);
+    await expect(details.getByText('Hello {{contact.firstname}} — Grace Hopper')).toBeVisible();
+    await expect(dialog.getByTestId('eb-test-values')).toContainText('First name');
+    await expect(dialog.getByTestId('eb-test-values')).toContainText('Grace');
+    // Clicked again: out of the recipients.
+    await found.getByRole('button', { name: /Grace Hopper/ }).click();
+    await expect(recipients).toHaveCount(0);
+    await found.getByRole('button', { name: /Grace Hopper/ }).click();
 
-    // A typed address: sample values, and it is the one previewed.
-    await dialog.getByLabel('Find a contact').fill('reviewer@example.com');
-    await found.getByRole('button', { name: 'Add “reviewer@example.com”' }).click();
+    // Addresses typed by hand, without a list: sample values.
+    await dialog.getByLabel('Addresses').fill('reviewer@example.com, not-an-address');
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(dialog.getByLabel('Addresses')).toHaveValue('not-an-address');
     await expect(preview).toHaveAttribute('srcdoc', /data-recipient>reviewer@example.com</);
+    await expect(dialog.getByTestId('eb-test-values')).toContainText('Jane');
     // Back to Grace: her values again.
     await recipients.getByRole('button', { name: /Grace Hopper/ }).click();
     await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Grace Hopper</);
 
+    // While the test leaves, the preview goes from one recipient to the next.
     await dialog.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(dialog.getByText('Sending to grace@example.com…')).toBeVisible();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>reviewer@example.com</);
+    await expect(dialog.getByText('Sending to reviewer@example.com…')).toBeVisible();
     await expect(notice(page, '2 test(s) sent — check your inbox.')).toBeVisible();
     expect((await page.evaluate(() => window.__sentTests)).map((s) => s.to)).toEqual(['grace@example.com', 'reviewer@example.com']);
+    await expect(recipients.getByLabel('Sent')).toHaveCount(2);
 
     // The same address typed, then picked as a contact: the contact takes its place.
-    await dialog.getByLabel('Find a contact').fill('ada@example.com');
-    await dialog.getByLabel('Find a contact').press('Enter');
+    await dialog.getByLabel('Addresses').fill('ada@example.com');
+    await dialog.getByLabel('Addresses').press('Enter');
     await expect(recipients.getByText('ada@example.com')).toHaveCount(1);
+    await dialog.getByRole('combobox', { name: 'Contact lists' }).click();
+    await page.getByRole('option', { name: 'All contacts' }).click();
     await dialog.getByLabel('Find a contact').fill('ada');
     await found.getByRole('button', { name: /Ada Lovelace/ }).click();
     await expect(recipients.getByRole('listitem')).toHaveCount(3);

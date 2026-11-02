@@ -25,9 +25,10 @@ your database.
 | `PUT` | `{base}/templates/:id/tags` | write | Set a template's tags, `{ tags: [ids] }`, three at most (needs `tagStore`). |
 | `GET` | `{base}/templates/:id/versions` | read | List a template's versions. |
 | `GET` | `{base}/templates/:id/versions/:vid` | read | Read one version, with its project. |
-| `POST` | `{base}/render` | read | Preview: render on the server and run the quality checks. `{ contactId }`: with that contact's values; `{ email }`: samples, with that address. |
+| `POST` | `{base}/render` | read | Preview: render on the server and run the quality checks. `{ contactId }`: with that contact's values; `{ email }`: samples, with that address. Returns the `values` used. |
 | `POST` | `{base}/test` | write | Send a test email (needs `transport`): `{ emails }` typed get samples, `{ contacts: [ids] }` their own values. |
-| `GET` | `{base}/contacts?q=` | read | Contacts to test with: `id`, `email`, `label`, `detail` — never their values (needs `contactStore`). |
+| `GET` | `{base}/contacts?q=&list=` | read | Contacts to test with, of one list when `list` is given: `id`, `email`, `label`, `detail` — never their values (needs `contactStore`). |
+| `GET` | `{base}/contacts/lists` | read | The contact lists: `id`, `name`, `detail`, `count` (`[]` without `contactStore.lists`). |
 | `POST` | `{base}/assets` | write | Upload an image (multipart, field `file`). |
 | `POST` | `{base}/proofread` | write | Find the mistakes of an email's texts (needs `generator`, see [AI](AI.md)). |
 | `POST` | `{base}/rewrite` | write | Write or rewrite one text of an email (needs `generator`). |
@@ -73,7 +74,7 @@ const handler = createEmailBuilderHandler({
 | `brandStore` | `null` | `{ get(), save(brand) }`. Turns on the *Brand* button. |
 | `brandImporter` | `null` | `createBrandImporter()`. Turns on *Get my brand*. |
 | `tagStore` | `null` | The repository of tags. Turns on tags in the library. |
-| `contactStore` | `null` | `{ search(query, { user, limit }), get(ids, { user }) }`, each contact `{ id, email, label?, detail?, values }` (`values`: variable key → value). Lists your contacts in the test dialog; a test or preview for a contact gets its `values`, read here by id — the browser never sends them. Scope both calls to what `user` may see. |
+| `contactStore` | `null` | `{ search(query, { user, limit, list }), get(ids, { user }), lists?({ user }) }`, each contact `{ id, email, label?, detail?, values }` (`values`: variable key → value). Lists your contacts in the test dialog; a test or preview for a contact gets its `values`, read here by id — the browser never sends them. Scope both calls to what `user` may see. |
 | `locale` | `'en'` | The language of error messages (see [Languages](LANGUAGES.md)). |
 | `messages` | — | Extra or overriding translations for those messages. |
 | `lang` | `locale.slice(0, 2)` | The `<html lang>` of compiled emails. The AI also writes in this language when the browser does not send one. |
@@ -141,7 +142,7 @@ interface TemplateStorage {
 | `fetch` | the global `fetch` | Your own `fetch`. |
 | `brand` | `false` | `true` turns on the *Brand* button. Use `{ import: false }` when the server has no `brandImporter`. |
 | `tags` | `false` | `true` turns on tags in the library. The server needs a `tagStore`. |
-| `contacts` | `false` | `true` lists contacts in the test dialog. The server needs a `contactStore`. |
+| `contacts` | `false` | `true` lists contacts and their lists in the test dialog. The server needs a `contactStore`. |
 
 `createMemoryStorage()` implements the contract in memory. It is meant for
 demos, tests and playgrounds. Give it `compile` (`({ mjml, subject, preheader })

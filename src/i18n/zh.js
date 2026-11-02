@@ -618,7 +618,6 @@ export const zh = {
   "Its variables belong to it: it cannot be deleted.": "其中的变量属于该分组：无法删除。",
   "New variable in {group}": "在 {group} 中新建变量",
   "Unit": "单位",
-  "Add “{email}”": "添加“{email}”",
   "Added": "已添加",
   "Contacts are not configured": "未配置联系人",
   "Find a contact": "查找联系人",
@@ -633,4 +632,10 @@ export const zh = {
   "Sent": "已发送",
   "The email on screen, with each contact’s values.": "屏幕上的邮件，使用每位联系人的值。",
   "This contact is no longer available": "该联系人已不可用",
+  "Add": "添加",
+  "All contacts": "全部联系人",
+  "Contact lists": "联系人列表",
+  "No variable in this email.": "此邮件中没有变量。",
+  "Sending to {email}…": "正在发送至 {email}…",
+  "Values": "值",
 };

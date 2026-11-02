@@ -5,19 +5,35 @@ import { Button } from '../../ui/primitives/button.jsx';
 import { Input, Label } from '../../ui/primitives/fields.jsx';
 import { SectionLabel } from '../../ui/primitives/misc.jsx';
 import { cn } from '../../ui/primitives/cn.js';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
-import { EmailPreview } from '../preview/PreviewButton.jsx';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../ui/primitives/overlays.jsx';
+import { labelOf } from '../variables/catalog.js';
+import { EmailPreview, QualityList } from '../preview/PreviewButton.jsx';
 
 /**
  * TEST SEND — the only real layout check: a browser preview says nothing about
  * what Outlook will do. Sends the MJML on screen, saved or not.
  *
- * Left, the email as the selected recipient will get it (server rendering,
- * when the storage can `render`). Right, the recipients, then a field that
- * finds the host's contacts (`storage.searchContacts`) or takes an address.
+ * The preview's dialog, with the recipients beside it. Left, the email as the
+ * selected recipient gets it (server rendering, when the storage can
+ * `render`); then its inbox line, the VALUES its variables take and the
+ * points to check. Right, the host's contact lists (`storage.contactLists`)
+ * and their contacts (`storage.searchContacts`), the recipients, and a field
+ * for addresses typed by hand.
  *
  * A CONTACT gets its own values: the server reads them from its id, the
- * browser never sends them. A typed address gets sample values.
+ * browser never sends them. A typed address gets sample values. While the
+ * test leaves, the preview goes from one recipient to the next.
  *
  * The TYPED addresses are remembered in the browser for the next test; the
  * contacts are not: their names would stay in a browser others may use.
@@ -27,6 +43,12 @@ const KEY = 'best-email-builder:test-addresses';
 /** The server's default (`MAX_TEST_RECIPIENTS`). */
 const MAX_RECIPIENTS = 10;
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+/** Every contact, in no list (a Select item cannot be ''). */
+const ALL = '*';
+/** How long each recipient's email stays on screen while the test leaves. */
+const SENDING_STEP_MS = 1200;
+/** The rendering with sample values, before any recipient. */
+const NOBODY = '';
 
 /**
  * @typedef {{key: string, email: string, contactId?: string, label?: string|null, detail?: string|null}} Recipient
@@ -76,69 +98,121 @@ function rememberAddresses(recipients) {
   }
 }
 
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** The variables the email uses (its tags in the MJML, subject or preview text), links aside. */
+function usedVariables(variables, text) {
+  return variables.filter((v) => v.kind !== 'link' && new RegExp(`\\{\\{\\s*${escapeRegExp(v.key)}\\s*\\}\\}`).test(text));
+}
+
+const EMPTY_RENDER = { loading: false, html: '', subject: null, preheader: null, values: null, warnings: [], quality: [], error: null };
+
 export default function TestEmailButton({ context }) {
-  const { editor, ready, meta, storage, testRecipients = [] } = context;
+  const { editor, ready, meta, storage, variables = [], testRecipients = [] } = context;
   const { t, notify } = useUi();
   const canPreview = typeof storage.render === 'function';
   const canSearch = typeof storage.searchContacts === 'function';
+  const canList = canSearch && typeof storage.contactLists === 'function';
 
   const [open, setOpen] = useState(false);
   const [mjml, setMjml] = useState('');
   /** @type {[Recipient[], Function]} */
   const [recipients, setRecipients] = useState([]);
   const [focus, setFocus] = useState(/** @type {string|null} */ (null));
+  const [lists, setLists] = useState({ loading: false, items: [], error: null });
+  const [list, setList] = useState(ALL);
   const [query, setQuery] = useState('');
-  // `query`: what the items were found for — Enter never takes a previous search's.
-  const [found, setFound] = useState({ query: null, loading: false, items: [], error: null });
+  const [found, setFound] = useState({ loading: false, items: [], error: null });
+  const [addresses, setAddresses] = useState('');
   const [device, setDevice] = useState('desktop');
-  const [preview, setPreview] = useState({ loading: false, html: '', error: null });
+  // One rendering per recipient, kept while the dialog is open: going back to one is instant.
+  const [renders, setRenders] = useState(/** @type {Record<string, any>} */ ({}));
+  // Bumped by "Refresh": every recipient renders again.
+  const [round, setRound] = useState(0);
   const [sending, setSending] = useState(false);
   const [report, setReport] = useState(null);
-  const renderRun = useRef(0);
+  const rendering = useRef(new Set());
+  // Bumped on opening and on "Refresh": a rendering of before is dropped.
+  const generation = useRef(0);
 
   const focused = recipients.find((r) => r.key === focus) || recipients[0] || null;
+  // No recipient yet: the email with sample values.
+  const shownKey = focused?.key ?? NOBODY;
+  const shown = renders[shownKey] || (canPreview && mjml ? { ...EMPTY_RENDER, loading: true } : EMPTY_RENDER);
   const full = recipients.length >= MAX_RECIPIENTS;
-  const term = query.trim().toLowerCase();
-  const typedAddress = EMAIL_SHAPE.test(term) && !recipients.some((r) => r.email === term) ? term : null;
+  const used = usedVariables(variables, `${mjml}\n${meta.subject || ''}\n${meta.preheader || ''}`);
 
-  // Contacts matching the field, a moment after the last key.
+  // The host's lists, once per opening.
+  useEffect(() => {
+    if (!open || !canList) return undefined;
+    const controller = new AbortController();
+    setLists((s) => ({ ...s, loading: true, error: null }));
+    storage
+      .contactLists({ signal: controller.signal })
+      .then((items) => setLists({ loading: false, items: Array.isArray(items) ? items : [], error: null }))
+      .catch((error) => {
+        if (!controller.signal.aborted) setLists({ loading: false, items: [], error: error.message });
+      });
+    return () => controller.abort();
+  }, [open, canList, storage]);
+
+  // The contacts of the list, matching the field, a moment after the last key.
   useEffect(() => {
     if (!open || !canSearch) return undefined;
     const controller = new AbortController();
     setFound((s) => ({ ...s, loading: true, error: null }));
     const timer = setTimeout(() => {
       storage
-        .searchContacts(query, { signal: controller.signal })
-        .then((items) => setFound({ query, loading: false, items: Array.isArray(items) ? items : [], error: null }))
+        .searchContacts(query, { list: list === ALL ? null : list, signal: controller.signal })
+        .then((items) => setFound({ loading: false, items: Array.isArray(items) ? items : [], error: null }))
         .catch((error) => {
-          if (!controller.signal.aborted) setFound({ query, loading: false, items: [], error: error.message });
+          if (!controller.signal.aborted) setFound({ loading: false, items: [], error: error.message });
         });
     }, 250);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [open, canSearch, storage, query]);
+  }, [open, canSearch, storage, query, list]);
 
-  // The email as the selected recipient gets it.
-  const focusedKey = focused?.key ?? null;
-  useEffect(() => {
-    if (!open || !canPreview || !mjml) return;
-    const run = ++renderRun.current;
-    setPreview((s) => ({ ...s, loading: true, error: null }));
+  /** Renders a recipient's email (null: samples), unless it is there or on its way. @param {Recipient|null} r */
+  const renderFor = (r) => {
+    const key = r?.key ?? NOBODY;
+    // A failed rendering is tried again when its recipient is shown again.
+    if (!canPreview || !mjml || (renders[key] && !renders[key].error) || rendering.current.has(key)) return;
+    rendering.current.add(key);
+    const run = generation.current;
     storage
       .render({
         mjml,
         subject: meta.subject,
         preheader: meta.preheader,
-        contactId: focused?.contactId ?? null,
-        email: focused && !focused.contactId ? focused.email : null,
+        contactId: r?.contactId ?? null,
+        email: r && !r.contactId ? r.email : null,
       })
-      .then((data) => run === renderRun.current && setPreview({ loading: false, html: data.html, error: null }))
-      .catch((error) => run === renderRun.current && setPreview({ loading: false, html: '', error: error.message }));
-    // `focused` is read through its key: a new array of the same recipients renders nothing again.
+      .then((data) => ({ ...EMPTY_RENDER, ...data, warnings: data.warnings || [], quality: data.quality || [] }))
+      .catch((error) => ({ ...EMPTY_RENDER, error: error.message }))
+      .then((result) => {
+        if (run !== generation.current) return;
+        rendering.current.delete(key);
+        setRenders((all) => ({ ...all, [key]: result }));
+      });
+  };
+
+  // The email as the selected recipient gets it.
+  useEffect(() => {
+    if (open) renderFor(focused);
+    // `renderFor` reads the state it needs; the focused recipient is what changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, canPreview, storage, mjml, meta.subject, meta.preheader, focusedKey]);
+  }, [open, focused?.key, mjml, round]);
+
+  const refresh = () => {
+    generation.current += 1;
+    rendering.current.clear();
+    setRenders({});
+    setMjml(editor.exportMjml());
+    setRound((n) => n + 1);
+  };
 
   /**
    * Adds the ones not there yet (up to the limit); the last one is previewed.
@@ -164,7 +238,6 @@ export default function TestEmailButton({ context }) {
     setRecipients(next);
     if (last) setFocus(last);
   };
-  const add = (recipient) => addAll([recipient]);
 
   const remove = (key) => {
     setReport(null);
@@ -172,18 +245,22 @@ export default function TestEmailButton({ context }) {
     if (focus === key) setFocus(null);
   };
 
-  // Enter: the addresses typed (several at once, pasted), else the only contact found.
-  const onKeyDown = (event) => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    const tokens = query.split(/[,;\s]+/).map((a) => a.trim().toLowerCase()).filter(Boolean);
-    const addresses = tokens.filter((a) => EMAIL_SHAPE.test(a));
-    if (addresses.length) {
-      addAll(addresses.map(typed));
-      setQuery(tokens.filter((a) => !EMAIL_SHAPE.test(a)).join(', '));
-    } else if (canSearch && found.query === query && !found.loading && found.items.length === 1) {
-      add(picked(found.items[0]));
-    }
+  // A contact of the list: in, or out when it is in already. Not while a test leaves.
+  const toggle = (contact) => {
+    if (sending) return;
+    const there = recipients.find((r) => r.contactId === String(contact.id));
+    if (there) remove(there.key);
+    else addAll([picked(contact)]);
+  };
+
+  // The addresses typed (several at once, pasted); what is not one stays in the field.
+  const addTyped = () => {
+    if (sending) return;
+    const tokens = addresses.split(/[,;\s]+/).map((a) => a.trim().toLowerCase()).filter(Boolean);
+    const valid = tokens.filter((a) => EMAIL_SHAPE.test(a));
+    if (!valid.length) return;
+    addAll(valid.map(typed));
+    setAddresses(tokens.filter((a) => !EMAIL_SHAPE.test(a)).join(', '));
   };
 
   const send = async () => {
@@ -191,6 +268,14 @@ export default function TestEmailButton({ context }) {
     rememberAddresses(recipients);
     setSending(true);
     setReport(null);
+    // The preview goes through the recipients while the test leaves.
+    const order = recipients.map((r) => r.key);
+    let step = 0;
+    setFocus(order[0]);
+    const timer = setInterval(() => {
+      step = (step + 1) % order.length;
+      setFocus(order[step]);
+    }, SENDING_STEP_MS);
     try {
       const result = await storage.sendTest({
         mjml: editor.exportMjml(),
@@ -205,6 +290,7 @@ export default function TestEmailButton({ context }) {
     } catch (error) {
       notify('error', error.message);
     } finally {
+      clearInterval(timer);
       setSending(false);
     }
   };
@@ -214,6 +300,188 @@ export default function TestEmailButton({ context }) {
     r.contactId && report?.skipped?.includes(r.contactId)
       ? { ok: false, error: t('This contact is no longer available') }
       : report?.results?.find((x) => x.email === r.email) || null;
+
+  const ROW = 'eb:flex eb:w-full eb:items-center eb:gap-1.5 eb:rounded-lg2 eb:px-2 eb:py-1.5 eb:text-left eb:hover:bg-surface-200 eb:disabled:opacity-50';
+
+  const contactsSection = canSearch && (
+    <section className="eb:flex eb:min-h-0 eb:flex-1 eb:flex-col eb:gap-1.5">
+      <SectionLabel className="eb:flex eb:items-center eb:gap-1.5">
+        {t('Contact lists')}
+        {found.loading && found.items.length > 0 && <Loader2 className="eb:size-3 eb:animate-spin" aria-label={t('Searching…')} />}
+      </SectionLabel>
+      {canList && (
+        <Select value={list} onValueChange={setList} disabled={lists.loading}>
+          <SelectTrigger aria-label={t('Contact lists')} className="eb:h-8 eb:text-[12px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{t('All contacts')}</SelectItem>
+            {lists.items.map((l) => (
+              <SelectItem key={l.id} value={String(l.id)}>
+                {[l.name, l.detail].filter(Boolean).join(' · ')}
+                {l.count != null && <span className="eb:text-foreground-muted"> ({l.count})</span>}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+      {lists.error && <p className="eb:text-[12px] eb:text-destructive">{lists.error}</p>}
+      <div className="eb:relative">
+        <Search
+          className="eb:pointer-events-none eb:absolute eb:top-1/2 eb:left-2.5 eb:size-3.5 eb:-translate-y-1/2 eb:text-foreground-muted"
+          aria-hidden="true"
+        />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label={t('Find a contact')}
+          placeholder={t('Name, company or address')}
+          className="eb:h-8 eb:pl-8"
+          autoComplete="off"
+        />
+      </div>
+      <ul className="eb:min-h-24 eb:flex-1 eb:space-y-0.5 eb:overflow-y-auto" aria-label={t('Search results')} data-testid="eb-test-contacts">
+        {found.items.map((contact) => {
+          const added = recipients.some((r) => r.contactId === String(contact.id));
+          return (
+            <li key={contact.id}>
+              <button type="button" disabled={sending || (full && !added)} onClick={() => toggle(contact)} aria-pressed={added} className={ROW}>
+                <span className="eb:min-w-0 eb:flex-1">
+                  <span className="eb:block eb:truncate eb:text-[12px] eb:text-foreground">{contact.label || contact.email}</span>
+                  <span className="eb:block eb:truncate eb:text-[11px] eb:text-foreground-muted">
+                    {[contact.label ? contact.email : null, contact.detail].filter(Boolean).join(' · ')}
+                  </span>
+                </span>
+                {added ? (
+                  <CheckCircle2 className="eb:size-3.5 eb:shrink-0 eb:text-success" aria-label={t('Added')} />
+                ) : (
+                  <Plus className="eb:size-3.5 eb:shrink-0 eb:text-foreground-muted" aria-hidden="true" />
+                )}
+              </button>
+            </li>
+          );
+        })}
+        {!found.loading && !found.error && !found.items.length && (
+          <li className="eb:px-2 eb:py-1.5 eb:text-[12px] eb:text-foreground-lighter">{t('No contact found.')}</li>
+        )}
+        {found.loading && !found.items.length && (
+          <li className="eb:flex eb:items-center eb:gap-1.5 eb:px-2 eb:py-1.5 eb:text-[12px] eb:text-foreground-lighter">
+            <Loader2 className="eb:size-3.5 eb:animate-spin" aria-hidden="true" />
+            {t('Searching…')}
+          </li>
+        )}
+        {found.error && <li className="eb:px-2 eb:py-1.5 eb:text-[12px] eb:text-destructive">{found.error}</li>}
+      </ul>
+    </section>
+  );
+
+  const recipientsSection = (
+    <section className={cn('eb:flex eb:min-h-0 eb:flex-col eb:gap-1.5', canSearch ? 'eb:max-h-[35%] eb:shrink-0' : 'eb:flex-1')}>
+      <SectionLabel>
+        {t('Recipients')} · {recipients.length}/{MAX_RECIPIENTS}
+      </SectionLabel>
+      {recipients.length ? (
+        <ul className="eb:min-h-0 eb:space-y-1 eb:overflow-y-auto" data-testid="eb-test-recipients">
+          {recipients.map((r) => {
+            const result = resultOf(r);
+            const current = canPreview && focused?.key === r.key;
+            return (
+              <li
+                key={r.key}
+                className={cn(
+                  'eb:flex eb:items-center eb:gap-1 eb:rounded-lg2 eb:border eb:px-1.5 eb:py-1',
+                  current ? 'eb:border-primary/40 eb:bg-primary/5' : 'eb:border-border'
+                )}
+              >
+                <button
+                  type="button"
+                  className="eb:flex eb:min-w-0 eb:flex-1 eb:items-center eb:gap-1.5 eb:text-left"
+                  onClick={() => setFocus(r.key)}
+                  aria-pressed={current}
+                  title={canPreview ? t('Preview with these values') : undefined}
+                  disabled={!canPreview || sending}
+                >
+                  {sending ? (
+                    <Loader2 className="eb:size-3.5 eb:shrink-0 eb:animate-spin eb:text-foreground-muted" aria-hidden="true" />
+                  ) : result ? (
+                    result.ok ? (
+                      <CheckCircle2 className="eb:size-3.5 eb:shrink-0 eb:text-success" aria-label={t('Sent')} />
+                    ) : (
+                      <XCircle className="eb:size-3.5 eb:shrink-0 eb:text-destructive" aria-label={result.error || ''} />
+                    )
+                  ) : (
+                    canPreview && (
+                      <Eye
+                        className={cn('eb:size-3.5 eb:shrink-0', current ? 'eb:text-primary' : 'eb:text-foreground-muted/50')}
+                        aria-hidden="true"
+                      />
+                    )
+                  )}
+                  <span className="eb:min-w-0">
+                    <span className="eb:block eb:truncate eb:text-[12px] eb:text-foreground">{r.label || r.email}</span>
+                    <span className="eb:block eb:truncate eb:text-[11px] eb:text-foreground-muted">
+                      {r.contactId ? r.email : t('Sample values')}
+                    </span>
+                    {result?.error && <span className="eb:block eb:text-[11px] eb:text-destructive">{result.error}</span>}
+                  </span>
+                </button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={t('Remove {email}', { email: r.email })}
+                  title={t('Remove')}
+                  onClick={() => remove(r.key)}
+                  disabled={sending}
+                >
+                  <X />
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="eb:text-[12px] eb:text-foreground-lighter">{t('No recipient yet.')}</p>
+      )}
+      {report?.invalid?.map((email) => (
+        <p key={`invalid-${email}`} className="eb:text-[12px] eb:text-foreground-muted">
+          {t('Ignored (invalid): {email}', { email })}
+        </p>
+      ))}
+    </section>
+  );
+
+  const addressesSection = (
+    <section className="eb:flex eb:shrink-0 eb:flex-col eb:gap-1.5">
+      <Label htmlFor="eb-test-addresses">{t('Addresses')}</Label>
+      <div className="eb:flex eb:gap-1.5">
+        <Input
+          id="eb-test-addresses"
+          value={addresses}
+          onChange={(e) => setAddresses(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            addTyped();
+          }}
+          placeholder="jane@example.com, john@example.com"
+          className="eb:h-8"
+          autoComplete="off"
+          disabled={full || sending}
+        />
+        <Button
+          variant="outline"
+          size="sm-compact"
+          className="eb:h-8"
+          onClick={addTyped}
+          disabled={full || sending || !splitAddresses(addresses).length}
+        >
+          <Plus />
+          {t('Add')}
+        </Button>
+      </div>
+      {full && <p className="eb:text-[11px] eb:text-foreground-muted">{t('{max} test addresses at most', { max: MAX_RECIPIENTS })}</p>}
+    </section>
+  );
 
   return (
     <>
@@ -225,8 +493,12 @@ export default function TestEmailButton({ context }) {
           setRecipients(readRecipients(testRecipients));
           setFocus(null);
           setQuery('');
+          setAddresses('');
           setReport(null);
-          setPreview({ loading: false, html: '', error: null });
+          setList(ALL);
+          generation.current += 1;
+          rendering.current.clear();
+          setRenders({});
           setMjml(editor.exportMjml());
           setOpen(true);
         }}
@@ -234,11 +506,11 @@ export default function TestEmailButton({ context }) {
         <Send />
         {t('Test')}
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(next) => !sending && setOpen(next)}>
         <DialogContent
           className={cn(
             'eb:flex eb:flex-col eb:gap-4',
-            canPreview ? 'eb:h-[85vh] eb:max-h-[85vh] eb:sm:max-w-[67.2rem]' : 'eb:max-h-[85vh] eb:sm:max-w-[460px]'
+            canPreview ? 'eb:h-[88vh] eb:max-h-[88vh] eb:sm:max-w-[92rem]' : 'eb:max-h-[85vh] eb:sm:max-w-[460px]'
           )}
         >
           <DialogHeader>
@@ -248,8 +520,12 @@ export default function TestEmailButton({ context }) {
               </span>
               <div>
                 <DialogTitle className="eb:text-base eb:font-normal">{t('Send a test')}</DialogTitle>
-                <DialogDescription className="eb:text-[13px]">
-                  {canSearch ? t('The email on screen, with each contact’s values.') : t('The email on screen, to reviewers’ addresses.')}
+                <DialogDescription className="eb:text-[13px]" aria-live="polite">
+                  {sending && focused
+                    ? t('Sending to {email}…', { email: focused.email })
+                    : canSearch
+                      ? t('The email on screen, with each contact’s values.')
+                      : t('The email on screen, to reviewers’ addresses.')}
                 </DialogDescription>
               </div>
             </div>
@@ -258,168 +534,64 @@ export default function TestEmailButton({ context }) {
           <div
             className={cn(
               'eb:grid eb:min-h-0 eb:flex-1 eb:gap-4',
-              canPreview && 'eb:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] eb:md:grid-cols-[minmax(0,1fr)_320px] eb:md:grid-rows-1'
+              canPreview &&
+                'eb:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] eb:md:grid-cols-[minmax(0,1fr)_320px] eb:md:grid-rows-1 eb:xl:grid-cols-[minmax(0,1fr)_240px_320px]'
             )}
           >
             {canPreview && (
               <EmailPreview
-                html={preview.html}
-                loading={preview.loading}
-                error={preview.error}
+                html={shown.html}
+                loading={shown.loading}
+                error={shown.error}
                 device={device}
                 onDeviceChange={setDevice}
+                onRefresh={sending ? undefined : refresh}
                 hint={false}
               />
             )}
 
+            {/* As in the preview: the inbox line, then what the variables take, then the points to check. */}
+            {canPreview && (
+              <aside className="eb:hidden eb:min-h-0 eb:space-y-5 eb:overflow-y-auto eb:xl:block" aria-busy={shown.loading} data-testid="eb-test-details">
+                <section className="eb:space-y-2">
+                  <SectionLabel>{t('Inbox')}</SectionLabel>
+                  <div className="eb:rounded-lg2 eb:border eb:border-border eb:bg-surface-75 eb:px-3 eb:py-2.5">
+                    <p className="eb:text-[13px] eb:font-medium eb:text-foreground">{(shown.subject ?? meta.subject) || t('No subject')}</p>
+                    <p className="eb:text-[12px] eb:text-foreground-muted">{(shown.preheader ?? meta.preheader) || t('No preview text')}</p>
+                  </div>
+                </section>
+                <section className="eb:space-y-2">
+                  <SectionLabel>{t('Values')}</SectionLabel>
+                  {used.length ? (
+                    <dl className="eb:space-y-1 eb:text-[12px]" data-testid="eb-test-values">
+                      {used.map((v) => (
+                        <div key={v.key} className="eb:flex eb:gap-2">
+                          <dt className="eb:w-24 eb:shrink-0 eb:truncate eb:text-foreground-muted" title={`{{${v.key}}}`}>
+                            {labelOf(v, t)}
+                          </dt>
+                          <dd className="eb:min-w-0 eb:flex-1 eb:truncate eb:text-foreground">
+                            {shown.values ? shown.values[v.key] || '—' : '…'}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p className="eb:text-[12px] eb:text-foreground-lighter">{t('No variable in this email.')}</p>
+                  )}
+                </section>
+                <section className="eb:space-y-2">
+                  <SectionLabel>{t('To check')}</SectionLabel>
+                  {!shown.loading && !shown.error && <QualityList quality={shown.quality} warnings={shown.warnings} />}
+                </section>
+              </aside>
+            )}
+
             <aside className="eb:flex eb:min-h-0 eb:flex-col eb:gap-3" aria-label={t('Recipients')}>
-              <section className="eb:flex eb:max-h-[45%] eb:min-h-0 eb:shrink-0 eb:flex-col eb:gap-1.5">
-                <SectionLabel>
-                  {t('Recipients')} · {recipients.length}/{MAX_RECIPIENTS}
-                </SectionLabel>
-                {recipients.length ? (
-                  <ul className="eb:min-h-0 eb:space-y-1 eb:overflow-y-auto" data-testid="eb-test-recipients">
-                    {recipients.map((r) => {
-                      const result = resultOf(r);
-                      const current = canPreview && focused?.key === r.key;
-                      return (
-                        <li
-                          key={r.key}
-                          className={cn(
-                            'eb:flex eb:items-center eb:gap-1 eb:rounded-lg2 eb:border eb:px-1.5 eb:py-1',
-                            current ? 'eb:border-primary/40 eb:bg-primary/5' : 'eb:border-border'
-                          )}
-                        >
-                          <button
-                            type="button"
-                            className="eb:flex eb:min-w-0 eb:flex-1 eb:items-center eb:gap-1.5 eb:text-left"
-                            onClick={() => setFocus(r.key)}
-                            aria-pressed={current}
-                            title={canPreview ? t('Preview with these values') : undefined}
-                            disabled={!canPreview}
-                          >
-                            {result ? (
-                              result.ok ? (
-                                <CheckCircle2 className="eb:size-3.5 eb:shrink-0 eb:text-success" aria-label={t('Sent')} />
-                              ) : (
-                                <XCircle className="eb:size-3.5 eb:shrink-0 eb:text-destructive" aria-label={result.error || ''} />
-                              )
-                            ) : (
-                              canPreview && (
-                                <Eye
-                                  className={cn('eb:size-3.5 eb:shrink-0', current ? 'eb:text-primary' : 'eb:text-foreground-muted/50')}
-                                  aria-hidden="true"
-                                />
-                              )
-                            )}
-                            <span className="eb:min-w-0">
-                              <span className="eb:block eb:truncate eb:text-[12px] eb:text-foreground">{r.label || r.email}</span>
-                              <span className="eb:block eb:truncate eb:text-[11px] eb:text-foreground-muted">
-                                {r.contactId ? r.email : t('Sample values')}
-                              </span>
-                              {result?.error && <span className="eb:block eb:text-[11px] eb:text-destructive">{result.error}</span>}
-                            </span>
-                          </button>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label={t('Remove {email}', { email: r.email })}
-                            title={t('Remove')}
-                            onClick={() => remove(r.key)}
-                          >
-                            <X />
-                          </Button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="eb:text-[12px] eb:text-foreground-lighter">{t('No recipient yet.')}</p>
-                )}
-                {report?.invalid?.map((email) => (
-                  <p key={`invalid-${email}`} className="eb:text-[12px] eb:text-foreground-muted">
-                    {t('Ignored (invalid): {email}', { email })}
-                  </p>
-                ))}
-              </section>
-
-              <section className="eb:flex eb:min-h-0 eb:flex-1 eb:flex-col eb:gap-1.5">
-                <Label htmlFor="eb-test-find">{canSearch ? t('Find a contact') : t('Addresses')}</Label>
-                <div className="eb:relative">
-                  <Search
-                    className="eb:pointer-events-none eb:absolute eb:top-1/2 eb:left-2.5 eb:size-3.5 eb:-translate-y-1/2 eb:text-foreground-muted"
-                    aria-hidden="true"
-                  />
-                  <Input
-                    id="eb-test-find"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={onKeyDown}
-                    placeholder={canSearch ? t('Name, company or address') : 'jane@example.com'}
-                    className="eb:h-8 eb:pl-8"
-                    autoComplete="off"
-                    disabled={full}
-                  />
-                </div>
-                {full && <p className="eb:text-[11px] eb:text-foreground-muted">{t('{max} test addresses at most', { max: MAX_RECIPIENTS })}</p>}
-                <ul className="eb:min-h-0 eb:flex-1 eb:space-y-0.5 eb:overflow-y-auto" aria-label={t('Search results')} data-testid="eb-test-contacts">
-                  {typedAddress && (
-                    <li>
-                      <button
-                        type="button"
-                        disabled={full}
-                        onClick={() => {
-                          add(typed(typedAddress));
-                          setQuery('');
-                        }}
-                        className="eb:flex eb:w-full eb:items-center eb:gap-1.5 eb:rounded-lg2 eb:px-2 eb:py-1.5 eb:text-left eb:text-[12px] eb:text-foreground eb:hover:bg-surface-200 eb:disabled:opacity-50"
-                      >
-                        <Plus className="eb:size-3.5 eb:shrink-0 eb:text-primary" aria-hidden="true" />
-                        <span className="eb:truncate">{t('Add “{email}”', { email: typedAddress })}</span>
-                      </button>
-                    </li>
-                  )}
-                  {canSearch &&
-                    found.items.map((contact) => {
-                      const added = recipients.some((r) => r.contactId === String(contact.id));
-                      return (
-                        <li key={contact.id}>
-                          <button
-                            type="button"
-                            disabled={full && !added}
-                            onClick={() => add(picked(contact))}
-                            className="eb:flex eb:w-full eb:items-center eb:gap-1.5 eb:rounded-lg2 eb:px-2 eb:py-1.5 eb:text-left eb:hover:bg-surface-200 eb:disabled:opacity-50"
-                          >
-                            <span className="eb:min-w-0 eb:flex-1">
-                              <span className="eb:block eb:truncate eb:text-[12px] eb:text-foreground">{contact.label || contact.email}</span>
-                              <span className="eb:block eb:truncate eb:text-[11px] eb:text-foreground-muted">
-                                {[contact.label ? contact.email : null, contact.detail].filter(Boolean).join(' · ')}
-                              </span>
-                            </span>
-                            {added ? (
-                              <CheckCircle2 className="eb:size-3.5 eb:shrink-0 eb:text-success" aria-label={t('Added')} />
-                            ) : (
-                              <Plus className="eb:size-3.5 eb:shrink-0 eb:text-foreground-muted" aria-hidden="true" />
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  {canSearch && !found.loading && !found.error && !found.items.length && !typedAddress && (
-                    <li className="eb:px-2 eb:py-1.5 eb:text-[12px] eb:text-foreground-lighter">{t('No contact found.')}</li>
-                  )}
-                  {canSearch && found.loading && !found.items.length && (
-                    <li className="eb:flex eb:items-center eb:gap-1.5 eb:px-2 eb:py-1.5 eb:text-[12px] eb:text-foreground-lighter">
-                      <Loader2 className="eb:size-3.5 eb:animate-spin" aria-hidden="true" />
-                      {t('Searching…')}
-                    </li>
-                  )}
-                  {found.error && <li className="eb:px-2 eb:py-1.5 eb:text-[12px] eb:text-destructive">{found.error}</li>}
-                </ul>
-              </section>
-
+              {contactsSection}
+              {recipientsSection}
+              {addressesSection}
               <div className="eb:flex eb:shrink-0 eb:justify-end eb:gap-2">
-                <Button variant="outline" onClick={() => setOpen(false)}>
+                <Button variant="outline" onClick={() => setOpen(false)} disabled={sending}>
                   {t('Close')}
                 </Button>
                 <Button onClick={send} disabled={sending || !recipients.length}>

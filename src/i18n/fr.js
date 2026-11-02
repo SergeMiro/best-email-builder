@@ -618,7 +618,6 @@ export const fr = {
   "Its variables belong to it: it cannot be deleted.": "Ses variables lui appartiennent : il ne peut pas être supprimé.",
   "New variable in {group}": "Nouvelle variable dans {group}",
   "Unit": "Unité",
-  "Add “{email}”": "Ajouter « {email} »",
   "Added": "Ajouté",
   "Contacts are not configured": "Les contacts ne sont pas configurés",
   "Find a contact": "Trouver un contact",
@@ -633,4 +632,10 @@ export const fr = {
   "Sent": "Envoyé",
   "The email on screen, with each contact’s values.": "Le courriel à l’écran, avec les valeurs de chaque contact.",
   "This contact is no longer available": "Ce contact n’est plus disponible",
+  "Add": "Ajouter",
+  "All contacts": "Tous les contacts",
+  "Contact lists": "Listes de contacts",
+  "No variable in this email.": "Aucune variable dans ce courriel.",
+  "Sending to {email}…": "Envoi à {email}…",
+  "Values": "Valeurs",
 };

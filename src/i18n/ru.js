@@ -618,7 +618,6 @@ export const ru = {
   "Its variables belong to it: it cannot be deleted.": "Её переменные принадлежат ей: удалить её нельзя.",
   "New variable in {group}": "Новая переменная в группе {group}",
   "Unit": "Единица",
-  "Add “{email}”": "Добавить «{email}»",
   "Added": "Добавлен",
   "Contacts are not configured": "Контакты не настроены",
   "Find a contact": "Найти контакт",
@@ -633,4 +632,10 @@ export const ru = {
   "Sent": "Отправлено",
   "The email on screen, with each contact’s values.": "Письмо с экрана, со значениями каждого контакта.",
   "This contact is no longer available": "Этот контакт больше недоступен",
+  "Add": "Добавить",
+  "All contacts": "Все контакты",
+  "Contact lists": "Списки контактов",
+  "No variable in this email.": "В письме нет переменных.",
+  "Sending to {email}…": "Отправка на {email}…",
+  "Values": "Значения",
 };

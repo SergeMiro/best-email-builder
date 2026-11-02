@@ -57,35 +57,52 @@ const QUALITY_SAMPLE = [{ code: 'IMAGE_NO_ALT', level: 'warning', message: 'Imag
 
 /** The host's contacts (`?contacts=1`): their values are the server's, never sent by the browser. */
 const FAKE_CONTACTS = [
-  { id: '11', email: 'ada@example.com', label: 'Ada Lovelace', detail: 'Analytical Engines' },
-  { id: '12', email: 'grace@example.com', label: 'Grace Hopper', detail: 'Navy' },
+  { id: '11', email: 'ada@example.com', label: 'Ada Lovelace', detail: 'Analytical Engines', lists: ['1'] },
+  { id: '12', email: 'grace@example.com', label: 'Grace Hopper', detail: 'Navy', lists: ['1', '2'] },
+];
+const FAKE_LISTS = [
+  { id: '1', name: 'Pioneers', detail: null, count: 2 },
+  { id: '2', name: 'Navy', detail: null, count: 1 },
 ];
 
-function fakeSearchContacts(query) {
+function fakeSearchContacts(query, { list = null } = {}) {
   const term = String(query || '').toLowerCase();
-  return Promise.resolve(FAKE_CONTACTS.filter((c) => `${c.label} ${c.email} ${c.detail}`.toLowerCase().includes(term)));
+  return Promise.resolve(
+    FAKE_CONTACTS.filter((c) => (!list || c.lists.includes(list)) && `${c.label} ${c.email} ${c.detail}`.toLowerCase().includes(term)).map(
+      ({ lists: _lists, ...c }) => c
+    )
+  );
 }
+
+const fakeContactLists = () => Promise.resolve(FAKE_LISTS);
 
 function fakeRender({ mjml, subject, contactId, email }) {
   // MJML only compiles on the server: the playground shows the source text.
   const text = String(mjml || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  const who = FAKE_CONTACTS.find((c) => c.id === contactId)?.label || email || 'sample';
+  const contact = FAKE_CONTACTS.find((c) => c.id === contactId);
+  const who = contact?.label || email || 'sample';
   return Promise.resolve({
     html: `<!doctype html><html><body><h1>${subject || ''}</h1><p data-recipient>${who}</p><p data-preview>${text}</p></body></html>`,
+    subject: `${subject || ''} — ${who}`,
+    values: contact
+      ? { 'contact.firstname': contact.label.split(' ')[0], 'contact.email': contact.email }
+      : { 'contact.firstname': 'Jane', 'contact.email': email || 'jane@example.com' },
     warnings: [],
     quality: QUALITY_SAMPLE,
   });
 }
 
-function fakeSendTest({ emails, contacts = [], subject }) {
+async function fakeSendTest({ emails, contacts = [], subject }) {
+  // Long enough to see the preview go from one recipient to the next.
+  await new Promise((resolve) => setTimeout(resolve, Number(new URLSearchParams(window.location.search).get('sendMs')) || 0));
   const all = [...contacts.map((id) => FAKE_CONTACTS.find((c) => c.id === id)?.email).filter(Boolean), ...emails];
   window.__sentTests = [...(window.__sentTests || []), ...all.map((to) => ({ to, subject: `[TEST] ${subject || ''}` }))];
-  return Promise.resolve({
+  return {
     sent: all.length,
     failed: 0,
     invalid: [],
     results: all.map((email) => ({ email, ok: true, error: null })),
-  });
+  };
 }
 
 /** The mistakes the fake proofreader corrects, wherever they are. */
@@ -224,7 +241,7 @@ function Bench() {
       createMemoryStorage({
         render: fakeRender,
         sendTest: fakeSendTest,
-        ...(contacts ? { searchContacts: fakeSearchContacts } : {}),
+        ...(contacts ? { searchContacts: fakeSearchContacts, contactLists: fakeContactLists } : {}),
         importBrand: fakeImportBrand,
         systemVariables: variables,
       }),

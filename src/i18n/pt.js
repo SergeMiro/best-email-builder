@@ -618,7 +618,6 @@ export const pt = {
   "Its variables belong to it: it cannot be deleted.": "Suas variáveis pertencem a ele: não pode ser excluído.",
   "New variable in {group}": "Nova variável em {group}",
   "Unit": "Unidade",
-  "Add “{email}”": "Adicionar «{email}»",
   "Added": "Adicionado",
   "Contacts are not configured": "Os contactos não estão configurados",
   "Find a contact": "Procurar um contacto",
@@ -633,4 +632,10 @@ export const pt = {
   "Sent": "Enviado",
   "The email on screen, with each contact’s values.": "O e-mail no ecrã, com os valores de cada contacto.",
   "This contact is no longer available": "Este contacto já não está disponível",
+  "Add": "Adicionar",
+  "All contacts": "Todos os contactos",
+  "Contact lists": "Listas de contactos",
+  "No variable in this email.": "Nenhuma variável neste e-mail.",
+  "Sending to {email}…": "A enviar para {email}…",
+  "Values": "Valores",
 };
