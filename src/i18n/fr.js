@@ -635,7 +635,5 @@ export const fr = {
   "Add": "Ajouter",
   "All contacts": "Tous les contacts",
   "Contact lists": "Listes de contacts",
-  "No variable in this email.": "Aucune variable dans ce courriel.",
   "Sending to {email}…": "Envoi à {email}…",
-  "Values": "Valeurs",
 };

@@ -13,9 +13,8 @@ All notable changes are documented here. The format follows
   values, empty ones included, read by the server from its id. A typed
   address still gets sample values. Typed addresses are remembered for the
   next test; contacts are not.
-- The test dialog is the preview's: devices, dark mode, refresh, the inbox
-  line and the points to check, plus the VALUES the email's variables take
-  for the selected recipient. Contacts are picked from the host's lists
+- The test dialog is the preview's (devices, dark mode, refresh), with the
+  recipients beside it. Contacts are picked from the host's lists
   (`contactStore.lists`), addresses typed in a field of their own; while the
   test leaves, the preview goes from one recipient to the next.
 

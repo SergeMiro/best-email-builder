@@ -1101,16 +1101,15 @@ test.describe('Images, preview, test send', () => {
     const preview = dialog.locator('iframe[title="Email preview"]');
     const recipients = dialog.getByTestId('eb-test-recipients');
     const found = dialog.getByTestId('eb-test-contacts');
-    const details = dialog.getByTestId('eb-test-details');
     await expect(preview).toHaveAttribute('srcdoc', /data-recipient>sample</);
-    // As in the preview: devices, refresh, the inbox line, the points to check.
+    // As in the preview: devices and refresh; nothing between the email and the contacts.
     await expect(dialog.getByRole('tab', { name: 'Mobile' })).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Refresh' })).toBeVisible();
-    await expect(details.getByText('Images without alt text: 1')).toBeVisible();
-    // Side by side: the preview, its details, then the contacts.
-    const [frameBox, detailsBox, listBox] = [await preview.boundingBox(), await details.boundingBox(), await found.boundingBox()];
-    expect(frameBox.x + frameBox.width).toBeLessThan(detailsBox.x);
-    expect(detailsBox.x + detailsBox.width).toBeLessThan(listBox.x);
+    await expect(dialog.getByText('Inbox')).toHaveCount(0);
+    const [frameBox, listBox] = [await preview.boundingBox(), await found.boundingBox()];
+    expect(frameBox.x + frameBox.width).toBeLessThan(listBox.x);
+    expect(listBox.x - (frameBox.x + frameBox.width)).toBeLessThan(80);
+    expect(listBox.width).toBeGreaterThan(500);
 
     // A list: its contacts only.
     await expect(found.getByRole('button')).toHaveCount(2);
@@ -1119,11 +1118,8 @@ test.describe('Images, preview, test send', () => {
     await expect(found.getByRole('button')).toHaveCount(1);
     await found.getByRole('button', { name: /Grace Hopper/ }).click();
     await expect(recipients.getByText('Grace Hopper')).toBeVisible();
-    // Her email: the preview, the subject and the values are hers.
+    // Her email: the preview is hers.
     await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Grace Hopper</);
-    await expect(details.getByText('Hello {{contact.firstname}} — Grace Hopper')).toBeVisible();
-    await expect(dialog.getByTestId('eb-test-values')).toContainText('First name');
-    await expect(dialog.getByTestId('eb-test-values')).toContainText('Grace');
     // Clicked again: out of the recipients.
     await found.getByRole('button', { name: /Grace Hopper/ }).click();
     await expect(recipients).toHaveCount(0);
@@ -1134,7 +1130,6 @@ test.describe('Images, preview, test send', () => {
     await dialog.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(dialog.getByLabel('Addresses')).toHaveValue('not-an-address');
     await expect(preview).toHaveAttribute('srcdoc', /data-recipient>reviewer@example.com</);
-    await expect(dialog.getByTestId('eb-test-values')).toContainText('Jane');
     // Back to Grace: her values again.
     await recipients.getByRole('button', { name: /Grace Hopper/ }).click();
     await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Grace Hopper</);

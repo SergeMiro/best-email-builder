@@ -635,7 +635,5 @@ export const zh = {
   "Add": "添加",
   "All contacts": "全部联系人",
   "Contact lists": "联系人列表",
-  "No variable in this email.": "此邮件中没有变量。",
   "Sending to {email}…": "正在发送至 {email}…",
-  "Values": "值",
 };

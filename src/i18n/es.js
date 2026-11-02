@@ -635,7 +635,5 @@ export const es = {
   "Add": "Añadir",
   "All contacts": "Todos los contactos",
   "Contact lists": "Listas de contactos",
-  "No variable in this email.": "Ninguna variable en este correo.",
   "Sending to {email}…": "Enviando a {email}…",
-  "Values": "Valores",
 };

@@ -635,7 +635,5 @@ export const ru = {
   "Add": "Добавить",
   "All contacts": "Все контакты",
   "Contact lists": "Списки контактов",
-  "No variable in this email.": "В письме нет переменных.",
   "Sending to {email}…": "Отправка на {email}…",
-  "Values": "Значения",
 };

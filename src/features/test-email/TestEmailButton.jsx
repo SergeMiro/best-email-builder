@@ -17,8 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../ui/primitives/overlays.jsx';
-import { labelOf } from '../variables/catalog.js';
-import { EmailPreview, QualityList } from '../preview/PreviewButton.jsx';
+import { EmailPreview } from '../preview/PreviewButton.jsx';
 
 /**
  * TEST SEND — the only real layout check: a browser preview says nothing about
@@ -26,8 +25,7 @@ import { EmailPreview, QualityList } from '../preview/PreviewButton.jsx';
  *
  * The preview's dialog, with the recipients beside it. Left, the email as the
  * selected recipient gets it (server rendering, when the storage can
- * `render`); then its inbox line, the VALUES its variables take and the
- * points to check. Right, the host's contact lists (`storage.contactLists`)
+ * `render`). Right, the host's contact lists (`storage.contactLists`)
  * and their contacts (`storage.searchContacts`), the recipients, and a field
  * for addresses typed by hand.
  *
@@ -98,17 +96,10 @@ function rememberAddresses(recipients) {
   }
 }
 
-const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-/** The variables the email uses (its tags in the MJML, subject or preview text), links aside. */
-function usedVariables(variables, text) {
-  return variables.filter((v) => v.kind !== 'link' && new RegExp(`\\{\\{\\s*${escapeRegExp(v.key)}\\s*\\}\\}`).test(text));
-}
-
 const EMPTY_RENDER = { loading: false, html: '', subject: null, preheader: null, values: null, warnings: [], quality: [], error: null };
 
 export default function TestEmailButton({ context }) {
-  const { editor, ready, meta, storage, variables = [], testRecipients = [] } = context;
+  const { editor, ready, meta, storage, testRecipients = [] } = context;
   const { t, notify } = useUi();
   const canPreview = typeof storage.render === 'function';
   const canSearch = typeof storage.searchContacts === 'function';
@@ -140,7 +131,6 @@ export default function TestEmailButton({ context }) {
   const shownKey = focused?.key ?? NOBODY;
   const shown = renders[shownKey] || (canPreview && mjml ? { ...EMPTY_RENDER, loading: true } : EMPTY_RENDER);
   const full = recipients.length >= MAX_RECIPIENTS;
-  const used = usedVariables(variables, `${mjml}\n${meta.subject || ''}\n${meta.preheader || ''}`);
 
   // The host's lists, once per opening.
   useEffect(() => {
@@ -535,7 +525,7 @@ export default function TestEmailButton({ context }) {
             className={cn(
               'eb:grid eb:min-h-0 eb:flex-1 eb:gap-4',
               canPreview &&
-                'eb:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] eb:md:grid-cols-[minmax(0,1fr)_320px] eb:md:grid-rows-1 eb:xl:grid-cols-[minmax(0,1fr)_240px_320px]'
+                'eb:grid-rows-[minmax(0,1fr)_minmax(0,1fr)] eb:md:grid-cols-[minmax(0,1fr)_320px] eb:md:grid-rows-1 eb:xl:grid-cols-[minmax(0,1fr)_576px]'
             )}
           >
             {canPreview && (
@@ -548,42 +538,6 @@ export default function TestEmailButton({ context }) {
                 onRefresh={sending ? undefined : refresh}
                 hint={false}
               />
-            )}
-
-            {/* As in the preview: the inbox line, then what the variables take, then the points to check. */}
-            {canPreview && (
-              <aside className="eb:hidden eb:min-h-0 eb:space-y-5 eb:overflow-y-auto eb:xl:block" aria-busy={shown.loading} data-testid="eb-test-details">
-                <section className="eb:space-y-2">
-                  <SectionLabel>{t('Inbox')}</SectionLabel>
-                  <div className="eb:rounded-lg2 eb:border eb:border-border eb:bg-surface-75 eb:px-3 eb:py-2.5">
-                    <p className="eb:text-[13px] eb:font-medium eb:text-foreground">{(shown.subject ?? meta.subject) || t('No subject')}</p>
-                    <p className="eb:text-[12px] eb:text-foreground-muted">{(shown.preheader ?? meta.preheader) || t('No preview text')}</p>
-                  </div>
-                </section>
-                <section className="eb:space-y-2">
-                  <SectionLabel>{t('Values')}</SectionLabel>
-                  {used.length ? (
-                    <dl className="eb:space-y-1 eb:text-[12px]" data-testid="eb-test-values">
-                      {used.map((v) => (
-                        <div key={v.key} className="eb:flex eb:gap-2">
-                          <dt className="eb:w-24 eb:shrink-0 eb:truncate eb:text-foreground-muted" title={`{{${v.key}}}`}>
-                            {labelOf(v, t)}
-                          </dt>
-                          <dd className="eb:min-w-0 eb:flex-1 eb:truncate eb:text-foreground">
-                            {shown.values ? shown.values[v.key] || '—' : '…'}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ) : (
-                    <p className="eb:text-[12px] eb:text-foreground-lighter">{t('No variable in this email.')}</p>
-                  )}
-                </section>
-                <section className="eb:space-y-2">
-                  <SectionLabel>{t('To check')}</SectionLabel>
-                  {!shown.loading && !shown.error && <QualityList quality={shown.quality} warnings={shown.warnings} />}
-                </section>
-              </aside>
             )}
 
             <aside className="eb:flex eb:min-h-0 eb:flex-col eb:gap-3" aria-label={t('Recipients')}>
