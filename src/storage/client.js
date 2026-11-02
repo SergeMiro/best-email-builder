@@ -17,7 +17,8 @@
  *                                 when the page cannot load the path itself —
  *                                 images on another origin, no server at all)
  *   render(input)               → { html, warnings, quality }   (optional: preview;
- *                                 `contactId` or `email`: that recipient's values)
+ *                                 `contactId` or `email`: that recipient's values;
+ *                                 `samples: false`: every variable left as its tag)
  *   sendTest(input)             → { sent, failed, invalid, results } (optional: test send;
  *                                 `emails` typed, `contacts` ids picked)
  *   searchContacts(query, {list}) → contacts to test with     (optional: the test
@@ -92,7 +93,7 @@ import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/
  *   createdAt?: string,
  * }} TemplateVersion
  *
- * @typedef {{mjml: string, subject?: string|null, preheader?: string|null, contactId?: string|null, email?: string|null}} RenderInput
+ * @typedef {{mjml: string, subject?: string|null, preheader?: string|null, contactId?: string|null, email?: string|null, samples?: boolean}} RenderInput
  * @typedef {{id: string, email: string, label?: string|null, detail?: string|null}} TestContact
  * @typedef {{id: string, name: string, detail?: string|null, count?: number|null}} ContactList
  * @typedef {{html: string, warnings: {message: string}[], quality: {code: string, level: string, message: string}[]}} RenderResult

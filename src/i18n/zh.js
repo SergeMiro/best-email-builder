@@ -284,6 +284,8 @@ export const zh = {
   "external resource not allowed": "不允许引用外部资源",
   "File missing": "缺少文件",
   "Final rendering, variables filled with samples.": "最终渲染效果，变量已填入示例值。",
+  "Final rendering, variables shown as tags.": "最终效果，变量显示为标签。",
+  "Fictitious values": "虚拟值",
   "First name": "名字",
   "Fit to text": "适应文字",
   "Font": "字体",

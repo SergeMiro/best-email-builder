@@ -397,17 +397,20 @@ export function createEmailBuilderHandler(options) {
         if (!contact) throw new HttpError(404, t('This contact is no longer available'), 'CONTACT_UNAVAILABLE');
       }
       const email = typeof body?.email === 'string' ? body.email.trim().slice(0, 254) : '';
+      // `{ samples: false }`: no value at all, every variable stays a tag.
+      const keepTags = body?.samples === false && !contact && !email;
       // Same origin as the application: uploaded images stay relative.
-      const values = contact ? contactValues(catalog, contact) : sampleValues(catalog, email ? { 'contact.email': email } : {});
+      const values = keepTags ? {} : contact ? contactValues(catalog, contact) : sampleValues(catalog, email ? { 'contact.email': email } : {});
       const unsubscribeUrl = previewUnsubscribeUrl || sampleUnsubscribeUrl(catalog);
-      const html = personalize(compiled, { values, unsubscribeUrl, variables: catalog });
+      const html = personalize(compiled, { values, unsubscribeUrl, variables: catalog, keepTags });
+      const text = (value) => (keepTags ? String(value || '') : applyVariablesToText(value || '', values, catalog));
       return json({
         data: {
           html,
-          subject: applyVariablesToText(body?.subject || '', values, catalog),
-          preheader: applyVariablesToText(body?.preheader || '', values, catalog),
+          subject: text(body?.subject),
+          preheader: text(body?.preheader),
           // What the variables were filled with: the dialog shows the test's values.
-          values: Object.fromEntries(catalog.map((v) => [v.key, values[v.key] == null ? '' : String(values[v.key])])),
+          values: keepTags ? {} : Object.fromEntries(catalog.map((v) => [v.key, values[v.key] == null ? '' : String(values[v.key])])),
           warnings,
           quality,
         },

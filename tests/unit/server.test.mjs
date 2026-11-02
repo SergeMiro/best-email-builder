@@ -227,6 +227,19 @@ test('render: the values the variables took come back with the email', async () 
   assert.notEqual((await values({}))['contact.firstname'], 'Ada');
 });
 
+test('render: without samples, every variable stays a tag; a contact or an address keeps its values', async () => {
+  const { call } = setup({ contactStore: contactStore() });
+  const render = async (body) =>
+    (await (await call('POST', '/api/email-builder/render', { mjml: MJML, subject: 'Hi {{contact.firstname}}', ...body })).json()).data;
+  const raw = await render({ samples: false, mjml: MJML.replace('</mj-text>', ' {{unsubscribe}}</mj-text>') });
+  assert.match(raw.html, /Hello \{\{contact\.firstname\}\} \{\{unsubscribe\}\}/);
+  assert.equal(raw.subject, 'Hi {{contact.firstname}}');
+  assert.deepEqual(raw.values, {});
+  assert.doesNotMatch((await render({})).html, /\{\{/);
+  assert.match((await render({ contactId: '1', samples: false })).html, /Hello Ada/);
+  assert.doesNotMatch((await render({ email: 'rev@example.com', samples: false })).html, /\{\{/);
+});
+
 test('render: a contact’s own values, a typed address’s samples, another user’s contact refused', async () => {
   const { call } = setup({ contactStore: contactStore() });
   const render = (body) => call('POST', '/api/email-builder/render', { mjml: MJML, ...body });

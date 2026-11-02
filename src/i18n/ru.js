@@ -284,6 +284,8 @@ export const ru = {
   "external resource not allowed": "внешние ресурсы запрещены",
   "File missing": "Файл отсутствует",
   "Final rendering, variables filled with samples.": "Итоговый вид, переменные заполнены примерами.",
+  "Final rendering, variables shown as tags.": "Итоговый вид, переменные показаны тегами.",
+  "Fictitious values": "Тестовые значения",
   "First name": "Имя",
   "Fit to text": "По ширине текста",
   "Font": "Шрифт",

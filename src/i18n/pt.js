@@ -284,6 +284,8 @@ export const pt = {
   "external resource not allowed": "recurso externo não permitido",
   "File missing": "Arquivo ausente",
   "Final rendering, variables filled with samples.": "Resultado final, com valores de exemplo nas variáveis.",
+  "Final rendering, variables shown as tags.": "Visualização final, variáveis mostradas como etiquetas.",
+  "Fictitious values": "Valores fictícios",
   "First name": "Nome",
   "Fit to text": "Ajustar ao texto",
   "Font": "Fonte",

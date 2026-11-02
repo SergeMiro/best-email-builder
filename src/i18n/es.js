@@ -284,6 +284,8 @@ export const es = {
   "external resource not allowed": "recurso externo no permitido",
   "File missing": "Falta el archivo",
   "Final rendering, variables filled with samples.": "Resultado final, con valores de ejemplo en las variables.",
+  "Final rendering, variables shown as tags.": "Vista final, variables mostradas como etiquetas.",
+  "Fictitious values": "Valores ficticios",
   "First name": "Nombre",
   "Fit to text": "Ajustado al texto",
   "Font": "Fuente",

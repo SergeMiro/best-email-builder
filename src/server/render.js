@@ -67,7 +67,9 @@ export function sampleUnsubscribeUrl(variables = DEFAULT_VARIABLES) {
 /**
  * Personalization of compiled HTML, once per recipient. `baseUrl` makes
  * uploaded images absolute — omit it for a preview inside the application,
- * which reads them from its own origin.
+ * which reads them from its own origin. `keepTags`: the variables, the
+ * unsubscribe and mirror links included, stay as written (a preview without
+ * sample values).
  *
  * Without `unsubscribeUrl`, the unsubscribe link is the link variable's value
  * if empty (the email provider's own tag, `*|UNSUB|*`), otherwise inert.
@@ -78,11 +80,14 @@ export function sampleUnsubscribeUrl(variables = DEFAULT_VARIABLES) {
  *   unsubscribeUrl?: string|null,
  *   baseUrl?: string|null,
  *   variables?: EmailVariable[],
+ *   keepTags?: boolean,
  * }} options
  */
-export function personalize(compiled, { values, unsubscribeUrl = null, baseUrl = null, variables = DEFAULT_VARIABLES }) {
+export function personalize(compiled, { values, unsubscribeUrl = null, baseUrl = null, variables = DEFAULT_VARIABLES, keepTags = false }) {
   const link = unsubscribeUrl || findVariable('unsubscribe', variables)?.fallback || '#';
-  const html = applyServiceLinks(applyVariables(compiled, values, variables), { unsubscribeUrl: link });
+  const html = keepTags
+    ? String(compiled || '')
+    : applyServiceLinks(applyVariables(compiled, values, variables), { unsubscribeUrl: link });
   return absoluteAssetUrls(html, baseUrl);
 }
 

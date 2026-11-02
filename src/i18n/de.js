@@ -284,6 +284,8 @@ export const de = {
   "external resource not allowed": "unzulässige externe Ressource",
   "File missing": "Datei fehlt",
   "Final rendering, variables filled with samples.": "Endgültige Darstellung, Variablen mit Beispielwerten gefüllt.",
+  "Final rendering, variables shown as tags.": "Endgültige Darstellung, Variablen als Platzhalter.",
+  "Fictitious values": "Fiktive Werte",
   "First name": "Vorname",
   "Fit to text": "An Text anpassen",
   "Font": "Schriftart",

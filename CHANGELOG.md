@@ -17,6 +17,8 @@ All notable changes are documented here. The format follows
   recipients beside it. Contacts are picked from the host's lists
   (`contactStore.lists`), addresses typed in a field of their own; while the
   test leaves, the preview goes from one recipient to the next.
+- The preview's « Fictitious values » switch: off, every variable shows as its
+  tag, unsubscribe link included (`render({ samples: false })`).
 
 ### Changed
 - A variable is inserted with a space after it (none in a link's address,

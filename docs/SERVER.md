@@ -25,7 +25,7 @@ your database.
 | `PUT` | `{base}/templates/:id/tags` | write | Set a template's tags, `{ tags: [ids] }`, three at most (needs `tagStore`). |
 | `GET` | `{base}/templates/:id/versions` | read | List a template's versions. |
 | `GET` | `{base}/templates/:id/versions/:vid` | read | Read one version, with its project. |
-| `POST` | `{base}/render` | read | Preview: render on the server and run the quality checks. `{ contactId }`: with that contact's values; `{ email }`: samples, with that address. Returns the `values` used. |
+| `POST` | `{base}/render` | read | Preview: render on the server and run the quality checks. `{ contactId }`: with that contact's values; `{ email }`: samples, with that address; `{ samples: false }`: every variable left as its tag. Returns the `values` used. |
 | `POST` | `{base}/test` | write | Send a test email (needs `transport`): `{ emails }` typed get samples, `{ contacts: [ids] }` their own values. |
 | `GET` | `{base}/contacts?q=&list=` | read | Contacts to test with, of one list when `list` is given: `id`, `email`, `label`, `detail` — never their values (needs `contactStore`). |
 | `GET` | `{base}/contacts/lists` | read | The contact lists: `id`, `name`, `detail`, `count` (`[]` without `contactStore.lists`). |

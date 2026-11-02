@@ -1067,6 +1067,17 @@ test.describe('Images, preview, test send', () => {
     await expect(dialog.getByText('Email preview').first()).toBeVisible();
     await expect(dialog.frameLocator('iframe[title="Email preview"]').getByText(/Your headline/)).toBeVisible();
     await expect(dialog.getByText('Images without alt text: 1')).toBeVisible();
+    // Sample values on by default; off, the variables show as their tags.
+    const preview = dialog.locator('iframe[title="Email preview"]');
+    const samples = dialog.getByRole('button', { name: 'Fictitious values' });
+    await expect(samples).toHaveAttribute('aria-pressed', 'true');
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>sample</);
+    await samples.click();
+    await expect(samples).toHaveAttribute('aria-pressed', 'false');
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>tags</);
+    await expect(dialog.getByText('Final rendering, variables shown as tags.')).toBeVisible();
+    await samples.click();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>sample</);
     // One scrollbar: the frame fills its box and scrolls the email, the box itself does not scroll.
     const fit = await dialog.locator('iframe[title="Email preview"]').evaluate((frame) => {
       const box = frame.closest('[data-device]').parentElement;

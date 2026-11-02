@@ -76,11 +76,11 @@ function fakeSearchContacts(query, { list = null } = {}) {
 
 const fakeContactLists = () => Promise.resolve(FAKE_LISTS);
 
-function fakeRender({ mjml, subject, contactId, email }) {
+function fakeRender({ mjml, subject, contactId, email, samples }) {
   // MJML only compiles on the server: the playground shows the source text.
   const text = String(mjml || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const contact = FAKE_CONTACTS.find((c) => c.id === contactId);
-  const who = contact?.label || email || 'sample';
+  const who = samples === false ? 'tags' : contact?.label || email || 'sample';
   return Promise.resolve({
     html: `<!doctype html><html><body><h1>${subject || ''}</h1><p data-recipient>${who}</p><p data-preview>${text}</p></body></html>`,
     subject: `${subject || ''} — ${who}`,
