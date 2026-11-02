@@ -25,6 +25,8 @@ All notable changes are documented here. The format follows
 ### Fixed
 - The variable list of a link field opened in the window's top-left corner
   under React StrictMode: the field is now its only anchor.
+- A select or popover inside a builder dialog opened under it when the host
+  pins every Radix popper below its own modals (scroll-locked body).
 
 ## [0.21.0] — 2026-10-30
 

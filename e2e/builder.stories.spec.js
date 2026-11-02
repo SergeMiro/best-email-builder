@@ -1111,7 +1111,9 @@ test.describe('Images, preview, test send', () => {
     expect(listBox.x - (frameBox.x + frameBox.width)).toBeLessThan(80);
     expect(listBox.width).toBeGreaterThan(500);
 
-    // A list: its contacts only.
+    // A list: its contacts only. The options stay above the dialog even when the
+    // host pins every popper under a scroll lock (as the Extranet does).
+    await page.addStyleTag({ content: 'body[data-scroll-locked] [data-radix-popper-content-wrapper] { z-index: 60 !important; }' });
     await expect(found.getByRole('button')).toHaveCount(2);
     await dialog.getByRole('combobox', { name: 'Contact lists' }).click();
     await page.getByRole('option', { name: /Navy/ }).click();
