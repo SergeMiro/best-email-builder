@@ -16,8 +16,12 @@
  *   imageUrl(path)              → where the canvas shows an uploaded image  (optional:
  *                                 when the page cannot load the path itself —
  *                                 images on another origin, no server at all)
- *   render(input)               → { html, warnings, quality }   (optional: preview)
- *   sendTest(input)             → { sent, failed, invalid, results } (optional: test send)
+ *   render(input)               → { html, warnings, quality }   (optional: preview;
+ *                                 `contactId` or `email`: that recipient's values)
+ *   sendTest(input)             → { sent, failed, invalid, results } (optional: test send;
+ *                                 `emails` typed, `contacts` ids picked)
+ *   searchContacts(query)       → contacts to test with       (optional: the test
+ *                                 dialog's contact list)
  *   listVariables()             → custom variables            (optional: user-defined
  *   saveVariable(variable)      → saved variable               variables, shared by
  *   deleteVariable(key)         → void                         every template, and
@@ -87,7 +91,8 @@ import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/
  *   createdAt?: string,
  * }} TemplateVersion
  *
- * @typedef {{mjml: string, subject?: string|null, preheader?: string|null}} RenderInput
+ * @typedef {{mjml: string, subject?: string|null, preheader?: string|null, contactId?: string|null, email?: string|null}} RenderInput
+ * @typedef {{id: string, email: string, label?: string|null, detail?: string|null}} TestContact
  * @typedef {{html: string, warnings: {message: string}[], quality: {code: string, level: string, message: string}[]}} RenderResult
  * @typedef {import('../features/brand/brand.js').Brand} Brand
  * @typedef {import('../features/tags/tags.js').TemplateTag} TemplateTag
@@ -109,7 +114,8 @@ import { MAX_TAGS, checkTemplateTags, sortTags, validateTag } from '../features/
  *   uploadImage: (file: Blob & {name?: string}) => Promise<{path: string}>,
  *   imageUrl?: (path: string) => string,
  *   render?: (input: RenderInput) => Promise<RenderResult>,
- *   sendTest?: (input: RenderInput & {emails: string[]}) => Promise<SendTestResult>,
+ *   sendTest?: (input: RenderInput & {emails: string[], contacts?: string[]}) => Promise<SendTestResult>,
+ *   searchContacts?: (query: string, options?: {signal?: AbortSignal}) => Promise<TestContact[]>,
  *   listVariables?: () => Promise<EmailVariable[]>,
  *   listVariableGroups?: () => Promise<string[]>,
  *   saveVariableGroup?: (name: string) => Promise<string>,
@@ -189,7 +195,8 @@ export function createHttpCaller({ baseUrl = '/api/email-builder', headers = {},
  * `brand: true` turns on the Brand button: the server must have a
  * `brandStore`, and a `brandImporter` to read a brand from a website
  * (`brand: {import: false}` when it has none). `tags: true` turns on the
- * library's tags: the server must have a `tagStore`.
+ * library's tags: the server must have a `tagStore`. `contacts: true` lists
+ * contacts in the test dialog: the server must have a `contactStore`.
  *
  * @param {{
  *   baseUrl?: string,
@@ -197,10 +204,11 @@ export function createHttpCaller({ baseUrl = '/api/email-builder', headers = {},
  *   fetch?: typeof fetch,
  *   brand?: boolean|{import?: boolean},
  *   tags?: boolean,
+ *   contacts?: boolean,
  * }} [options]
  * @returns {TemplateStorage}
  */
-export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = false, tags = false } = {}) {
+export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = false, tags = false, contacts = false } = {}) {
   const { root, call, unwrap, doFetch, extraHeaders } = createHttpCaller({ baseUrl, headers, fetch: fetchImpl });
 
   /** @param {SavePayload} payload */
@@ -249,6 +257,12 @@ export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = 
             : {}),
         }
       : {}),
+    ...(contacts
+      ? {
+          searchContacts: async (query, { signal } = {}) =>
+            call(`/contacts?q=${encodeURIComponent(String(query || '').trim())}`, { signal }),
+        }
+      : {}),
     ...(tags
       ? {
           listTags: async () => call('/tags'),
@@ -289,6 +303,7 @@ export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = 
  * @param {{
  *   render?: TemplateStorage['render'],
  *   sendTest?: TemplateStorage['sendTest'],
+ *   searchContacts?: TemplateStorage['searchContacts'],
  *   importBrand?: TemplateStorage['importBrand'],
  *   compile?: (input: RenderInput) => Promise<{html: string}>,
  *   brand?: Brand|null,
@@ -301,6 +316,7 @@ export function createHttpStorage({ baseUrl, headers, fetch: fetchImpl, brand = 
 export function createMemoryStorage({
   render,
   sendTest,
+  searchContacts,
   importBrand,
   compile,
   brand = null,
@@ -558,6 +574,7 @@ export function createMemoryStorage({
     ...(importBrand ? { importBrand } : {}),
     ...(render ? { render } : {}),
     ...(sendTest ? { sendTest } : {}),
+    ...(searchContacts ? { searchContacts } : {}),
     dump: () => ({
       rows: [...rows.values()],
       versions: Object.fromEntries(versions),

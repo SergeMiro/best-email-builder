@@ -14,8 +14,10 @@
  *   PUT    {base}/templates/:id/tags              write   the template's tags, { tags: [ids] } (needs `tagStore`)
  *   GET    {base}/templates/:id/versions          read    versions
  *   GET    {base}/templates/:id/versions/:vid     read    version with its project
- *   POST   {base}/render                          read    preview (server rendering)
- *   POST   {base}/test                            write   test send (needs `transport`)
+ *   POST   {base}/render                          read    preview (server rendering); { contactId } or
+ *                                                         { email }: with that recipient's values
+ *   POST   {base}/test                            write   test send (needs `transport`); { emails, contacts: [ids] }
+ *   GET    {base}/contacts?q=                     read    contacts to test with (needs `contactStore`)
  *   POST   {base}/assets                          write   image upload (multipart, field `file`)
  *   POST   {base}/rewrite                         write   write or rewrite one text of an email (needs `generator`,
  *                                                         the AI module: best-email-builder/ai/server)
@@ -57,7 +59,7 @@ import { MAX_IMAGE_BYTES } from '../validation/images.js';
 import { createAssetService } from './assets.js';
 import { HttpError, statusOf } from './errors.js';
 import { compileTemplate, personalize, sampleUnsubscribeUrl } from './render.js';
-import { MAX_TEST_RECIPIENTS, sendTestEmail } from './sendTest.js';
+import { MAX_TEST_RECIPIENTS, contactValues, sendTestEmail } from './sendTest.js';
 import { createTemplateService } from './templates.js';
 import { createVariableService } from './variables.js';
 import { createBrandService } from './brand.js';
@@ -87,6 +89,7 @@ import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
  *   variableStore?: import('./variables.js').VariableRepository|null,
  *   brandStore?: import('./brand.js').BrandRepository|null,
  *   tagStore?: import('./tags.js').TagRepository|null,
+ *   contactStore?: ContactRepository|null,
  *   brandImporter?: {import: (url: string, options?: {signal?: AbortSignal}) => Promise<import('./brandImport.js').BrandImport>}|null,
  *   locale?: string,
  *   messages?: Record<string, string>,
@@ -98,6 +101,23 @@ import { BRAND_IMPORT_ERRORS } from '../features/brand/messages.js';
  *   onError?: (error: unknown, request: Request) => void,
  * }} HandlerOptions
  */
+
+/**
+ * The host's CONTACTS, to send a test with a real recipient's values. Both
+ * calls get the user `authorize` returned: a host scopes them to what that
+ * user may see. `values`: variable key → value (`contact.firstname`…); what a
+ * contact does not have stays empty, as in a real send.
+ *
+ * @typedef {{id: string|number, email: string, label?: string|null, detail?: string|null,
+ *            values?: Record<string, string|null|undefined>}} TestContactRecord
+ * @typedef {{
+ *   search: (query: string, context: {user: User, limit: number}) => Promise<TestContactRecord[]>,
+ *   get: (ids: string[], context: {user: User}) => Promise<TestContactRecord[]>,
+ * }} ContactRepository
+ */
+
+/** Contacts listed per search. */
+const MAX_CONTACT_RESULTS = 50;
 
 /** Largest JSON body accepted (project 2 MB + MJML 512 KB + metadata). */
 const MAX_JSON_BYTES = 3 * 1024 * 1024;
@@ -178,6 +198,7 @@ export function createEmailBuilderHandler(options) {
   const customVariables = createVariableService({ repository: options.variableStore || null, system: variables, t });
   const brand = createBrandService({ repository: options.brandStore || null, t });
   const tags = createTagService({ repository: options.tagStore || null, t });
+  const contactStore = options.contactStore || null;
   const testLimiter = createLimiter(rateLimits.testPerHour ?? 20);
   const uploadLimiter = createLimiter(rateLimits.uploadsPerHour ?? 100);
   const proofreadLimiter = createLimiter(rateLimits.proofreadPerHour ?? 60);
@@ -193,6 +214,30 @@ export function createEmailBuilderHandler(options) {
   }
 
   const userKey = (/** @type {User} */ user) => String(user.id ?? user.name ?? 'anonymous');
+
+  /** Contact ids as the store gets them: strings, distinct; more than a test takes is refused. @param {unknown} raw */
+  const contactIds = (raw) => {
+    const ids = [...new Set((Array.isArray(raw) ? raw : []).map((id) => String(id ?? '').trim()).filter((id) => id && id.length <= 64))];
+    if (ids.length > maxTestRecipients) {
+      throw new HttpError(400, t('{max} test addresses at most', { max: maxTestRecipients }), 'TOO_MANY_RECIPIENTS');
+    }
+    return ids;
+  };
+
+  /**
+   * The contacts the user may see, among `ids`; `skipped`: the others (another
+   * client's, deleted, opted out…), said rather than dropped in silence.
+   * @param {unknown} raw @param {User} user
+   */
+  async function contactsFor(raw, user) {
+    const ids = contactIds(raw);
+    if (!ids.length) return { found: [], skipped: [] };
+    if (!contactStore) return { found: [], skipped: ids };
+    const wanted = new Set(ids);
+    const found = (await contactStore.get(ids, { user })).filter((c) => wanted.has(String(c?.id)));
+    const seen = new Set(found.map((c) => String(c.id)));
+    return { found, skipped: ids.filter((id) => !seen.has(id)) };
+  }
 
   /** @param {Request} request */
   /** The browser's language when it is one (`fr`, `pt-BR`), else the server's. @param {unknown} value */
@@ -303,16 +348,39 @@ export function createEmailBuilderHandler(options) {
       }
     }
 
+    if (section === 'contacts' && !id && method === 'GET') {
+      const user = await userFor(request, 'read');
+      if (!contactStore) throw new HttpError(501, t('Contacts are not configured'), 'NO_CONTACTS');
+      const query = (url.searchParams.get('q') || '').trim().slice(0, 100);
+      const found = await contactStore.search(query, { user, limit: MAX_CONTACT_RESULTS });
+      return json({
+        data: found.slice(0, MAX_CONTACT_RESULTS).map((c) => ({
+          id: String(c.id),
+          email: String(c.email || ''),
+          label: c.label ? String(c.label) : null,
+          detail: c.detail ? String(c.detail) : null,
+        })),
+      });
+    }
+
     if (section === 'render' && !id && method === 'POST') {
-      await userFor(request, 'read');
+      const user = await userFor(request, 'read');
       const body = await readJson(request);
       const catalog = await customVariables.catalog();
       const { compiled, warnings, quality } = await compileTemplate(
         { mjml: body?.mjml, subject: body?.subject, preheader: body?.preheader },
         { t, lang, variables: catalog, preview: true }
       );
+      // A contact: its own values. A typed address: samples, with that address.
+      let contact = null;
+      if (body?.contactId != null) {
+        [contact] = (await contactsFor([body.contactId], user)).found;
+        // Never the samples in its place: the preview would claim to be that contact's.
+        if (!contact) throw new HttpError(404, t('This contact is no longer available'), 'CONTACT_UNAVAILABLE');
+      }
+      const email = typeof body?.email === 'string' ? body.email.trim().slice(0, 254) : '';
       // Same origin as the application: uploaded images stay relative.
-      const values = sampleValues(catalog);
+      const values = contact ? contactValues(catalog, contact) : sampleValues(catalog, email ? { 'contact.email': email } : {});
       const unsubscribeUrl = previewUnsubscribeUrl || sampleUnsubscribeUrl(catalog);
       const html = personalize(compiled, { values, unsubscribeUrl, variables: catalog });
       return json({
@@ -331,11 +399,18 @@ export function createEmailBuilderHandler(options) {
       if (!transport) throw new HttpError(501, t('Test sending is not configured'), 'NO_TRANSPORT');
       if (!testLimiter(userKey(user))) throw new HttpError(429, t('Too many test sends — try again later'), 'RATE_LIMITED');
       const body = await readJson(request);
+      const contacts = await contactsFor(body?.contacts, user);
+      const typed = Array.isArray(body?.emails) ? body.emails.length : String(body?.emails || '').trim() ? 1 : 0;
+      if (!contacts.found.length && contacts.skipped.length && !typed) {
+        throw new HttpError(400, t('This contact is no longer available'), 'CONTACT_UNAVAILABLE');
+      }
       const result = await sendTestEmail({
         mjml: body?.mjml,
         subject: body?.subject,
         preheader: body?.preheader,
         emails: body?.emails,
+        contacts: contacts.found,
+        skipped: contacts.skipped,
         transport,
         baseUrl: publicUrl,
         unsubscribeUrl: previewUnsubscribeUrl,

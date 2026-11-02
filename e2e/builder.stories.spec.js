@@ -13,8 +13,8 @@ import { test, expect } from '@playwright/test';
 
 const STORY = '/?story=builder--interface&mode=preview';
 
-async function openBuilder(page, { lang, variables } = {}) {
-  await page.goto(`${STORY}${lang ? `&lang=${lang}` : ''}${variables ? `&variables=${variables}` : ''}`);
+async function openBuilder(page, { lang, variables, contacts } = {}) {
+  await page.goto(`${STORY}${lang ? `&lang=${lang}` : ''}${variables ? `&variables=${variables}` : ''}${contacts ? '&contacts=1' : ''}`);
   await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
 }
 
@@ -1069,11 +1069,65 @@ test.describe('Images, preview, test send', () => {
     await panel(page).getByLabel('Subject', { exact: true }).fill('Back to school');
     await page.getByRole('button', { name: 'Test', exact: true }).click();
     const dialog = page.getByRole('dialog').filter({ hasText: 'Send a test' });
-    await dialog.getByLabel('Addresses').fill('reviewer@example.com');
+    await dialog.getByLabel('Addresses').fill('reviewer@example.com, not-an-address');
+    await dialog.getByLabel('Addresses').press('Enter');
+    // The address joins the recipients; what is not one stays in the field.
+    await expect(dialog.getByLabel('Addresses')).toHaveValue('not-an-address');
+    const recipients = dialog.getByTestId('eb-test-recipients');
+    await expect(recipients.getByText('reviewer@example.com')).toBeVisible();
     await dialog.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(notice(page, '1 test(s) sent — check your inbox.')).toBeVisible();
     expect(await page.evaluate(() => window.__sentTests)).toEqual([{ to: 'reviewer@example.com', subject: '[TEST] Back to school' }]);
-    await expect(dialog.getByRole('list', { name: 'Results' }).getByText('reviewer@example.com')).toBeVisible();
+    await expect(recipients.getByLabel('Sent')).toBeVisible();
+  });
+
+  test('test send: the preview on the left, contacts found on the right, each previewed with its values', async ({ page }) => {
+    await openBuilder(page, { contacts: true });
+    await page.evaluate(() => window.localStorage.removeItem('best-email-builder:test-addresses'));
+    await page.getByRole('button', { name: 'Test', exact: true }).click();
+    const dialog = page.getByRole('dialog').filter({ hasText: 'Send a test' });
+    const preview = dialog.locator('iframe[title="Email preview"]');
+    const recipients = dialog.getByTestId('eb-test-recipients');
+    const found = dialog.getByTestId('eb-test-contacts');
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>sample</);
+    // Side by side: the preview on the left, the contacts on the right.
+    const [frameBox, listBox] = [await preview.boundingBox(), await found.boundingBox()];
+    expect(frameBox.x + frameBox.width).toBeLessThan(listBox.x);
+
+    await dialog.getByLabel('Find a contact').fill('grace');
+    await expect(found.getByRole('button')).toHaveCount(1);
+    await found.getByRole('button', { name: /Grace Hopper/ }).click();
+    await expect(recipients.getByText('Grace Hopper')).toBeVisible();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Grace Hopper</);
+
+    // A typed address: sample values, and it is the one previewed.
+    await dialog.getByLabel('Find a contact').fill('reviewer@example.com');
+    await found.getByRole('button', { name: 'Add “reviewer@example.com”' }).click();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>reviewer@example.com</);
+    // Back to Grace: her values again.
+    await recipients.getByRole('button', { name: /Grace Hopper/ }).click();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Grace Hopper</);
+
+    await dialog.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(notice(page, '2 test(s) sent — check your inbox.')).toBeVisible();
+    expect((await page.evaluate(() => window.__sentTests)).map((s) => s.to)).toEqual(['grace@example.com', 'reviewer@example.com']);
+
+    // The same address typed, then picked as a contact: the contact takes its place.
+    await dialog.getByLabel('Find a contact').fill('ada@example.com');
+    await dialog.getByLabel('Find a contact').press('Enter');
+    await expect(recipients.getByText('ada@example.com')).toHaveCount(1);
+    await dialog.getByLabel('Find a contact').fill('ada');
+    await found.getByRole('button', { name: /Ada Lovelace/ }).click();
+    await expect(recipients.getByRole('listitem')).toHaveCount(3);
+    await expect(recipients.getByText('Ada Lovelace')).toBeVisible();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Ada Lovelace</);
+
+    // Only the typed addresses are remembered: no contact's name stays in the browser.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await page.getByRole('button', { name: 'Test', exact: true }).click();
+    await expect(recipients.getByText('reviewer@example.com')).toBeVisible();
+    await expect(recipients.getByRole('listitem')).toHaveCount(1);
   });
 });
 

@@ -79,9 +79,13 @@ test('test send goes through the server transport', async ({ page }) => {
   await page.getByRole('button', { name: 'Test', exact: true }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Send a test' });
   await dialog.getByLabel('Addresses').fill('reviewer@example.com, not-an-address');
+  await dialog.getByLabel('Addresses').press('Enter');
+  await expect(dialog.getByLabel('Addresses')).toHaveValue('not-an-address');
+  // The server's rendering beside the recipients.
+  await expect(dialog.frameLocator('iframe[title="Email preview"]').getByText('Your text.')).toBeVisible({ timeout: 30_000 });
   await dialog.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByTestId('email-builder').getByText('1 test(s) sent — check your inbox.')).toBeVisible({ timeout: 30_000 });
-  await expect(dialog.getByText('Ignored (invalid): not-an-address')).toBeVisible();
+  await expect(dialog.getByTestId('eb-test-recipients').getByLabel('Sent')).toBeVisible();
 });
 
 test('image upload: stored by the server, served publicly with safe headers', async ({ page, request }) => {

@@ -6,6 +6,18 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- The test dialog shows the email beside its recipients, as the selected one
+  will get it. With a `contactStore` on the server (`createHttpStorage({
+  contacts: true })`), a field finds your contacts: a contact gets its own
+  values, empty ones included, read by the server from its id. A typed
+  address still gets sample values. Recipients are remembered for the next
+  test.
+
+### Fixed
+- The variable list of a link field opened in the window's top-left corner
+  under React StrictMode: the field is now its only anchor.
+
 ## [0.21.0] — 2026-10-30
 
 ### Added
