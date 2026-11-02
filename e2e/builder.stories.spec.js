@@ -754,8 +754,17 @@ test.describe('Variables', () => {
     await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveText('{{contact.firstname}}');
     expect(await mjml(page)).toBe(before);
     await firstName.click();
-    await expect.poll(() => mjml(page)).toMatch(/>\{\{contact\.firstname\}\}\s*Your headline<\/mj-text>/);
+    // A space after the tag: the next word is typed right away.
+    await expect.poll(() => mjml(page)).toMatch(/>\{\{contact\.firstname\}\} Your headline<\/mj-text>/);
     await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveCount(0);
+    await page.keyboard.press('End');
+    await badges.getByRole('button', { name: 'Last name', exact: true }).click();
+    await page.keyboard.type('and co');
+    await expect.poll(() => mjml(page)).toMatch(/Your headline\{\{contact\.lastname\}\} and co<\/mj-text>/);
+    // Before a space already there: not doubled.
+    for (let i = 0; i < ' and co'.length; i += 1) await page.keyboard.press('ArrowLeft');
+    await badges.getByRole('button', { name: 'Company', exact: true }).click();
+    await expect.poll(() => mjml(page)).toMatch(/\{\{contact\.lastname\}\}\{\{company\.name\}\} and co<\/mj-text>/);
   });
 
   test('create a custom variable: tag from the name, inserted at the caret, kept by the storage', async ({ page }) => {
@@ -883,7 +892,7 @@ test.describe('Variables', () => {
     await expect(picker.getByRole('option')).toHaveText([/First name/, /Last name/, /Company/, /Campaign name/]);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
-    await expect(subject).toHaveValue('{{contact.lastname}}Your order is ready');
+    await expect(subject).toHaveValue('{{contact.lastname}} Your order is ready');
   });
 
   test('{ } button inserts a variable in the subject line, at the caret', async ({ page }) => {
@@ -895,7 +904,7 @@ test.describe('Variables', () => {
     const picker = page.getByTestId('variable-picker');
     await expect(picker.getByRole('option', { name: /Unsubscribe link/ })).toHaveCount(0);
     await picker.getByRole('option', { name: /First name/ }).click();
-    await expect(subject).toHaveValue('{{contact.firstname}}Your order is ready');
+    await expect(subject).toHaveValue('{{contact.firstname}} Your order is ready');
   });
 
   /** Puts the pointer on the first tag of the canvas text holding `near`; its box shows. */

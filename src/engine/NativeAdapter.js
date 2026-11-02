@@ -848,7 +848,8 @@ export function createNativeAdapter({ loadCompiler = defaultLoadCompiler, imageU
       const node = selectedId ? findNode(root, selectedId) : null;
       if (!node || !TEXT_TAGS.has(node.tag)) return false;
       view.settlePreview();
-      commit(setContent(root, node.id, `${node.content || ''} ${escapeText(text)}`));
+      // At the end of the element: a trailing space would lead nowhere.
+      commit(setContent(root, node.id, `${node.content || ''} ${escapeText(text.trimEnd())}`));
       return true;
     },
 

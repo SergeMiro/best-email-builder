@@ -27,13 +27,15 @@ export default function VariableInsertButton({ variables, inputRef, value, onCha
   const insert = (variable) => {
     const input = inputRef.current;
     const text = String(value || '');
-    const token = tokenOf(variable);
     const start = input?.selectionStart ?? text.length;
     const end = input?.selectionEnd ?? text.length;
+    // A space after the tag in a text, so the next word can be typed right
+    // away; none in a link's address, nor when one already follows.
+    const token = tokenOf(variable) + (links || /^\s/.test(text.slice(end)) ? '' : ' ');
     const next = `${text.slice(0, start)}${token}${text.slice(end)}`;
     onChange(next);
     setOpen(false);
-    // Caret right after the inserted tag.
+    // Caret right after the inserted tag (and its space).
     requestAnimationFrame(() => {
       if (!input) return;
       input.focus();
