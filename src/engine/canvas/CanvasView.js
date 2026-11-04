@@ -1445,6 +1445,18 @@ export function createCanvasView(options) {
     insertText(text) {
       dropPreview();
       if (!restoreCaret()) return false;
+      // A trailing space is not doubled when the text after the caret starts with one.
+      const selection = win.getSelection();
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+      let after = '';
+      if (range && editingEl) {
+        // The text after the caret may start in the next text node.
+        const rest = doc.createRange();
+        rest.setStart(range.endContainer, range.endOffset);
+        rest.setEnd(editingEl, editingEl.childNodes.length);
+        after = rest.toString().charAt(0);
+      }
+      if (after && /\s/.test(after)) text = text.replace(/\s+$/, '');
       doc.execCommand('insertText', false, text);
       options.onEditInput(/** @type {string} */ (editingId), contentOfEditing());
       return true;

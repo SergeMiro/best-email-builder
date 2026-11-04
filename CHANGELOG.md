@@ -6,6 +6,35 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-11-04
+
+### Added
+- `TestEmailDialog` from `best-email-builder/builder` and `/library`: the test
+  dialog alone (preview, contact lists, typed addresses) for a host's own
+  button. `getMjml` is handed back to `storage.render` and `storage.sendTest`.
+- The test dialog shows the email beside its recipients, as the selected one
+  will get it. With a `contactStore` on the server (`createHttpStorage({
+  contacts: true })`), a field finds your contacts: a contact gets its own
+  values, empty ones included, read by the server from its id. A typed
+  address still gets sample values. Typed addresses are remembered for the
+  next test; contacts are not.
+- The test dialog is the preview's (devices, dark mode, refresh), with the
+  recipients beside it. Contacts are picked from the host's lists
+  (`contactStore.lists`), addresses typed in a field of their own; while the
+  test leaves, the preview goes from one recipient to the next.
+- The preview's « Fictitious values » switch: off, every variable shows as its
+  tag, unsubscribe link included (`render({ samples: false })`).
+
+### Changed
+- A variable is inserted with a space after it (none in a link's address,
+  nor before a space already there): the next word is typed right away.
+
+### Fixed
+- The variable list of a link field opened in the window's top-left corner
+  under React StrictMode: the field is now its only anchor.
+- A select or popover inside a builder dialog opened under it when the host
+  pins every Radix popper below its own modals (scroll-locked body).
+
 ## [0.22.0] — 2026-11-04
 
 ### Added

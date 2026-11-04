@@ -4,7 +4,7 @@
  * (`sendTestEmail`). Shown when the storage can send tests.
  */
 
-import TestEmailButton from './TestEmailButton.jsx';
+import TestEmailButton from './TestEmailDialog.jsx';
 
 /** @type {import('../../core/EmailEditor.js').EmailBuilderFeature} */
 export const testEmailFeature = {

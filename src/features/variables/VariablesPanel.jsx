@@ -232,9 +232,10 @@ export default function VariablesPanel({ context }) {
     },
   });
 
-  // Every variable alike, the unsubscribe link too: its tag, as typed.
+  // Every variable alike, the unsubscribe link too: its tag, as typed, and a
+  // space after it so the next word can be typed right away.
   const insert = (variable) => {
-    const done = editor.insertText(tokenOf(variable));
+    const done = editor.insertText(`${tokenOf(variable)} `);
     if (!done) notify('info', t('Select a text or a button first.'));
   };
 
@@ -357,7 +358,7 @@ export default function VariablesPanel({ context }) {
             await reloadVariables();
             if (created) {
               // A text was being edited: the new variable goes at its caret.
-              if (editor.insertText(tokenOf(variable))) {
+              if (editor.insertText(`${tokenOf(variable)} `)) {
                 notify('success', t('Variable “{name}” created and inserted.', { name: variable.label }));
               } else {
                 notify('success', t('Variable “{name}” created.', { name: variable.label }));

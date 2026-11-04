@@ -13,8 +13,10 @@ import { test, expect } from '@playwright/test';
 
 const STORY = '/?story=builder--interface&mode=preview';
 
-async function openBuilder(page, { lang, variables } = {}) {
-  await page.goto(`${STORY}${lang ? `&lang=${lang}` : ''}${variables ? `&variables=${variables}` : ''}`);
+async function openBuilder(page, { lang, variables, contacts, sendMs } = {}) {
+  await page.goto(
+    `${STORY}${lang ? `&lang=${lang}` : ''}${variables ? `&variables=${variables}` : ''}${contacts ? '&contacts=1' : ''}${sendMs ? `&sendMs=${sendMs}` : ''}`
+  );
   await expect(page.getByTestId('email-builder')).toHaveAttribute('data-status', 'ready', { timeout: 60_000 });
 }
 
@@ -754,8 +756,17 @@ test.describe('Variables', () => {
     await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveText('{{contact.firstname}}');
     expect(await mjml(page)).toBe(before);
     await firstName.click();
-    await expect.poll(() => mjml(page)).toMatch(/>\{\{contact\.firstname\}\}\s*Your headline<\/mj-text>/);
+    // A space after the tag: the next word is typed right away.
+    await expect.poll(() => mjml(page)).toMatch(/>\{\{contact\.firstname\}\} Your headline<\/mj-text>/);
     await expect(canvas(page).getByTestId('eb-canvas-preview')).toHaveCount(0);
+    await page.keyboard.press('End');
+    await badges.getByRole('button', { name: 'Last name', exact: true }).click();
+    await page.keyboard.type('and co');
+    await expect.poll(() => mjml(page)).toMatch(/Your headline\{\{contact\.lastname\}\} and co<\/mj-text>/);
+    // Before a space already there: not doubled.
+    for (let i = 0; i < ' and co'.length; i += 1) await page.keyboard.press('ArrowLeft');
+    await badges.getByRole('button', { name: 'Company', exact: true }).click();
+    await expect.poll(() => mjml(page)).toMatch(/\{\{contact\.lastname\}\}\{\{company\.name\}\} and co<\/mj-text>/);
   });
 
   test('create a custom variable: tag from the name, inserted at the caret, kept by the storage', async ({ page }) => {
@@ -883,7 +894,7 @@ test.describe('Variables', () => {
     await expect(picker.getByRole('option')).toHaveText([/First name/, /Last name/, /Company/, /Campaign name/]);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
-    await expect(subject).toHaveValue('{{contact.lastname}}Your order is ready');
+    await expect(subject).toHaveValue('{{contact.lastname}} Your order is ready');
   });
 
   test('{ } button inserts a variable in the subject line, at the caret', async ({ page }) => {
@@ -895,7 +906,7 @@ test.describe('Variables', () => {
     const picker = page.getByTestId('variable-picker');
     await expect(picker.getByRole('option', { name: /Unsubscribe link/ })).toHaveCount(0);
     await picker.getByRole('option', { name: /First name/ }).click();
-    await expect(subject).toHaveValue('{{contact.firstname}}Your order is ready');
+    await expect(subject).toHaveValue('{{contact.firstname}} Your order is ready');
   });
 
   /** Puts the pointer on the first tag of the canvas text holding `near`; its box shows. */
@@ -1056,6 +1067,17 @@ test.describe('Images, preview, test send', () => {
     await expect(dialog.getByText('Email preview').first()).toBeVisible();
     await expect(dialog.frameLocator('iframe[title="Email preview"]').getByText(/Your headline/)).toBeVisible();
     await expect(dialog.getByText('Images without alt text: 1')).toBeVisible();
+    // Sample values on by default; off, the variables show as their tags.
+    const preview = dialog.locator('iframe[title="Email preview"]');
+    const samples = dialog.getByRole('button', { name: 'Fictitious values' });
+    await expect(samples).toHaveAttribute('aria-pressed', 'true');
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>sample</);
+    await samples.click();
+    await expect(samples).toHaveAttribute('aria-pressed', 'false');
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>tags</);
+    await expect(dialog.getByText('Final rendering, variables shown as tags.')).toBeVisible();
+    await samples.click();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>sample</);
     // One scrollbar: the frame fills its box and scrolls the email, the box itself does not scroll.
     const fit = await dialog.locator('iframe[title="Email preview"]').evaluate((frame) => {
       const box = frame.closest('[data-device]').parentElement;
@@ -1069,11 +1091,89 @@ test.describe('Images, preview, test send', () => {
     await panel(page).getByLabel('Subject', { exact: true }).fill('Back to school');
     await page.getByRole('button', { name: 'Test', exact: true }).click();
     const dialog = page.getByRole('dialog').filter({ hasText: 'Send a test' });
-    await dialog.getByLabel('Addresses').fill('reviewer@example.com');
+    await dialog.getByLabel('Addresses').fill('reviewer@example.com, not-an-address');
+    await dialog.getByLabel('Addresses').press('Enter');
+    // The address joins the recipients; what is not one stays in the field.
+    await expect(dialog.getByLabel('Addresses')).toHaveValue('not-an-address');
+    const recipients = dialog.getByTestId('eb-test-recipients');
+    await expect(recipients.getByText('reviewer@example.com')).toBeVisible();
     await dialog.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(notice(page, '1 test(s) sent — check your inbox.')).toBeVisible();
     expect(await page.evaluate(() => window.__sentTests)).toEqual([{ to: 'reviewer@example.com', subject: '[TEST] Back to school' }]);
-    await expect(dialog.getByRole('list', { name: 'Results' }).getByText('reviewer@example.com')).toBeVisible();
+    await expect(recipients.getByLabel('Sent')).toBeVisible();
+  });
+
+  test('test send: the preview on the left, contact lists and addresses on the right, each recipient previewed with its values', async ({ page }) => {
+    await openBuilder(page, { contacts: true, sendMs: 2500 });
+    await page.evaluate(() => window.localStorage.removeItem('best-email-builder:test-addresses'));
+    await panel(page).getByLabel('Subject', { exact: true }).fill('Hello {{contact.firstname}}');
+    await page.getByRole('button', { name: 'Test', exact: true }).click();
+    const dialog = page.getByRole('dialog').filter({ hasText: 'Send a test' });
+    const preview = dialog.locator('iframe[title="Email preview"]');
+    const recipients = dialog.getByTestId('eb-test-recipients');
+    const found = dialog.getByTestId('eb-test-contacts');
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>sample</);
+    // As in the preview: devices and refresh; nothing between the email and the contacts.
+    await expect(dialog.getByRole('tab', { name: 'Mobile' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Refresh' })).toBeVisible();
+    await expect(dialog.getByText('Inbox')).toHaveCount(0);
+    const [frameBox, listBox] = [await preview.boundingBox(), await found.boundingBox()];
+    expect(frameBox.x + frameBox.width).toBeLessThan(listBox.x);
+    expect(listBox.x - (frameBox.x + frameBox.width)).toBeLessThan(80);
+    expect(listBox.width).toBeGreaterThan(500);
+
+    // A list: its contacts only. The options stay above the dialog even when the
+    // host pins every popper under a scroll lock (as the Extranet does).
+    await page.addStyleTag({ content: 'body[data-scroll-locked] [data-radix-popper-content-wrapper] { z-index: 60 !important; }' });
+    await expect(found.getByRole('button')).toHaveCount(2);
+    await dialog.getByRole('combobox', { name: 'Contact lists' }).click();
+    await page.getByRole('option', { name: /Navy/ }).click();
+    await expect(found.getByRole('button')).toHaveCount(1);
+    await found.getByRole('button', { name: /Grace Hopper/ }).click();
+    await expect(recipients.getByText('Grace Hopper')).toBeVisible();
+    // Her email: the preview is hers.
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Grace Hopper</);
+    // Clicked again: out of the recipients.
+    await found.getByRole('button', { name: /Grace Hopper/ }).click();
+    await expect(recipients).toHaveCount(0);
+    await found.getByRole('button', { name: /Grace Hopper/ }).click();
+
+    // Addresses typed by hand, without a list: sample values.
+    await dialog.getByLabel('Addresses').fill('reviewer@example.com, not-an-address');
+    await dialog.getByRole('button', { name: 'Add', exact: true }).click();
+    await expect(dialog.getByLabel('Addresses')).toHaveValue('not-an-address');
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>reviewer@example.com</);
+    // Back to Grace: her values again.
+    await recipients.getByRole('button', { name: /Grace Hopper/ }).click();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Grace Hopper</);
+
+    // While the test leaves, the preview goes from one recipient to the next.
+    await dialog.getByRole('button', { name: 'Send', exact: true }).click();
+    await expect(dialog.getByText('Sending to grace@example.com…')).toBeVisible();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>reviewer@example.com</);
+    await expect(dialog.getByText('Sending to reviewer@example.com…')).toBeVisible();
+    await expect(notice(page, '2 test(s) sent — check your inbox.')).toBeVisible();
+    expect((await page.evaluate(() => window.__sentTests)).map((s) => s.to)).toEqual(['grace@example.com', 'reviewer@example.com']);
+    await expect(recipients.getByLabel('Sent')).toHaveCount(2);
+
+    // The same address typed, then picked as a contact: the contact takes its place.
+    await dialog.getByLabel('Addresses').fill('ada@example.com');
+    await dialog.getByLabel('Addresses').press('Enter');
+    await expect(recipients.getByText('ada@example.com')).toHaveCount(1);
+    await dialog.getByRole('combobox', { name: 'Contact lists' }).click();
+    await page.getByRole('option', { name: 'All contacts' }).click();
+    await dialog.getByLabel('Find a contact').fill('ada');
+    await found.getByRole('button', { name: /Ada Lovelace/ }).click();
+    await expect(recipients.getByRole('listitem')).toHaveCount(3);
+    await expect(recipients.getByText('Ada Lovelace')).toBeVisible();
+    await expect(preview).toHaveAttribute('srcdoc', /data-recipient>Ada Lovelace</);
+
+    // Only the typed addresses are remembered: no contact's name stays in the browser.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await page.getByRole('button', { name: 'Test', exact: true }).click();
+    await expect(recipients.getByText('reviewer@example.com')).toBeVisible();
+    await expect(recipients.getByRole('listitem')).toHaveCount(1);
   });
 });
 

@@ -10,6 +10,7 @@
 
 export { default as EmailBuilder } from './ui/EmailBuilder.jsx';
 export { default as EmailBuilderBoundary } from './ui/EmailBuilderBoundary.jsx';
+export { TestEmailDialog } from './features/test-email/TestEmailDialog.jsx';
 export { createHttpStorage, createMemoryStorage, StorageError } from './storage/client.js';
 export { createStarterMjml, STARTER_MJML } from './features/templates/starter.js';
 export { TEMPLATE_GALLERY, buildGallery } from './features/templates/gallery.js';

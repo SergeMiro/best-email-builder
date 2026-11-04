@@ -21,7 +21,10 @@
 @source './';
 
 /* Radix portals escape clipped panels and stay above host and canvas layers. */
-.eb-scope[data-eb-overlay] {
+.eb-scope[data-eb-overlay],
+/* Radix wraps a select or popover in its own positioned layer: lift it too, even
+   when the host pins every popper under a scroll lock (it would sit under our dialog). */
+[data-radix-popper-content-wrapper]:has(> .eb-scope[data-eb-overlay]) {
   z-index: 2147483647 !important;
 }
 

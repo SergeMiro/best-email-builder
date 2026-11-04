@@ -169,6 +169,133 @@ test('test send without transport: 501', async () => {
   assert.equal((await call('POST', '/api/email-builder/test', { mjml: STARTER_MJML, emails: ['a@example.com'] })).status, 501);
 });
 
+/** A host's contacts: user 7 sees Ada (and her empty last name), never Bob. */
+function contactStore() {
+  const rows = [
+    { id: '1', owner: 7, email: 'ada@example.com', label: 'Ada', detail: 'Acme', lists: ['5'], values: { 'contact.firstname': 'Ada', 'contact.lastname': '' } },
+    { id: '2', owner: 8, email: 'bob@example.com', label: 'Bob', detail: 'Other', values: { 'contact.firstname': 'Bob' } },
+  ];
+  const calls = [];
+  const visible = (user) => rows.filter((r) => r.owner === user.id);
+  return {
+    calls,
+    search: async (query, { user, limit, list }) => {
+      calls.push({ query, limit, list });
+      return visible(user).filter(
+        (r) => (!list || r.lists?.includes(list)) && `${r.label} ${r.email}`.toLowerCase().includes(query.toLowerCase())
+      );
+    },
+    get: async (ids, { user }) => visible(user).filter((r) => ids.includes(r.id)),
+    lists: async ({ user }) => (user.id === 7 ? [{ id: 5, name: 'Clients', detail: 'Acme', count: '1' }] : []),
+  };
+}
+
+test('contacts: searched for the user, without their values; 501 without a store', async () => {
+  const store = contactStore();
+  const { call } = setup({ contactStore: store });
+  const res = await call('GET', '/api/email-builder/contacts?q=ad');
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).data, [{ id: '1', email: 'ada@example.com', label: 'Ada', detail: 'Acme' }]);
+  assert.deepEqual(store.calls, [{ query: 'ad', limit: 50, list: null }]);
+  assert.equal((await call('GET', '/api/email-builder/contacts?q=ad', null, { auth: false })).status, 401);
+  assert.equal((await setup().call('GET', '/api/email-builder/contacts')).status, 501);
+});
+
+test('contacts: the user’s lists, and the contacts of one list', async () => {
+  const store = contactStore();
+  const { call } = setup({ contactStore: store });
+  const lists = await call('GET', '/api/email-builder/contacts/lists');
+  assert.equal(lists.status, 200);
+  assert.deepEqual((await lists.json()).data, [{ id: '5', name: 'Clients', detail: 'Acme', count: 1 }]);
+  assert.deepEqual((await (await call('GET', '/api/email-builder/contacts?q=&list=5')).json()).data.map((c) => c.id), ['1']);
+  assert.deepEqual((await (await call('GET', '/api/email-builder/contacts?q=&list=9')).json()).data, []);
+  assert.equal(store.calls.at(-1).list, '9');
+  // A store without lists: none, not an error.
+  const { lists: _lists, ...noLists } = contactStore();
+  assert.deepEqual((await (await setup({ contactStore: noLists }).call('GET', '/api/email-builder/contacts/lists')).json()).data, []);
+  assert.equal((await setup().call('GET', '/api/email-builder/contacts/lists')).status, 501);
+  assert.equal((await call('GET', '/api/email-builder/contacts/lists', null, { auth: false })).status, 401);
+});
+
+test('render: the values the variables took come back with the email', async () => {
+  const { call } = setup({ contactStore: contactStore() });
+  const values = async (body) =>
+    (await (await call('POST', '/api/email-builder/render', { mjml: MJML, ...body })).json()).data.values;
+  assert.equal((await values({ contactId: '1' }))['contact.firstname'], 'Ada');
+  assert.equal((await values({ contactId: '1' }))['contact.lastname'], '');
+  assert.equal((await values({ email: 'rev@example.com' }))['contact.email'], 'rev@example.com');
+  assert.notEqual((await values({}))['contact.firstname'], 'Ada');
+});
+
+test('render: without samples, every variable stays a tag; a contact or an address keeps its values', async () => {
+  const { call } = setup({ contactStore: contactStore() });
+  const render = async (body) =>
+    (await (await call('POST', '/api/email-builder/render', { mjml: MJML, subject: 'Hi {{contact.firstname}}', ...body })).json()).data;
+  const raw = await render({ samples: false, mjml: MJML.replace('</mj-text>', ' {{unsubscribe}}</mj-text>') });
+  assert.match(raw.html, /Hello \{\{contact\.firstname\}\} \{\{unsubscribe\}\}/);
+  assert.equal(raw.subject, 'Hi {{contact.firstname}}');
+  assert.deepEqual(raw.values, {});
+  assert.doesNotMatch((await render({})).html, /\{\{/);
+  assert.match((await render({ contactId: '1', samples: false })).html, /Hello Ada/);
+  assert.doesNotMatch((await render({ email: 'rev@example.com', samples: false })).html, /\{\{/);
+});
+
+test('render: a contact’s own values, a typed address’s samples, another user’s contact refused', async () => {
+  const { call } = setup({ contactStore: contactStore() });
+  const render = (body) => call('POST', '/api/email-builder/render', { mjml: MJML, ...body });
+  const html = async (body) => (await (await render(body)).json()).data.html;
+  assert.match(await html({ contactId: '1' }), /Hello Ada/);
+  assert.doesNotMatch(await html({}), /Hello Ada|Hello Bob/);
+  // Bob belongs to another user: neither his values nor samples posing as his.
+  const bob = await render({ contactId: '2' });
+  assert.equal(bob.status, 404);
+  assert.equal((await bob.json()).code, 'CONTACT_UNAVAILABLE');
+  assert.equal((await setup().call('POST', '/api/email-builder/render', { mjml: MJML, contactId: '1' })).status, 404);
+});
+
+test('test send: a contact gets its values, empty ones included; a typed address the samples', async () => {
+  const { call, sent } = setup({ contactStore: contactStore() });
+  const mjml = MJML.replace('Hello {{contact.firstname}}', 'Hello {{contact.firstname}} [{{contact.lastname}}]');
+  const res = await call('POST', '/api/email-builder/test', {
+    mjml,
+    subject: 'Hi {{contact.firstname}}',
+    emails: ['reviewer@example.com', 'ADA@example.com'],
+    contacts: ['1', '2', '1'],
+  });
+  const report = (await res.json()).data;
+  // Bob is not the user's: not sent, and said so. Ada typed again: one send, with her values.
+  assert.deepEqual(report.results.map((r) => r.email), ['ada@example.com', 'reviewer@example.com']);
+  assert.deepEqual(report.skipped, ['2']);
+  assert.equal(sent[0].subject, '[TEST] Hi Ada');
+  assert.match(sent[0].html, /Hello Ada \[\]/);
+  assert.doesNotMatch(sent[1].html, /Hello Ada/);
+  assert.doesNotMatch(sent[1].html, /\[\]/);
+});
+
+test('test send to contacts: none left is an error, too many is refused, never cut', async () => {
+  const { call, sent } = setup({ contactStore: contactStore(), maxTestRecipients: 2 });
+  const only = await call('POST', '/api/email-builder/test', { mjml: MJML, contacts: ['2'] });
+  assert.equal(only.status, 400);
+  assert.equal((await only.json()).code, 'CONTACT_UNAVAILABLE');
+  const many = await call('POST', '/api/email-builder/test', { mjml: MJML, contacts: ['1', '2', '3'] });
+  assert.equal(many.status, 400);
+  assert.equal((await many.json()).code, 'TOO_MANY_RECIPIENTS');
+  // Contacts and typed addresses count together.
+  const mixed = await call('POST', '/api/email-builder/test', { mjml: MJML, contacts: ['1'], emails: ['a@example.com', 'b@example.com'] });
+  assert.equal(mixed.status, 400);
+  assert.equal(sent.length, 0);
+});
+
+test('sendTestEmail: a contact with an unusable address is listed as invalid', async () => {
+  const report = await sendTestEmail({
+    mjml: STARTER_MJML,
+    contacts: [{ email: 'not-an-address', values: {} }, { email: 'Ada@Example.com', values: { 'contact.firstname': 'Ada' } }],
+    transport: { send: async () => {} },
+  });
+  assert.deepEqual(report.invalid, ['not-an-address']);
+  assert.deepEqual(report.results.map((r) => r.email), ['ada@example.com']);
+});
+
 test('sendTestEmail: a failing address does not stop the others', async () => {
   const report = await sendTestEmail({
     mjml: STARTER_MJML,

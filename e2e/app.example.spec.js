@@ -79,9 +79,13 @@ test('test send goes through the server transport', async ({ page }) => {
   await page.getByRole('button', { name: 'Test', exact: true }).click();
   const dialog = page.getByRole('dialog').filter({ hasText: 'Send a test' });
   await dialog.getByLabel('Addresses').fill('reviewer@example.com, not-an-address');
+  await dialog.getByLabel('Addresses').press('Enter');
+  await expect(dialog.getByLabel('Addresses')).toHaveValue('not-an-address');
+  // The server's rendering beside the recipients.
+  await expect(dialog.frameLocator('iframe[title="Email preview"]').getByText('Your text.')).toBeVisible({ timeout: 30_000 });
   await dialog.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(page.getByTestId('email-builder').getByText('1 test(s) sent — check your inbox.')).toBeVisible({ timeout: 30_000 });
-  await expect(dialog.getByText('Ignored (invalid): not-an-address')).toBeVisible();
+  await expect(dialog.getByTestId('eb-test-recipients').getByLabel('Sent')).toBeVisible();
 });
 
 test('image upload: stored by the server, served publicly with safe headers', async ({ page, request }) => {
@@ -151,5 +155,30 @@ test('brand: the server reads public websites only, keeps the brand, and the ema
   } finally {
     // The dev server is shared by the other tests: back to no brand.
     await request.put('/api/email-builder/brand', { data: {} });
+  }
+});
+
+// Under StrictMode in development (this app), effects run twice: the { }
+// button, once a Radix trigger, took back the anchor and the list opened in
+// the window's top-left corner.
+test('link: the variable list opens under the address field, and the { } button closes it', async ({ page }) => {
+  await openNew(page);
+  const canvas = page.frameLocator('.eb-canvas-frame');
+  await page.locator('[data-block-id="text"]').click();
+  await canvas.getByText('Your text.', { exact: true }).last().dblclick();
+  await page.getByTestId('eb-ribbon').locator('[data-command="link"]').click();
+  const button = page.getByRole('button', { name: 'Insert a variable in the link' });
+  const list = page.locator('[data-slot="popover-content"]').filter({ has: page.getByTestId('variable-picker') });
+  for (let round = 0; round < 2; round += 1) {
+    await button.click();
+    await expect(list).toBeVisible();
+    await expect.poll(async () => {
+      const field = await page.getByRole('textbox', { name: 'Link URL' }).boundingBox();
+      const box = await list.boundingBox();
+      return [Math.round(box.x - field.x), Math.round(box.width - field.width), box.y > field.y + field.height];
+    }).toEqual([0, 0, true]);
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await button.click();
+    await expect(list).toHaveCount(0);
   }
 });

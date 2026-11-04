@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Eye, Info, Loader2, Monitor, Moon, RefreshCw, Smartphone, Sun } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Braces, CheckCircle2, Eye, Info, Loader2, Monitor, Moon, RefreshCw, Smartphone, Sun } from 'lucide-react';
 import { EMAIL_MOBILE_WIDTH } from '../../core/constants.js';
 import { FRAME_SCROLLBAR_CSS } from '../../core/scrollbars.js';
 import { useUi } from '../../ui/context.jsx';
 import { Button } from '../../ui/primitives/button.jsx';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../ui/primitives/overlays.jsx';
-import { SectionLabel, Tabs, TabsList, TabsTrigger } from '../../ui/primitives/misc.jsx';
+import { FilterChip, SectionLabel, Tabs, TabsList, TabsTrigger } from '../../ui/primitives/misc.jsx';
 import { cn } from '../../ui/primitives/cn.js';
 import { DARK_PAGE, simulateDarkMode } from './darkMode.js';
 
@@ -71,10 +71,10 @@ const withPreviewScrollbars = (html) =>
   !html ? '' : /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${PREVIEW_SCROLLBAR_CSS}</head>`) : PREVIEW_SCROLLBAR_CSS + html;
 
 /**
- * Sandboxed preview frame, desktop or mobile width, light or dark.
- * @param {{html: string, loading?: boolean, error?: string|null, device?: 'desktop'|'mobile', onDeviceChange?: (device: 'desktop'|'mobile') => void, onRefresh?: () => void, hint?: boolean}} props
+ * Sandboxed preview frame, desktop or mobile width, light or dark. `actions`: beside Refresh.
+ * @param {{html: string, loading?: boolean, error?: string|null, device?: 'desktop'|'mobile', onDeviceChange?: (device: 'desktop'|'mobile') => void, onRefresh?: () => void, hint?: boolean, actions?: import('react').ReactNode}} props
  */
-export function EmailPreview({ html, loading = false, error = null, device = 'desktop', onDeviceChange, onRefresh, hint = true }) {
+export function EmailPreview({ html, loading = false, error = null, device = 'desktop', onDeviceChange, onRefresh, hint = true, actions = null }) {
   const { t } = useUi();
   const isMobile = device === 'mobile';
   const [scheme, setScheme] = useState('light');
@@ -109,6 +109,7 @@ export function EmailPreview({ html, loading = false, error = null, device = 'de
           </TabsList>
         </Tabs>
         <span className="eb:flex-1" />
+        {actions}
         {onRefresh && (
           <Button variant="outline" size="sm-compact" onClick={onRefresh} disabled={loading}>
             {loading ? <Loader2 className="eb:animate-spin" /> : <RefreshCw />}
@@ -167,12 +168,23 @@ export default function PreviewButton({ context }) {
   const { t } = useUi();
   const [open, setOpen] = useState(false);
   const [device, setDevice] = useState('desktop');
-  const [state, setState] = useState({ loading: false, html: '', subject: null, preheader: null, warnings: [], quality: [], error: null });
+  const [state, setState] = useState({ loading: false, html: '', subject: null, preheader: null, warnings: [], quality: [], error: null, samples: true });
+  // Sample values (Jean Dupont…) by default; off, every variable shows as its tag.
+  const [samples, setSamples] = useState(true);
+  const run = useRef(0);
 
-  const refresh = async () => {
+  const refresh = async (withSamples = samples) => {
+    const current = ++run.current;
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const data = await storage.render({ mjml: editor.exportMjml(), subject: meta.subject, preheader: meta.preheader });
+      const data = await storage.render({
+        mjml: editor.exportMjml(),
+        subject: meta.subject,
+        preheader: meta.preheader,
+        ...(withSamples ? {} : { samples: false }),
+      });
+      // A later render (the switch toggled meanwhile) wins.
+      if (current !== run.current) return;
       setState({
         loading: false,
         html: data.html,
@@ -182,9 +194,12 @@ export default function PreviewButton({ context }) {
         warnings: data.warnings || [],
         quality: data.quality || [],
         error: null,
+        // What the frame shows, not what was just asked for.
+        samples: withSamples,
       });
     } catch (error) {
-      setState({ loading: false, html: '', subject: null, preheader: null, warnings: [], quality: [], error: error.message });
+      if (current !== run.current) return;
+      setState({ loading: false, html: '', subject: null, preheader: null, warnings: [], quality: [], error: error.message, samples: withSamples });
     }
   };
 
@@ -196,7 +211,7 @@ export default function PreviewButton({ context }) {
         disabled={!ready}
         onClick={() => {
           setOpen(true);
-          refresh();
+          void refresh();
         }}
       >
         <Eye />
@@ -211,7 +226,9 @@ export default function PreviewButton({ context }) {
               </span>
               <div>
                 <DialogTitle className="eb:text-base eb:font-normal">{t('Email preview')}</DialogTitle>
-                <DialogDescription className="eb:text-[13px]">{t('Final rendering, variables filled with samples.')}</DialogDescription>
+                <DialogDescription className="eb:text-[13px]">
+                  {state.samples ? t('Final rendering, variables filled with samples.') : t('Final rendering, variables shown as tags.')}
+                </DialogDescription>
               </div>
             </div>
           </DialogHeader>
@@ -223,7 +240,19 @@ export default function PreviewButton({ context }) {
               error={state.error}
               device={device}
               onDeviceChange={setDevice}
-              onRefresh={refresh}
+              onRefresh={() => void refresh()}
+              actions={
+                <FilterChip
+                  pressed={samples}
+                  onClick={() => {
+                    setSamples(!samples);
+                    void refresh(!samples);
+                  }}
+                >
+                  <Braces className="eb:size-3" />
+                  {t('Fictitious values')}
+                </FilterChip>
+              }
               // The reminder points to "Send test": only when it exists.
               hint={typeof storage.sendTest === 'function'}
             />
