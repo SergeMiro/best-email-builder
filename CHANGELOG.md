@@ -6,6 +6,8 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-11-04
+
 ### Added
 - `EmailPreview` from `best-email-builder/library`: the library's preview
   frame (desktop or mobile, light or dark) for a host's own screens.
