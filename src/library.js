@@ -9,6 +9,7 @@
  */
 
 export { default as TemplateLibrary } from './ui/library/TemplateLibrary.jsx';
+export { EmailPreview } from './features/preview/PreviewButton.jsx';
 export { createHttpStorage, createMemoryStorage, StorageError } from './storage/client.js';
 export { withPlaceholderImages } from './features/templates/thumbnails.js';
 export { MAX_TEMPLATE_TAGS, TAG_COLORS, validateTag } from './features/tags/tags.js';
