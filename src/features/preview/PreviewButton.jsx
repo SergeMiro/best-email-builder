@@ -70,7 +70,10 @@ const PREVIEW_SCROLLBAR_CSS = `<style data-preview-scrollbar>${FRAME_SCROLLBAR_C
 const withPreviewScrollbars = (html) =>
   !html ? '' : /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${PREVIEW_SCROLLBAR_CSS}</head>`) : PREVIEW_SCROLLBAR_CSS + html;
 
-/** Sandboxed preview frame, desktop or mobile width, light or dark. */
+/**
+ * Sandboxed preview frame, desktop or mobile width, light or dark.
+ * @param {{html: string, loading?: boolean, error?: string|null, device?: 'desktop'|'mobile', onDeviceChange?: (device: 'desktop'|'mobile') => void, onRefresh?: () => void, hint?: boolean}} props
+ */
 export function EmailPreview({ html, loading = false, error = null, device = 'desktop', onDeviceChange, onRefresh, hint = true }) {
   const { t } = useUi();
   const isMobile = device === 'mobile';
