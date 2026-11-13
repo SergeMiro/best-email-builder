@@ -6,6 +6,17 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-11-13
+
+### Fixed
+- New Outlook (Windows), Outlook on the web and webmails that ignore media
+  queries showed the columns of a row stacked, one under the other, in a
+  600 px email. Each column of a multi-column row now carries its pixel width
+  inline (`max-width`, the width MJML computes for classic Outlook): the
+  columns sit side by side at the email's width in every client, and still
+  stack full width on a phone. Saved templates get it when saved or rendered
+  again.
+
 ## [0.23.0] — 2026-11-04
 
 ### Added

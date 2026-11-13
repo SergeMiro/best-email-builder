@@ -1,4 +1,4 @@
-import { prepareColumnAlignment } from '../../src/renderer/columnAlignment.js';
+import { capColumnWidths, prepareColumnAlignment } from '../../src/renderer/columnAlignment.js';
 /**
  * EMAIL CLIENTS — what the server compiles is checked against the rules
  * Outlook, Gmail and Apple Mail impose. They cannot run here; the HTML they
@@ -88,10 +88,12 @@ test('mobile: a viewport, the columns media query, and columns stacking where <s
     assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1">/, id);
     if (/mj-column-per-/.test(html)) {
       assert.match(html, /@media only screen and \(min-width:480px\)/, `${id}: columns side by side only from 480 px`);
-      // Without <style> (some webmails strip it), every column falls back to the full width.
-      for (const column of html.match(/<div class="mj-column-per-[^"]*"[^>]*>/g) || []) {
-        assert.match(column, /width:\s*100%/, `${id}: ${column.slice(0, 90)}`);
+      // Without media queries (new Outlook, webmails that strip <style>), the columns of a row
+      // still sit side by side: full width, capped inline at their pixel width; stacked on a phone.
+      for (const column of html.match(/<div\s+class="mj-column-[^"]*\beb-va-col\b[^"]*"[^>]*>/g) || []) {
+        if (/width:100%/.test(column)) assert.match(column, /width:100%;max-width:\d+px;/, `${id}: ${column.slice(0, 120)}`);
       }
+      if (/eb-va-col/.test(html)) assert.match(html, /@media only screen and \(max-width:479px\) \{\.eb-va-col \{max-width:100%!important;\}\}/, id);
     }
   }
 });
@@ -130,7 +132,7 @@ test('what the canvas shows is what is sent: the canvas compiler and the server 
     const server = await compileMjml(prepared);
     const canvas = await canvasCompile(prepareColumnAlignment(prepared), { validationLevel: 'soft', keepComments: false, fonts: {} });
     const body = (html) => /<body[^>]*>([\s\S]*)<\/body>/.exec(html)[1].replace(/\s+/g, ' ').trim();
-    assert.equal(body(canvas.html), body(server.html), id);
+    assert.equal(body(capColumnWidths(canvas.html)), body(server.html), id);
   }
 });
 
@@ -170,4 +172,10 @@ test('a preview keeps the image with no picture yet (its frame is drawn), what i
   assert.match(preview.compiled, /<img\b[^>]*alt="To fill"/);
   // Both say it, so the person fills it.
   for (const { quality } of [sent, preview]) assert.ok(quality.some((issue) => issue.code === 'IMAGE_NO_SRC'));
+});
+
+test('new Outlook: two columns side by side at 600 px without the media query, their caps adding up to the row', async () => {
+  const { html } = await compileMjml('<mjml><mj-body width="600px"><mj-section><mj-column width="39%"><mj-text>Logo</mj-text></mj-column><mj-column width="61%"><mj-text>Menu</mj-text></mj-column></mj-section></mj-body></mjml>');
+  const caps = [...html.matchAll(/eb-va-col[^"]*"\s+style="[^"]*max-width:(\d+)px;/g)].map((match) => Number(match[1]));
+  assert.deepEqual(caps, [234, 366]);
 });

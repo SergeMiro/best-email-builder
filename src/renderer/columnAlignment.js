@@ -49,7 +49,24 @@ export function prepareColumnAlignment(source) {
     `@media only screen and (min-width:${breakpoint}) {` +
     '.eb-va-row {display:table;width:100%;table-layout:fixed;}' +
     '.eb-va-row > .eb-va-col {display:table-cell!important;}' +
-    '}' }));
+    '}' +
+    // Undo the inline px cap of `capColumnWidths` on phones: columns stack full width.
+    `@media only screen and (max-width:${Number.parseFloat(breakpoint) - 1}px) {.eb-va-col {max-width:100%!important;}}` }));
   if (backgrounds.length) head.children.push(createNode('mj-style', { attributes: { inline: 'inline' }, content: backgrounds.join('') }));
   return serializeMjml(root);
+}
+
+/**
+ * Columns side by side without media queries (new Outlook, Outlook on the web,
+ * webmails that drop `<style>`): MJML gives a stacked column `width:100%` and
+ * only widens it from the breakpoint up. Capping it inline at the pixel width
+ * MJML computed for Outlook's table lets the columns sit side by side at the
+ * email's width and wrap on their own on a narrow screen.
+ * @param {string} html
+ */
+export function capColumnWidths(html) {
+  return html.replace(
+    /(<td\b[^>]*?\bstyle="[^"]*?\bwidth:(\d+(?:\.\d+)?)px;[^"]*"[^>]*>(?:\s*<!\[endif\]-->)?\s*<div\s+class="[^"]*\beb-va-col\b[^"]*"\s+style="[^"]*?)\bwidth:100%;/g,
+    (_, before, width) => `${before}width:100%;max-width:${Math.floor(Number(width))}px;`
+  );
 }

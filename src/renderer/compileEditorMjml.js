@@ -4,7 +4,7 @@ import { boxKeys } from '../core/blockBox.js';
 import { createNode, findFirst, walk } from '../engine/model.js';
 import { toValues, parseBorder, parseSpacing } from '../core/mjmlAttributes.js';
 import { MJML_DEFAULTS } from '../core/mjmlDefaults.js';
-import { prepareColumnAlignment } from './columnAlignment.js';
+import { capColumnWidths, prepareColumnAlignment } from './columnAlignment.js';
 import { MOBILE_MISMATCH, mergeDevices, splitDevices } from './mobileStyles.js';
 
 /** Only lengths may become outside or inside spacing. @param {string} value */
@@ -121,16 +121,21 @@ function prepareImageHeights(source) {
 export async function compileEditorMjml(source, compile, options = {}) {
   const devices = splitDevices(source);
   if (!devices) return compileOne(source, compile, options);
-  const [desktop, mobile] = await Promise.all([compileOne(devices.desktop, compile, options), compileOne(devices.mobile, compile, options)]);
+  const [desktop, mobile] = await Promise.all([compileOne(devices.desktop, compile, options), compileOne(devices.mobile, compile, options, false)]);
   const html = mergeDevices(desktop.html, mobile.html, devices.breakpoint);
   return html === null ? { ...desktop, errors: [...(desktop.errors || []), { message: MOBILE_MISMATCH }] } : { ...desktop, html };
 }
 
-/** @param {string} source @param {(source: string, options: any) => any} compile @param {any} options */
-async function compileOne(source, compile, options) {
+/**
+ * The phone version is left uncapped: its columns stack, and a different pixel
+ * width there would become a phone rule overriding the stacking.
+ * @param {string} source @param {(source: string, options: any) => any} compile @param {any} options
+ */
+async function compileOne(source, compile, options, cap = true) {
   const prepared = prepareBoxes(source);
   const result = await compile(prepareColumnAlignment(prepareImageHeights(prepared.mjml)), options);
   let html = String(result.html || '');
+  if (cap) html = capColumnWidths(html);
   // Children first: outer wrappers retain every nested canvas marker.
   for (const box of prepared.boxes.reverse()) {
     const element = markedElement(html, box.marker);
