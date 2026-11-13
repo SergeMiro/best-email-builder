@@ -91,7 +91,7 @@ test('mobile: a viewport, the columns media query, and columns stacking where <s
       // Without media queries (new Outlook, webmails that strip <style>), the columns of a row
       // still sit side by side: full width, capped inline at their pixel width; stacked on a phone.
       for (const column of html.match(/<div\s+class="mj-column-[^"]*\beb-va-col\b[^"]*"[^>]*>/g) || []) {
-        if (/width:100%/.test(column)) assert.match(column, /width:100%;max-width:\d+px;/, `${id}: ${column.slice(0, 120)}`);
+        if (/(?<![-\w])width:\s*100%/.test(column)) assert.match(column, /width:100%;max-width:\d+px;/, `${id}: ${column.slice(0, 120)}`);
       }
       if (/eb-va-col/.test(html)) assert.match(html, /@media only screen and \(max-width:479px\) \{\.eb-va-col \{max-width:100%!important;\}\}/, id);
     }
@@ -175,7 +175,7 @@ test('a preview keeps the image with no picture yet (its frame is drawn), what i
 });
 
 test('new Outlook: two columns side by side at 600 px without the media query, their caps adding up to the row', async () => {
-  const { html } = await compileMjml('<mjml><mj-body width="600px"><mj-section><mj-column width="39%"><mj-text>Logo</mj-text></mj-column><mj-column width="61%"><mj-text>Menu</mj-text></mj-column></mj-section></mj-body></mjml>');
+  const { html } = await compileMjml('<mjml><mj-body width="600px"><mj-section><mj-column width="39%" background-color="#eceff4"><mj-text>Logo</mj-text></mj-column><mj-column width="61%"><mj-text>Menu</mj-text></mj-column></mj-section></mj-body></mjml>');
   const caps = [...html.matchAll(/eb-va-col[^"]*"\s+style="[^"]*max-width:(\d+)px;/g)].map((match) => Number(match[1]));
   assert.deepEqual(caps, [234, 366]);
 });

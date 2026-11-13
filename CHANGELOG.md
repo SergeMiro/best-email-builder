@@ -6,6 +6,13 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.24.1] — 2026-11-13
+
+### Fixed
+- 0.24.0 missed the columns with a background color (their style is
+  rewritten as `width: 100%`): they too are capped and sit side by side in
+  new Outlook.
+
 ## [0.24.0] — 2026-11-13
 
 ### Fixed

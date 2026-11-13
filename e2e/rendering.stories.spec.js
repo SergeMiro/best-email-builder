@@ -59,8 +59,22 @@ for (const { id, html } of all) {
     await open(page, withoutStyles(html), 375);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
     const rows = await columnRows(page);
-    // Every column takes the whole width: one per row.
-    for (const column of rows) expect(column.width).toBeGreaterThan(300);
+    // Capped at their desktop pixel width, the columns wrap: none past the screen, none squeezed.
+    for (const column of rows) {
+      expect(column.left + column.width).toBeLessThanOrEqual(375);
+      expect(column.width).toBeGreaterThanOrEqual(140);
+    }
+  });
+
+  test(`"${id}": desktop, <style> stripped (new Outlook) — the columns of a row side by side`, async ({ page }) => {
+    await open(page, withoutStyles(html), 640);
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll('.eb-va-row')].map((row) =>
+        [...row.children].filter((el) => el.classList.contains('eb-va-col')).map((el) => Math.round(el.getBoundingClientRect().left))
+      )
+    );
+    // Side by side: each column starts right of the previous one (tops differ when middle-aligned).
+    for (const lefts of rows) lefts.slice(1).forEach((left, index) => expect(left).toBeGreaterThan(lefts[index]));
   });
 }
 

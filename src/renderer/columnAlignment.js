@@ -66,7 +66,7 @@ export function prepareColumnAlignment(source) {
  */
 export function capColumnWidths(html) {
   return html.replace(
-    /(<td\b[^>]*?\bstyle="[^"]*?\bwidth:(\d+(?:\.\d+)?)px;[^"]*"[^>]*>(?:\s*<!\[endif\]-->)?\s*<div\s+class="[^"]*\beb-va-col\b[^"]*"\s+style="[^"]*?)\bwidth:100%;/g,
+    /(<td\b[^>]*?\bstyle="[^"]*?\bwidth:(\d+(?:\.\d+)?)px;[^"]*"[^>]*>(?:\s*<!\[endif\]-->)?\s*<div\s+class="[^"]*\beb-va-col\b[^"]*"\s+style="[^"]*?)(?<![-\w])width:\s*100%;?/g,
     (_, before, width) => `${before}width:100%;max-width:${Math.floor(Number(width))}px;`
   );
 }
