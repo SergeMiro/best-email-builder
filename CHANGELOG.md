@@ -6,6 +6,16 @@ All notable changes are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.24.2] — 2026-11-16
+
+### Fixed
+- New Outlook: three equal columns in a 560 px row still wrapped the third.
+  The cap was Outlook's cell width, which MJML rounds (186.67 → 187, three
+  of them 561 px). The cap is now the exact width rounded down: the row (the
+  section's width minus its padding and borders) × the column's share, or a
+  `mj-column-px-N` column's own width; failing that, Outlook's cell width
+  minus half a pixel. A row never overflows.
+
 ## [0.24.1] — 2026-11-13
 
 ### Fixed

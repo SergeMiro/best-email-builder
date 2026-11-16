@@ -174,8 +174,19 @@ test('a preview keeps the image with no picture yet (its frame is drawn), what i
   for (const { quality } of [sent, preview]) assert.ok(quality.some((issue) => issue.code === 'IMAGE_NO_SRC'));
 });
 
-test('new Outlook: two columns side by side at 600 px without the media query, their caps adding up to the row', async () => {
-  const { html } = await compileMjml('<mjml><mj-body width="600px"><mj-section><mj-column width="39%" background-color="#eceff4"><mj-text>Logo</mj-text></mj-column><mj-column width="61%"><mj-text>Menu</mj-text></mj-column></mj-section></mj-body></mjml>');
-  const caps = [...html.matchAll(/eb-va-col[^"]*"\s+style="[^"]*max-width:(\d+)px;/g)].map((match) => Number(match[1]));
-  assert.deepEqual(caps, [234, 366]);
+test('new Outlook: the columns of a row side by side without the media query, their caps never over the row', async () => {
+  const caps = async (body) => {
+    const { html } = await compileMjml(`<mjml><mj-body width="600px">${body}</mj-body></mjml>`);
+    return [...html.matchAll(/eb-va-col[^"]*"\s+style="[^"]*max-width:(\d+)px;/g)].map((match) => Number(match[1]));
+  };
+  const column = (attributes = '') => `<mj-column ${attributes}><mj-text>x</mj-text></mj-column>`;
+  const thirds = `<mj-section padding="0 20px">${column().repeat(3)}</mj-section>`;
+  // MJML rounds Outlook's cell to 187 px: three of them (561) overflow the 560 px row.
+  assert.deepEqual(await caps(thirds), [186, 186, 186]);
+  // Wrapper 600 − 20 padding − 2 border = 578; section 578 − 40 padding − 2 border = 536.
+  assert.deepEqual(await caps(`<mj-wrapper border="1px solid #000" padding="10px"><mj-section padding="0 20px" border="1px solid #ccc">${column().repeat(3)}</mj-section></mj-wrapper>`), [178, 178, 178]);
+  assert.deepEqual(await caps(`<mj-section>${column().repeat(2)}</mj-section>`), [300, 300]);
+  assert.deepEqual(await caps(`<mj-section padding-left="15px" padding-right="16px">${column().repeat(2)}</mj-section>`), [284, 284]);
+  assert.deepEqual(await caps(`<mj-section padding="0px">${column('width="187px"')}${column('width="373px"')}</mj-section>`), [187, 373]);
+  assert.deepEqual(await caps(`<mj-section>${column('width="39%" background-color="#eceff4"')}${column('width="61%"')}</mj-section>`), [234, 366]);
 });

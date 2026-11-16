@@ -115,3 +115,12 @@ test('menu links are written as typed (MJML would capitalise them)', async ({ pa
   await expect(page.getByRole('link', { name: 'Shop', exact: true })).toBeVisible();
   expect(await page.getByRole('link', { name: 'Shop', exact: true }).innerText()).toBe('Shop');
 });
+
+test('new Outlook (<style> stripped): three thirds in a 560 px row stay on one line', async ({ page }) => {
+  const column = '<mj-column><mj-text>x</mj-text></mj-column>';
+  const { html } = await compileMjml(`<mjml><mj-body width="600px"><mj-section padding="0 20px">${column.repeat(3)}</mj-section></mj-body></mjml>`);
+  await open(page, withoutStyles(html), 640);
+  const tops = await page.evaluate(() => [...document.querySelectorAll('.eb-va-col')].map((el) => Math.round(el.getBoundingClientRect().top)));
+  expect(tops).toHaveLength(3);
+  expect(new Set(tops).size).toBe(1);
+});
